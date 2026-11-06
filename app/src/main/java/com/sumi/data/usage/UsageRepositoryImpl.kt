@@ -27,6 +27,7 @@ import com.sumi.domain.usage.UsageEventSource
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.domain.usage.UsageSession
 import com.sumi.domain.usage.UsageStatsSource
+import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -168,7 +169,7 @@ class UsageRepositoryImpl @Inject constructor(
             val now = clock.nowUtcMs()
             val zone = timeZone.currentZone()
             val aggregates = statsSource.loadDailyAggregates(fromUtcMs, toUtcMs, zone)
-            val sessionDays = db.sessionDao.getAllDateKeys().toSet()
+            val sessionDays = sessionDao.getAllDateKeys().toSet()
             // Session-backed days replace aggregate-only rows.
             val filtered = aggregates.filter { it.dateKey !in sessionDays }
             if (filtered.isNotEmpty()) {

@@ -8,10 +8,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 
 /** Local JSON export (M5). Export never leaves the device unless the user shares the file. */
-@Serializable
 data class SumiExport(
     val version: Int = 1,
     val dailyUsage: List<com.sumi.core.database.entity.DailyUsage> = emptyList(),
