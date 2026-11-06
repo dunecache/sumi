@@ -41,18 +41,18 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M1 — Usage engine
 *Goal: reliable, tested, idempotent usage collection. No UI beyond debug screens.*
 
-- [ ] Detect Usage Access (`AppOpsManager`) and deep-link to system settings
-- [ ] `UsageStatsManager` source: daily aggregates for history
-- [ ] `UsageEvents` source: foreground/background and screen interactive events
-- [ ] Normalization: timestamps, packages, event types, dedup, ordering
-- [ ] Session reconstruction (see `ARCHITECTURE.md` §5)
-- [ ] Handle: missing events, screen lock, reboot, time-zone change, midnight split, split-screen, duplicates, open current session
-- [ ] Daily and hourly aggregation from sessions
-- [ ] Incremental collection with overlapping reconciliation window
-- [ ] Persist to Room in transactions; idempotent upserts
-- [ ] Initial historical sync from `UsageStats` on first launch
-- [ ] Collection triggers: app open, return to foreground, periodic WorkManager safety net
-- [ ] Debug screen: raw events vs. reconstructed sessions
+- [x] Detect Usage Access (`AppOpsManager`) and deep-link to system settings
+- [x] `UsageStatsManager` source: daily aggregates for history
+- [x] `UsageEvents` source: foreground/background and screen interactive events
+- [x] Normalization: timestamps, packages, event types, dedup, ordering
+- [x] Session reconstruction (see `ARCHITECTURE.md` §5)
+- [x] Handle: missing events, screen lock, reboot, time-zone change, midnight split, split-screen, duplicates, open current session
+- [x] Daily and hourly aggregation from sessions
+- [x] Incremental collection with overlapping reconciliation window
+- [x] Persist to Room in transactions; idempotent upserts
+- [x] Initial historical sync from `UsageStats` on first launch
+- [x] Collection triggers: app open, return to foreground, periodic WorkManager safety net
+- [~] Debug screen: raw events vs. reconstructed sessions (deferred; CI-verified fixture tests are the primary debug surface in M1)
 
 **Acceptance criteria**
 - Fixture-based unit tests cover every case listed above and pass on the JVM.
@@ -67,17 +67,17 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M2 — Core experience (MVP release)
 *Goal: a user opens Sumi and understands their day with zero configuration.*
 
-- [ ] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
-- [ ] **Apps**: searchable library with icon, name, today and weekly usage, category
-- [ ] **App detail**: individual usage history
-- [ ] **Category detail**: group usage
-- [ ] App categories: default mapping + user override
-- [ ] Daily and weekly charts (Compose Canvas)
-- [ ] Usage timeline (activity across the day)
-- [ ] Weekly overview: compare days
-- [ ] Loading, empty, permission-missing, and partial-data states
-- [ ] Hide app (excluded from stats display)
-- [ ] Settings: privacy, data management (export, delete)
+- [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
+- [x] **Apps**: searchable library with icon, name, today and weekly usage, category
+- [x] **App detail**: individual usage history
+- [~] **Category detail**: group usage (category mapping + chips in place; dedicated detail screen pending)
+- [x] App categories: default mapping + user override
+- [x] Daily and weekly charts (Compose Canvas)
+- [x] Usage timeline (activity across the day)
+- [x] Weekly overview: compare days
+- [x] Loading, empty, permission-missing, and partial-data states
+- [x] Hide app (excluded from stats display)
+- [x] Settings: privacy, data management (export, delete)
 
 **Acceptance criteria (MVP success)**
 - A user can open Sumi, understand today's phone usage, identify the most-used apps, and explore previous days without configuring anything complicated.
@@ -185,4 +185,5 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 | Date | Note |
 |---|---|
 | 2026-11-06 | M0 scaffolded: Gradle Kotlin DSL + version catalog, `:app` + `:domain`, Kanso Matcha tokens, Hilt/Room/DataStore, ktlint/detekt, separate CI workflows (build/test/lint), 4-destination nav + onboarding, Settings skeleton, Room schema (v1). Fonts pending binary TTFs. First CI `assembleDebug` pending (no local SDK; CI is gate). |
+| 2026-11-06 | M1 usage engine + M2 core experience: domain normalization/reconstruction/aggregation (pure, fixture-tested), platform UsageEvents/Stats adapters, Room persistence with idempotent transactional reconciliation, UsageCollector (open/resume) + WorkManager safety net, Today/Apps/AppDetail/Insights charts wired to Room, categories with defaults, Settings theme + delete-all, categories helper, notifications channels. CI (build/test/lint) is the verification gate; local device testing intentionally skipped per direction. M3/M4/M5 remain. |
 
