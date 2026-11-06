@@ -2,22 +2,24 @@ package com.sumi.core.designsystem.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.sumi.R
 
 /**
- * Typography roles per DESIGN.md §3.2.
- * - Interface: Inter (body/headline) — maps to [FontFamily.Default] until bundled Inter TTFs are dropped in (see res/font/README.md).
- * - Reflection/editorial: Literata — maps to [FontFamily.Serif] fallback.
- * - Numeric/durations: IBM Plex Mono — maps to [FontFamily.Monospace] fallback with tabular numerals.
- *
- * Once fonts are bundled, replace these families with Font(R.font.inter_*) etc. No hardcoded type sizes in features.
+ * Typography roles per DESIGN.md §3.2, bundled locally (no downloadable fonts, no network).
+ * Inter (interface), Literata (reflection), IBM Plex Mono (numeric). Variable-font TTFs from
+ * google/fonts (OFL); licensed headers attributed in res/font/README.md.
  */
 object SumiFontFamilies {
-    val Interface = FontFamily.Default
-    val Reflection = FontFamily.Serif
-    val Numeric = FontFamily.Monospace
+    val Interface = FontFamily(Font(R.font.inter_regular, FontWeight.Normal))
+    val Reflection = FontFamily(Font(R.font.literata_regular, FontWeight.Normal))
+    val Numeric = FontFamily(
+        Font(R.font.plex_mono_regular, FontWeight.Normal),
+        Font(R.font.plex_mono_medium, FontWeight.Medium),
+    )
 }
 
 val SumiTypography = Typography(

@@ -1,16 +1,14 @@
 # Fonts (bundled locally, no downloadable fonts, no network)
 
-Planned families per DESIGN.md §3.2:
+Bundled per DESIGN.md §3.2, pulled from `google/fonts` (OFL):
 
-- **Inter** — interface (headings, body). Role: `SumiFontFamilies.Interface`.
-- **Literata** — reflective/editorial text. Role: `SumiFontFamilies.Reflection`.
-- **IBM Plex Mono** — numbers, durations. Role: `SumiFontFamilies.Numeric`.
+- **Inter** — interface (headings, body). `inter_regular.ttf` (variable font, OFL).
+- **Literata** — reflective/editorial text. `literata_regular.ttf` (variable font, OFL).
+- **IBM Plex Mono** — numbers, durations. `plex_mono_regular.ttf` + `plex_mono_medium.ttf` (OFL).
 
-Current `Type.kt` maps these roles to `Default` / `Serif` / `Monospace` fallbacks so M0 builds
-without large binaries. To bundle, drop TTFs as `inter_regular.ttf`, `inter_medium.ttf`,
-`inter_semibold.ttf`, `literata_regular.ttf`, `plex_mono_regular.ttf`, `plex_mono_medium.ttf`
-into this `res/font/` directory and update `SumiFontFamilies` to
-`FontFamily(Font(R.font.inter_regular))` etc.
+Artifacts pulled via `curl` from `github.com/google/fonts/raw/main` (`ofl/inter`, `ofl/literata`,
+`ofl/ibmplexmono`). All three families are open-source (Inter by rsms, Literata by The Connected Part /
+Google Fonts, IBM Plex Mono by IBM) under the SIL Open Font License 1.1.
 
-All three families are open-source (Inter by rsms, Literata by The Connected Part / Google Fonts,
-IBM Plex Mono by IBM). Include license headers/attribution when bundling.
+`Type.kt` uses these via `Font(R.font.*)`; family XMLs in this directory wrap them for
+Android's font resources.

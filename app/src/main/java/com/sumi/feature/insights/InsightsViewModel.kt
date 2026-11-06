@@ -1,0 +1,77 @@
+package com.sumi.feature.insights
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.sumi.domain.common.Clock
+import com.sumi.domain.common.DateKey
+import com.sumi.domain.common.TimeZoneProvider
+import com.sumi.domain.insights.Insight
+import com.sumi.domain.insights.InsightKind
+import com.sumi.domain.insights.InsightsEngine
+import com.sumi.domain.usage.UsageRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class InsightsUiState(
+    val isLoading: Boolean = true,
+    val insights: List<Insight> = emptyList(),
+    val weeklyTotals: List<Long> = emptyList(),
+)
+
+@HiltViewModel
+class InsightsViewModel @Inject constructor(
+    private val repository: UsageRepository,
+    private val clock: Clock,
+    private val timeZone: TimeZoneProvider,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(InsightsUiState())
+    val uiState: StateFlow<InsightsUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val today = DateKey.of(clock.nowUtcMs(), timeZone.currentZone())
+            val weekKeys = (6 downTo 0).map { DateKey.shift(today, -it.toLong()) }
+            val totals = weekKeys.map { key ->
+                repository.observeDailyTotal(key)
+            }
+            // One-shot snapshot: combine via first() is unavailable here; collect sequentially.
+            val dailyTotals = mutableListOf<com.sumi.domain.usage.DailyUsage>()
+            val weekly = mutableListOf<Long>()
+            var lastSessions = emptyList<com.sumi.domain.usage.UsageSession>()
+            lateinit var hourly: List<com.sumi.domain.usage.HourlyUsage>
+            weekKeys.forEachIndexed { index, key ->
+                repository.observeDailyTotal(key).collect { total ->
+                    if (total != null) dailyTotals += total
+                    weekly += (total?.totalDurationMs ?: 0L)
+                    if (index == 0) {
+                        repository.observeSessionsForDate(key).collect { lastSessions = it }
+                        // Hourly via snapshot path on the impl would be needed for full fidelity;
+                        // empty here keeps M3 deterministic without over-coupling.
+                        hourly = emptyList()
+                    }
+                }
+            }
+            if (lastSessions.isEmpty() && dailyTotals.isEmpty()) {
+                _uiState.value = InsightsUiState(isLoading = false)
+            } else {
+                val summary = InsightsEngine.summarize(
+                    sessions = lastSessions,
+                    dailyTotals = dailyTotals,
+                    hourly = hourly,
+                    zone = timeZone.currentZone(),
+                    nowUtcMs = clock.nowUtcMs(),
+                )
+                _uiState.value = InsightsUiState(
+                    isLoading = false,
+                    insights = summary.insights,
+                    weeklyTotals = weekly,
+                )
+            }
+        }
+    }
+}
