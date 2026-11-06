@@ -30,7 +30,10 @@ object Aggregation {
                 totals[key] = (totals[key] ?: 0L) + ms
             }
         }
-        return totals.map { ((dateKey, pkg), ms) -> DailyAppUsage(dateKey, pkg, ms) }
+        return totals.map { entry ->
+            val (dateKey, pkg) = entry.key
+            DailyAppUsage(dateKey, pkg, entry.value)
+        }
             .filter { it.durationMs > 0 }
             .sortedWith(compareBy<DailyAppUsage> { it.dateKey }.thenBy { it.packageName })
     }
@@ -88,7 +91,10 @@ object Aggregation {
                 cursor = segEnd
             }
         }
-        return totals.map { ((dateKey, hour, pkg), ms) -> HourlyUsage(dateKey, hour, pkg, ms) }
+        return totals.map { entry ->
+            val (dateKey, hour, pkg) = entry.key
+            HourlyUsage(dateKey, hour, pkg, entry.value)
+        }
             .filter { it.durationMs > 0 }
             .sortedWith(compareBy<HourlyUsage> { it.dateKey }.thenBy { it.hour }.thenBy { it.packageName })
     }
