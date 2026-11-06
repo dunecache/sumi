@@ -1,0 +1,47 @@
+# Detekt config for M0. Lenient on style; strict on bugs.
+# Run in CI: ./gradlew detekt
+
+build:
+  maxIssues: 0
+
+comments:
+  active: false
+  excludes: ['**/generated/**']
+
+complexity:
+  active: true
+  includes: ['**/*.kt']
+  excludes: ['**/test/**', '**/androidTest/**']
+  CyclomaticComplexity:
+    active: true
+    threshold: 15
+  LongMethod:
+    active: true
+    threshold: 60
+  LongParameterList:
+    active: false
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInInterfaces: 20
+    thresholdInObjects: 32
+    thresholdInClasses: 25
+
+style:
+  active: true
+  includes: ['**/*.kt']
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreNumbers: ['-1', '0', '1', '2']
+
+potential-bugs:
+  active: true
+
+exceptions:
+  active: true
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: false

@@ -1,0 +1,24 @@
+# Detekt root config — mirrors config/detekt/detekt.yml for :detekt task.
+# To keep one source of truth, the file in config/ is authoritative; this exists for tooling that looks at root.
+build:
+  maxIssues: 0
+
+comments:
+  active: false
+
+complexity:
+  CyclomaticComplexity:
+    active: true
+    threshold: 15
+  LongMethod:
+    active: true
+    threshold: 60
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreNumbers: ['-1', '0', '1', '2']

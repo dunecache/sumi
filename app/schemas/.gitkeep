@@ -1,0 +1,2 @@
+Room schema export location (exportSchema = true).
+The generated 1.json is committed after the first successful CI `assembleDebug`.
