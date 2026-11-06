@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sumi.core.datastore.PreferencesRepository
+import com.sumi.feature.usage.UsageCollector
 import com.sumi.platform.usage.UsageAccessChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,6 +24,7 @@ sealed interface UsageAccessUiState {
 class OnboardingViewModel @Inject constructor(
     private val preferences: PreferencesRepository,
     private val usageAccessChecker: UsageAccessChecker,
+    private val collector: UsageCollector,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -50,9 +52,19 @@ class OnboardingViewModel @Inject constructor(
 
     fun settingsIntent() = usageAccessChecker.usageAccessSettingsIntent()
 
+    fun runInitialSync(onDone: () -> Unit) {
+        viewModelScope.launch {
+            if (usageAccessChecker.hasUsageAccess()) {
+                collector.importHistory()
+            }
+            onDone()
+        }
+    }
+
     fun completeOnboarding() {
         viewModelScope.launch {
             preferences.setOnboardingCompleted(true)
+            collector.collectOnForeground()
         }
     }
 }

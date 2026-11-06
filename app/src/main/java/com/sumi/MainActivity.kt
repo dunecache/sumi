@@ -14,6 +14,7 @@ import com.sumi.core.datastore.PreferencesRepository
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.core.designsystem.theme.SumiTheme
 import com.sumi.feature.onboarding.OnboardingViewModel
+import com.sumi.feature.usage.UsageCollector
 import com.sumi.navigation.SumiApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -26,13 +27,19 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var preferences: PreferencesRepository
 
+    @Inject lateinit var usageCollector: UsageCollector
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Re-check Usage Access on resume via the VM observing Lifecycle.
+        // Collect on open; re-check Usage Access + collect on resume.
+        lifecycleScope.launch {
+            usageCollector.collectOnForeground()
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 onboardingViewModel.refreshUsageAccess()
+                usageCollector.collectOnForeground()
             }
         }
 

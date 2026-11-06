@@ -7,20 +7,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.core.designsystem.theme.SumiSpacing
 
-/** M0 skeleton: privacy statement + theme. Data management (export/delete) lands in M2/M5. */
+/** Settings (M2/M5): privacy, theme, data management (export/delete). */
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit,
+    onDeleteAllData: () -> Unit = {},
+    onExportData: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
         Spacer(Modifier.height(SumiSpacing.lg))
@@ -40,8 +44,19 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RadioButton(selected = themeMode == mode, onClick = { onThemeSelected(mode) })
-                Text(text = mode.name.lowercase().replaceFirstChar(Char::uppercase), modifier = Modifier.padding(start = SumiSpacing.sm))
+                Text(
+                    text = mode.name.lowercase().replaceFirstChar(Char::uppercase),
+                    modifier = Modifier.padding(start = SumiSpacing.sm),
+                )
             }
+        }
+        Spacer(Modifier.height(SumiSpacing.xl))
+        Text(text = "Data", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(SumiSpacing.sm))
+        Button(onClick = onExportData, modifier = Modifier.fillMaxWidth()) { Text("Export data") }
+        Spacer(Modifier.height(SumiSpacing.sm))
+        TextButton(onClick = onDeleteAllData, modifier = Modifier.fillMaxWidth()) {
+            Text("Delete all data")
         }
     }
 }

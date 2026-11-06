@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
@@ -136,4 +137,9 @@ fun FirstOverviewScreen(onFinish: () -> Unit) {
         Button(onClick = onFinish, modifier = Modifier.fillMaxWidth()) { Text("Finish") }
         Spacer(Modifier.height(SumiSpacing.xl))
     }
+}
+
+@Composable
+fun InitialSyncTrigger(onConfirm: () -> Unit) {
+    LaunchedEffect(Unit) { onConfirm() }
 }

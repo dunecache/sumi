@@ -2,7 +2,6 @@ package com.sumi.navigation
 
 /** Route names. Onboarding graph sits outside the 4-destination bottom bar. */
 object Routes {
-    const val ONBOARDING = "onboarding"
     const val ONBOARDING_WELCOME = "onboarding/welcome"
     const val ONBOARDING_PRIVACY = "onboarding/privacy"
     const val ONBOARDING_USAGE_ACCESS = "onboarding/usage_access"
@@ -14,4 +13,7 @@ object Routes {
     const val FOCUS = "focus"
     const val APPS = "apps"
     const val SETTINGS = "settings"
+
+    fun appDetail(packageName: String) = "app-detail/$packageName"
+    fun appDetailPattern() = "app-detail/{packageName}"
 }

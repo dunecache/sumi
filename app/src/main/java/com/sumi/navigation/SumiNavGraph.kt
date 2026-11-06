@@ -17,11 +17,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.sumi.core.datastore.ThemeMode
+import com.sumi.feature.appdetail.AppDetailScreen
 import com.sumi.feature.apps.AppsScreen
 import com.sumi.feature.focus.FocusScreen
 import com.sumi.feature.insights.InsightsScreen
@@ -99,7 +102,7 @@ fun SumiApp(
                 composable(Routes.ONBOARDING_INITIAL_SYNC) {
                     InitialSyncScreen(
                         uiState = usageAccessState,
-                        onFinish = { navController.navigate(Routes.ONBOARDING_FIRST_OVERVIEW) },
+                        onFinish = { onboardingViewModel.runInitialSync { navController.navigate(Routes.ONBOARDING_FIRST_OVERVIEW) } },
                     )
                 }
                 composable(Routes.ONBOARDING_FIRST_OVERVIEW) {
@@ -117,9 +120,20 @@ fun SumiApp(
                 }
                 composable(Routes.INSIGHTS) { InsightsScreen() }
                 composable(Routes.FOCUS) { FocusScreen() }
-                composable(Routes.APPS) { AppsScreen() }
+                composable(Routes.APPS) {
+                    AppsScreen(
+                        onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
+                    )
+                }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(themeMode = themeMode, onThemeSelected = onThemeSelected)
+                }
+                composable(
+                    route = Routes.appDetailPattern(),
+                    arguments = listOf(navArgument("packageName") { type = NavType.StringType }),
+                ) { backStackEntry ->
+                    val pkg = backStackEntry.arguments?.getString("packageName") ?: ""
+                    AppDetailScreen(packageName = pkg)
                 }
             }
         }

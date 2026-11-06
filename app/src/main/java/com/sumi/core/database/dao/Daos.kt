@@ -40,6 +40,18 @@ interface UsageSessionDao {
 
     @Query("SELECT COUNT(*) FROM usage_sessions")
     suspend fun count(): Long
+
+    @Query("SELECT * FROM usage_sessions WHERE startTime BETWEEN :from AND :to ORDER BY startTime")
+    suspend fun getAllInRange(from: Long, to: Long): List<UsageSession>
+
+    @Query("SELECT * FROM usage_sessions ORDER BY startTime")
+    suspend fun getAll(): List<UsageSession>
+
+    @Query("SELECT DISTINCT dateKey FROM usage_sessions")
+    suspend fun getAllDateKeys(): List<String>
+
+    @Query("DELETE FROM usage_sessions")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -62,8 +74,14 @@ interface DailyAppUsageDao {
     @Query("SELECT * FROM daily_app_usage WHERE dateKey = :dateKey")
     suspend fun getByDateKey(dateKey: String): List<DailyAppUsage>
 
+    @Query("SELECT * FROM daily_app_usage WHERE dateKey = :dateKey")
+    fun observeByDateKey(dateKey: String): Flow<List<DailyAppUsage>>
+
     @Query("SELECT * FROM daily_app_usage WHERE packageName = :packageName ORDER BY dateKey DESC")
     fun observeByPackage(packageName: String): Flow<List<DailyAppUsage>>
+
+    @Query("DELETE FROM daily_app_usage")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -73,6 +91,9 @@ interface HourlyUsageDao {
 
     @Query("SELECT * FROM hourly_usage WHERE dateKey = :dateKey")
     suspend fun getByDateKey(dateKey: String): List<HourlyUsage>
+
+    @Query("DELETE FROM hourly_usage")
+    suspend fun deleteAll()
 }
 
 @Dao
