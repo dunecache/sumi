@@ -23,10 +23,13 @@
         tools:targetApi="35">
 
         <!-- hilt-work uses on-demand WorkManager initialization (HiltWorkManagerFactory).
-             Remove the default initializer so androidx.hilt work doesn't deadlock at startup. -->
+             Remove the default initializer so androidx.hilt work doesn't deadlock at startup.
+             Instantiatable ignore: lint checks the removed provider's class which WorkManager
+             initializes with a Context arg; the removal itself is the officially supported path. -->
         <provider
             android:name="androidx.work.WorkManagerInitializer"
-            tools:node="remove" />
+            tools:node="remove"
+            tools:ignore="Instantiatable" />
 
         <activity
             android:name=".MainActivity"
