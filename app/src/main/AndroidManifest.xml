@@ -11,6 +11,10 @@
          Declared here, never requested at first launch. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Required for Sumi to appear on the Usage Access screen (Settings.ACTION_USAGE_ACCESS_SETTINGS).
+         Special access: granted in system Settings, never via runtime dialog. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+
     <!-- Records reboot instants for usage-engine R5. No special permission needed. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
