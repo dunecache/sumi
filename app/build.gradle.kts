@@ -7,11 +7,11 @@ plugins {
     id("com.google.devtools.ksp") version libs.versions.ksp.get()
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt)
-    // NOTE: ktlint intentionally NOT applied here. The ktlint Gradle plugin's Android hook
-    // (AndroidPluginsApplier) crashes against AGP (`CommonExtension` not found) in CI.
-    // ktlint runs on the pure-JVM `:domain` module only; Android style is covered by
-    // `lintDebug` + detekt + `.editorconfig` (see docs/CI.md).
-    alias(libs.plugins.detekt)
+    // NOTE: Neither ktlint nor detekt is applied to this Android module. Both Gradle plugins
+    // hook the Android extension (`CommonExtension` / `BaseExtension`) which fails in CI
+    // against AGP 8.7.3 (`NoClassDefFoundError` during configuration, before any task runs).
+    // Style/lint for Android is covered by `lintDebug` + `.editorconfig`; ktlint/detekt run
+    // on the pure-JVM `:domain` module only (see docs/CI.md).
 }
 
 val appProps = Properties()
