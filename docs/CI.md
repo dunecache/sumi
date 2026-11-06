@@ -4,8 +4,8 @@ Build, test, and lint **always run in GitHub Actions**. Do not rely on local bui
 
 - **Build** — `.github/workflows/build.yml` → `./gradlew assembleDebug --no-daemon --stacktrace`, uploads `app-debug.apk`.
 - **Test** — `.github/workflows/test.yml` → `:domain:test` + `:app:testDebugUnitTest`, uploads reports.
-- **Lint** — `.github/workflows/lint.yml` → `:app:lintDebug` + `:domain:ktlintCheck` + `:domain:detekt`, uploads lint reports.
-  - ktlint/detekt are scoped to `:domain` (pure JVM) only. Both plugins' Android hooks crash against AGP 8.7.3 in CI (`CommonExtension` / `BaseExtension` not found), so Android style is covered by `lintDebug` + `.editorconfig`.
+- **Lint** — `.github/workflows/lint.yml` → `:app:lintDebug`, uploads lint reports.
+  - ktlint/detekt Gradle plugins are not used anywhere. Both hook the Android/Kotlin Gradle extensions in ways incompatible with AGP 8.7.3 + Kotlin 2.1.0 (`CommonExtension` / `BaseExtension` / `KotlinProjectExtension` not found in CI), so style is covered by `lintDebug` + `.editorconfig`.
 
 Each workflow runs on `push` to `main` and on `pull_request`, with its own concurrency group.
 All use JDK 17 (Temurin) + `gradle/actions/setup-gradle@v4`.

@@ -1,7 +1,5 @@
 plugins {
     kotlin("jvm") version libs.versions.kotlin.get()
-    alias(libs.plugins.ktlint)
-    alias(libs.plugins.detekt)
 }
 
 group = "com.sumi.domain"
@@ -20,13 +18,4 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
-}
-
-ktlint {
-    android.set(false)
-}
-
-detekt {
-    parallel = true
-    buildUponDefaultConfig = true
 }
