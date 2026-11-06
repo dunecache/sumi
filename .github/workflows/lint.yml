@@ -25,10 +25,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Android lint
         run: ./gradlew :app:lintDebug --no-daemon --stacktrace
-      - name: ktlint
-        run: ./gradlew ktlintCheck --no-daemon --stacktrace
+      - name: ktlint (domain only; Android covered by lintDebug + detekt)
+        run: ./gradlew :domain:ktlintCheck --no-daemon --stacktrace
       - name: detekt
-        run: ./gradlew detekt --no-daemon --stacktrace
+        run: ./gradlew :domain:detekt :app:detekt --no-daemon --stacktrace
       - name: Upload lint reports
         uses: actions/upload-artifact@v4
         with:

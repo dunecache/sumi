@@ -7,7 +7,10 @@ plugins {
     id("com.google.devtools.ksp") version libs.versions.ksp.get()
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.ktlint)
+    // NOTE: ktlint intentionally NOT applied here. The ktlint Gradle plugin's Android hook
+    // (AndroidPluginsApplier) crashes against AGP (`CommonExtension` not found) in CI.
+    // ktlint runs on the pure-JVM `:domain` module only; Android style is covered by
+    // `lintDebug` + detekt + `.editorconfig` (see docs/CI.md).
     alias(libs.plugins.detekt)
 }
 
