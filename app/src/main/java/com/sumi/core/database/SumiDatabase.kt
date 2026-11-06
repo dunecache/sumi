@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 import com.sumi.core.database.dao.ApplicationDao
 import com.sumi.core.database.dao.CollectionStateDao
 import com.sumi.core.database.dao.DailyAppUsageDao
@@ -36,7 +35,6 @@ import javax.inject.Singleton
     version = 1,
     exportSchema = true,
 )
-@TypeConverters(Converters::class)
 abstract class SumiDatabase : RoomDatabase() {
     abstract fun applicationDao(): ApplicationDao
     abstract fun usageSessionDao(): UsageSessionDao
@@ -55,9 +53,6 @@ abstract class SumiDatabase : RoomDatabase() {
         ).addMigrations().build()
     }
 }
-
-/** Placeholder for future type converters (e.g., source enums). */
-class Converters
 
 @Singleton
 class DatabaseFactory @Inject constructor(
