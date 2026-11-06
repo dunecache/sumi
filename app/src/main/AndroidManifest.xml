@@ -12,8 +12,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Required for Sumi to appear on the Usage Access screen (Settings.ACTION_USAGE_ACCESS_SETTINGS).
-         Special access: granted in system Settings, never via runtime dialog. -->
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+         Special access: granted in system Settings, never via runtime dialog.
+         ProtectedPermissions ignore: lint misclassifies PACKAGE_USAGE_STATS (it is the canonical
+         special-access permission granted via Settings, not a system-only permission). -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Records reboot instants for usage-engine R5. No special permission needed. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
