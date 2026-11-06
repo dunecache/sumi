@@ -22,6 +22,7 @@ import com.sumi.domain.usage.DailyAppUsage
 import com.sumi.domain.usage.DailyUsage
 import com.sumi.domain.usage.HourlyUsage
 import com.sumi.domain.usage.Normalization
+import com.sumi.domain.usage.RebootBoundarySource
 import com.sumi.domain.usage.SessionReconstruction
 import com.sumi.domain.usage.UsageEventSource
 import com.sumi.domain.usage.UsageRepository
@@ -50,6 +51,7 @@ class UsageRepositoryImpl @Inject constructor(
     private val collectionDao: CollectionStateDao,
     private val eventSource: UsageEventSource,
     private val statsSource: UsageStatsSource,
+    private val rebootSource: RebootBoundarySource,
     private val clock: Clock,
     private val timeZone: TimeZoneProvider,
     private val dispatchers: AppDispatchers,
@@ -93,14 +95,19 @@ class UsageRepositoryImpl @Inject constructor(
      */
     override suspend fun collectRecent(fromUtcMs: Long, toUtcMs: Long) =
         withContext(dispatchers.io) {
-            val now = clock.nowUtcMs()
             val zone = timeZone.currentZone()
-            val overlapMs = OVERLAP_MS
-            val effectiveFrom = maxOf(fromUtcMs, (collectionDao.get()?.lastEventTimeCollected ?: fromUtcMs) - overlapMs)
+            val prevState = collectionDao.get()
+            // §6: on zone change, re-key stored sessions and rebuild all aggregates.
+            val zoneChanged = prevState != null && prevState.lastTimeZoneId.isNotEmpty() &&
+                prevState.lastTimeZoneId != zone.id
 
-            val raw = eventSource.loadRawEvents(effectiveFrom, toUtcMs)
+            val raw = eventSource.loadRawEvents(
+                maxOf(fromUtcMs, (prevState?.lastEventTimeCollected ?: fromUtcMs) - OVERLAP_MS),
+                toUtcMs,
+            )
             val normalized = Normalization.normalize(raw)
-            val sessions = SessionReconstruction.reconstruct(normalized, nowUtcMs = toUtcMs)
+            val sessions = SessionReconstruction.reconstruct(
+                normalized, nowUtcMs = toUtcMs, rebootUtcMs = rebootSource.rebootInstantsUtcMs())
 
             // Idempotent upsert keyed by (packageName, startTime).
             val entities = sessions.map { session ->
@@ -113,8 +120,16 @@ class UsageRepositoryImpl @Inject constructor(
                     isEstimated = session.isEstimated,
                 )
             }
-            val existing = sessionDao.getAllInRange(effectiveFrom, toUtcMs)
-            val existingKeys = existing.mapTo(mutableSetOf()) { it.packageName to it.startTime }
+            // Window-scoped normally; full history when the zone changed so re-key
+            // covers every stored row (H6/§6).
+            val existing = if (zoneChanged) {
+                sessionDao.getAll()
+            } else {
+                sessionDao.getAllInRange(
+                    maxOf(fromUtcMs, (prevState?.lastEventTimeCollected ?: fromUtcMs) - OVERLAP_MS),
+                    toUtcMs,
+                )
+            }
             val merged = (existing + entities)
                 .groupBy { it.packageName to it.startTime }
                 .mapValues { (_, rows) ->
@@ -126,13 +141,40 @@ class UsageRepositoryImpl @Inject constructor(
                 .toList()
                 .sortedBy { it.startTime }
 
-            val domainSessions = merged.map { it.toDomain() }
-            val dailyApp = Aggregation.dailyAppUsage(domainSessions, zone, toUtcMs)
-            val dailyTotals = Aggregation.dailyTotals(domainSessions, zone, toUtcMs)
-            val hourly = Aggregation.hourlyUsage(domainSessions, zone, toUtcMs)
+            // R1 finalization: stale open rows (missing BACKGROUND) close at the next
+            // session's start instead of growing with wall-clock forever (H3).
+            val finalized = SessionReconstruction.closeOpenAtNextSessionStart(merged.map { it.toDomain() })
+            val finalizedEntities = finalized.map { session ->
+                EntitySession(
+                    packageName = session.packageName,
+                    startTime = session.startTimeUtcMs,
+                    endTime = session.endTimeUtcMs,
+                    durationMs = session.durationMs(toUtcMs),
+                    dateKey = DateKey.of(session.startTimeUtcMs, zone),
+                    isEstimated = session.isEstimated,
+                )
+            }
+
+            val dailyApp = Aggregation.dailyAppUsage(finalized, zone, toUtcMs)
+            val dailyTotals = Aggregation.dailyTotals(finalized, zone, toUtcMs)
+            val hourly = Aggregation.hourlyUsage(finalized, zone, toUtcMs)
+
+            // Hygiene (H5): delete aggregates for every touched day before re-inserting,
+            // so corrected/pruned rows never linger (DATA_MODEL §5.6 reproducibility).
+            val affectedDateKeys = (dailyApp.map { it.dateKey } + dailyTotals.map { it.dateKey } +
+                hourly.map { it.dateKey }).toSortedSet()
 
             db.withTransaction {
-                sessionDao.upsertAll(merged)
+                sessionDao.upsertAll(finalizedEntities)
+                if (zoneChanged) {
+                    dailyAppDao.deleteAll()
+                    dailyDao.deleteAll()
+                    hourlyDao.deleteAll()
+                } else if (affectedDateKeys.isNotEmpty()) {
+                    dailyAppDao.deleteByDateKeys(affectedDateKeys.toList())
+                    dailyDao.deleteByDateKeys(affectedDateKeys.toList())
+                    hourlyDao.deleteByDateKeys(affectedDateKeys.toList())
+                }
                 dailyAppDao.upsertAll(
                     dailyApp.map {
                         EntityDailyAppUsage(it.dateKey, it.packageName, it.durationMs, it.source.name)
@@ -148,18 +190,17 @@ class UsageRepositoryImpl @Inject constructor(
                         EntityHourlyUsage(it.dateKey, it.hour, it.packageName, it.durationMs)
                     },
                 )
-                val prev = collectionDao.get()
                 collectionDao.upsert(
-                    (prev ?: CollectionState()).copy(
-                        lastEventTimeCollected = maxOf(prev?.lastEventTimeCollected ?: 0L, toUtcMs),
-                        earliestSessionTime = merged.minOfOrNull { it.startTime },
+                    (prevState ?: CollectionState()).copy(
+                        lastEventTimeCollected = maxOf(prevState?.lastEventTimeCollected ?: 0L, toUtcMs),
+                        earliestSessionTime = finalizedEntities.minOfOrNull { it.startTime },
                         lastTimeZoneId = zone.id,
-                        initialSyncCompleted = prev?.initialSyncCompleted == true,
+                        initialSyncCompleted = prevState?.initialSyncCompleted == true,
                     ),
                 )
                 // Ensure Application rows exist for stats display; keep user fields intact.
                 val known = applicationDao.getAll().mapTo(mutableSetOf()) { it.packageName }
-                val missing = merged.map { it.packageName }.filter { it !in known }.distinct()
+                val missing = finalizedEntities.map { it.packageName }.filter { it !in known }.distinct()
                 if (missing.isNotEmpty()) {
                     applicationDao.upsertAll(missing.map { Application(it, it) })
                 }
@@ -176,20 +217,22 @@ class UsageRepositoryImpl @Inject constructor(
             val sessionDays = sessionDao.getAllDateKeys().toSet()
             // Session-backed days replace aggregate-only rows.
             val filtered = aggregates.filter { it.dateKey !in sessionDays }
-            if (filtered.isNotEmpty()) {
-                dailyAppDao.upsertAll(
-                    filtered.map {
-                        EntityDailyAppUsage(it.dateKey, it.packageName, it.durationMs, "USAGE_STATS_AGGREGATE")
-                    },
+            db.withTransaction {
+                if (filtered.isNotEmpty()) {
+                    dailyAppDao.upsertAll(
+                        filtered.map {
+                            EntityDailyAppUsage(it.dateKey, it.packageName, it.durationMs, "USAGE_STATS_AGGREGATE")
+                        },
+                    )
+                }
+                collectionDao.upsert(
+                    (collectionDao.get() ?: CollectionState()).copy(
+                        initialSyncCompleted = true,
+                        lastTimeZoneId = zone.id,
+                        lastEventTimeCollected = maxOf(collectionDao.get()?.lastEventTimeCollected ?: 0L, now),
+                    ),
                 )
             }
-            collectionDao.upsert(
-                (collectionDao.get() ?: CollectionState()).copy(
-                    initialSyncCompleted = true,
-                    lastTimeZoneId = zone.id,
-                    lastEventTimeCollected = maxOf(collectionDao.get()?.lastEventTimeCollected ?: 0L, now),
-                ),
-            )
         }
 
     override suspend fun rebuildAggregates() =
@@ -202,6 +245,10 @@ class UsageRepositoryImpl @Inject constructor(
             val dailyTotals = Aggregation.dailyTotals(domain, zone, now)
             val hourly = Aggregation.hourlyUsage(domain, zone, now)
             db.withTransaction {
+                // Full rebuild: delete first so orphaned rows never linger (§5.6 reproducibility).
+                dailyAppDao.deleteAll()
+                dailyDao.deleteAll()
+                hourlyDao.deleteAll()
                 dailyAppDao.upsertAll(
                     dailyApp.map {
                         EntityDailyAppUsage(it.dateKey, it.packageName, it.durationMs, it.source.name)

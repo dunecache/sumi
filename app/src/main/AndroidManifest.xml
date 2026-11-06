@@ -11,6 +11,9 @@
          Declared here, never requested at first launch. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Records reboot instants for usage-engine R5. No special permission needed. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- RemoveWorkManagerInitializer ignore: SumiApplication implements Configuration.Provider
          with HiltWorkerFactory, so WorkManager uses on-demand initialization and the default
          initializer is removed below via tools:node="remove" (official hilt-work setup). -->
@@ -45,6 +48,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".platform.usage.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

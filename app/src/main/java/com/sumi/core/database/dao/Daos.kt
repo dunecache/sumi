@@ -64,6 +64,12 @@ interface DailyUsageDao {
 
     @Query("SELECT * FROM daily_usage ORDER BY dateKey DESC")
     fun observeAll(): Flow<List<DailyUsage>>
+
+    @Query("DELETE FROM daily_usage WHERE dateKey IN (:dateKeys)")
+    suspend fun deleteByDateKeys(dateKeys: List<String>)
+
+    @Query("DELETE FROM daily_usage")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -80,6 +86,9 @@ interface DailyAppUsageDao {
     @Query("SELECT * FROM daily_app_usage WHERE packageName = :packageName ORDER BY dateKey DESC")
     fun observeByPackage(packageName: String): Flow<List<DailyAppUsage>>
 
+    @Query("DELETE FROM daily_app_usage WHERE dateKey IN (:dateKeys)")
+    suspend fun deleteByDateKeys(dateKeys: List<String>)
+
     @Query("DELETE FROM daily_app_usage")
     suspend fun deleteAll()
 }
@@ -91,6 +100,9 @@ interface HourlyUsageDao {
 
     @Query("SELECT * FROM hourly_usage WHERE dateKey = :dateKey")
     suspend fun getByDateKey(dateKey: String): List<HourlyUsage>
+
+    @Query("DELETE FROM hourly_usage WHERE dateKey IN (:dateKeys)")
+    suspend fun deleteByDateKeys(dateKeys: List<String>)
 
     @Query("DELETE FROM hourly_usage")
     suspend fun deleteAll()

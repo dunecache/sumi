@@ -3,7 +3,6 @@ package com.sumi.platform.usage
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.os.Build
 import com.sumi.domain.usage.DailyAppAggregate
 import com.sumi.domain.usage.RawUsageEvent
 import com.sumi.domain.usage.UsageEventSource
@@ -57,19 +56,28 @@ class PlatformUsageSources @Inject constructor(
         toUtcMs: Long,
         zone: ZoneId,
     ): List<DailyAppAggregate> = withContext(Dispatchers.IO) {
-        // `queryUsageStats` with daily interval requires minSdk 22+; guard for older devices.
-        val interval = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            UsageStatsManager.INTERVAL_BEST
-        } else {
-            UsageStatsManager.INTERVAL_DAILY
+        // Per-day queries: INTERVAL_BEST/DAILY over a multi-day range returns one row
+        // per package spanning the whole range, which would misattribute totals to a
+        // single day. Query one calendar day at a time and stamp each with its dateKey.
+        val out = mutableListOf<DailyAppAggregate>()
+        var dayStart = com.sumi.domain.common.DateKey.startOfDayUtcMs(
+            com.sumi.domain.common.DateKey.of(fromUtcMs, zone), zone)
+        while (dayStart < toUtcMs) {
+            val dateKey = com.sumi.domain.common.DateKey.of(dayStart, zone)
+            val dayEnd = minOf(
+                com.sumi.domain.common.DateKey.endOfDayUtcMsExclusive(dateKey, zone),
+                toUtcMs,
+            )
+            val stats = manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd)
+            stats
+                .filter { it.packageName.isNotBlank() && it.totalTimeInForeground > 0 }
+                .mapTo(out) { stat ->
+                    DailyAppAggregate(dateKey, stat.packageName, stat.totalTimeInForeground)
+                }
+            if (dayEnd <= dayStart) break // defensive: never loop forever on zero-length day
+            dayStart = dayEnd
         }
-        val stats = manager.queryUsageStats(interval, fromUtcMs, toUtcMs)
-        stats
-            .filter { it.packageName.isNotBlank() && it.totalTimeInForeground > 0 }
-            .map { stat ->
-                val dateKey = com.sumi.domain.common.DateKey.of(stat.lastTimeStamp, zone)
-                DailyAppAggregate(dateKey, stat.packageName, stat.totalTimeInForeground)
-            }
+        out
     }
 
     private fun mapType(androidType: Int): UsageEventType? = when (androidType) {

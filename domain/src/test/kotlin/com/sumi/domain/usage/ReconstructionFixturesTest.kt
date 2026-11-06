@@ -113,4 +113,23 @@ class ReconstructionFixturesTest {
         )
         assertThat(sessions).hasSize(2)
     }
+
+    @Test
+    fun `open session closes at next session start (R1 finalization)`() {
+        // com.a left without BACKGROUND; com.b starts 30 min later.
+        val stale = UsageSession("com.a", t(0), endTimeUtcMs = null, isEstimated = false)
+        val next = UsageSession("com.b", t(30), endTimeUtcMs = t(50), isEstimated = false)
+        val finalized = SessionReconstruction.closeOpenAtNextSessionStart(listOf(stale, next))
+        assertThat(finalized[0].endTimeUtcMs).isEqualTo(t(30))
+        assertThat(finalized[0].isEstimated).isTrue()
+        assertThat(finalized[1]).isEqualTo(next)
+    }
+
+    @Test
+    fun `latest open session stays open (R11)`() {
+        val older = UsageSession("com.a", t(0), endTimeUtcMs = t(20), isEstimated = false)
+        val current = UsageSession("com.b", t(30), endTimeUtcMs = null, isEstimated = false)
+        val finalized = SessionReconstruction.closeOpenAtNextSessionStart(listOf(current, older))
+        assertThat(finalized.first { it.packageName == "com.b" }.endTimeUtcMs).isNull()
+    }
 }

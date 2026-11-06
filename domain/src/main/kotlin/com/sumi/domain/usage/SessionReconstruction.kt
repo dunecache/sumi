@@ -7,14 +7,13 @@ package com.sumi.domain.usage
  * `DailyUsage.totalDurationMs` later unions intervals so totals never exceed wall clock.
  *
  * Rules implemented:
- * - R1 foreground without background: closed at next event implying left foreground
- *   (another foreground is NOT enough in multi-window; screen-off closes, background closes).
- *   In single-foreground devices the next foreground closes via screen/timeout handling;
- *   here an explicit BACKGROUND or SCREEN_NON_INTERACTIVE closes, otherwise the session
- *   stays open until window end (R11) or a later close. Implicit close by another
- *   foreground only in non-mult-window mode is handled: foreground of a new app does
- *   not close others (multi-window). R1 fallback `isEstimated` is set when a session
- *   is closed without its own BACKGROUND (implicit) or exceeds [MAX_PLAUSIBLE_MS] (R14).
+ * - R1 foreground without background: at event level a foreground of a new app does NOT
+ *   close others (multi-window, R8), so the previous session stays open until an explicit
+ *   BACKGROUND, SCREEN_NON_INTERACTIVE, gap, or reboot closes it. At reconciliation time
+ *   the repository applies [closeOpenAtNextSessionStart] (R1 finalization): a stale open
+ *   session is closed at the next session's start and flagged estimated, so totals are
+ *   bounded even when BACKGROUND events are dropped. Implicit close exceeding [MAX_PLAUSIBLE_MS]
+ *   is flagged estimated (R14).
  * - R2 background without foreground: ignored.
  * - R3 screen non-interactive: closes all open at timestamp.
  * - R4 screen interactive: no-op.
@@ -36,6 +35,29 @@ object SessionReconstruction {
     const val MAX_GAP_MS = 30L * 60L * 1000L
 
     private data class Open(val packageName: String, val startUtcMs: Long)
+
+    /**
+     * R1 at session level (used by the repository's reconciliation pass): an open session
+     * that is followed by another session's start was left open by a missing BACKGROUND.
+     * Close it at that next start and flag it estimated. The latest-starting session stays
+     * open (R11: still current). Multi-window overlap is preserved because sessions are
+     * compared by start time only — overlapping starts are not closed by each other.
+     */
+    fun closeOpenAtNextSessionStart(sessions: List<UsageSession>): List<UsageSession> {
+        val sorted = sessions.sortedWith(compareBy<UsageSession> { it.startTimeUtcMs }.thenBy { it.packageName })
+        return sorted.mapIndexed { index, session ->
+            if (session.endTimeUtcMs != null) {
+                session
+            } else {
+                val next = sorted.getOrNull(index + 1)
+                if (next == null) {
+                    session
+                } else {
+                    session.copy(endTimeUtcMs = next.startTimeUtcMs, isEstimated = true)
+                }
+            }
+        }
+    }
 
     /**
      * @param events normalized, sorted events for one window.
