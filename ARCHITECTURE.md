@@ -215,6 +215,24 @@ No account · No analytics SDK · No advertising SDK · No cloud dependency
 - Reliable app blocking is far more complicated than tracking and is out of scope.
 - Sumi's totals may differ slightly from the system's Digital Wellbeing numbers; explain methodology in-app.
 
+### Verification findings (agents, 2026-11-06) — remaining, tracked not hidden
+
+- **Missing BACKGROUND (R1):** reconstruction keeps the previous app's session open until
+  screen-off/gap/window-end rather than closing at the next app's foreground. Only
+  `dailyTotals` (union) is overlap-safe; per-app sums can be inflated. Spec amendment or
+  fix required before V1.
+- **Reboot (R5):** no platform reboot source is wired; production falls back to the 30-min
+  gap heuristic. `rebootUtcMs` path exists in domain but is unreachable from `UsageRepositoryImpl`.
+- **Stale-open finalization (H3):** sessions open >6h with a dangling BACKGROUND outside the
+  overlap window stay open and grow with wall-clock until the next in-window event.
+- **Aggregate hygiene (H5):** reconciliation is window-scoped; orphaned aggregate rows are
+  never deleted. A full rebuild can differ from stored values for days outside the window.
+- **Timezone re-key (H6/§6):** `lastTimeZoneId` is recorded but not compared; session date
+  keys frozen under the old zone stay frozen after a zone change until re-collected.
+- **Historical UsageStats (H7):** `INTERVAL_BEST/DAILY` totals spanning a multi-day query are
+  attributed to a single day via `lastTimeStamp`; per-day queries are required for correctness.
+- **System/launcher (R13):** no exclusion set yet; launcher time is counted until M2 decides.
+
 Sumi prioritizes reliable daily and weekly reporting over pretending to provide perfect real-time monitoring.
 
 ## 10. Performance and reliability targets

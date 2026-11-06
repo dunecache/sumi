@@ -71,8 +71,7 @@ class UsageRepositoryImpl @Inject constructor(
     private fun observeDailyAppUsageEntities(dateKey: String): Flow<List<EntityDailyAppUsage>> =
         db.dailyAppUsageDao().observeByDateKey(dateKey)
 
-    override fun observeHourlyUsage(dateKey: String): Flow<List<HourlyUsage>> =
-        dailyDao.observeAll().map { emptyList() } // hourly DAO lacks Flow; expose via suspend snapshot below
+    override fun observeHourlyUsage(dateKey: String): Flow<List<HourlyUsage>> = observeHourly(dateKey)
 
     /** Flow for hourly buckets backed by a one-shot query transformed to a value. */
     fun observeHourly(dateKey: String): Flow<List<HourlyUsage>> = kotlinx.coroutines.flow.flow {
@@ -117,7 +116,12 @@ class UsageRepositoryImpl @Inject constructor(
             val existing = sessionDao.getAllInRange(effectiveFrom, toUtcMs)
             val existingKeys = existing.mapTo(mutableSetOf()) { it.packageName to it.startTime }
             val merged = (existing + entities)
-                .associateBy { it.packageName to it.startTime }
+                .groupBy { it.packageName to it.startTime }
+                .mapValues { (_, rows) ->
+                    // Prefer closed rows: a truncated window can re-reconstruct an open row
+                    // for a session already finalized in a previous run (R11: never resurrect).
+                    rows.firstOrNull { it.endTime != null } ?: rows.first()
+                }
                 .values
                 .toList()
                 .sortedBy { it.startTime }

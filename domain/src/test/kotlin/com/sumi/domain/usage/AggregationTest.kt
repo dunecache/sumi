@@ -47,6 +47,17 @@ class AggregationTest {
     }
 
     @Test
+    fun `hourly does not crash across 23 hour bucket`() {
+        // 22:30Z -> 01:30Z passes through 23:00 Berlin; exercises the truncatedTo path.
+        val start = java.time.Instant.parse("2026-11-06T22:30:00Z").toEpochMilli()
+        val end = java.time.Instant.parse("2026-11-07T01:30:00Z").toEpochMilli()
+        val sessions = listOf(UsageSession("com.a", start, end, isEstimated = false))
+        val hourly = Aggregation.hourlyUsage(sessions, zone, nowUtcMs = end + 1000L)
+        assertThat(hourly.sumOf { it.durationMs }).isEqualTo(180 * 60_000L)
+        assertThat(hourly.map { it.hour }.toSet()).contains(23)
+    }
+
+    @Test
     fun `rebuild equals stored aggregates`() {
         val start = java.time.Instant.parse("2026-11-06T08:00:00Z").toEpochMilli()
         val sessions = listOf(

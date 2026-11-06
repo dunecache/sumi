@@ -77,11 +77,11 @@ object Aggregation {
                 val instant = Instant.ofEpochMilli(cursor).atZone(zone)
                 val dateKey = DateKey.of(cursor, zone)
                 val hour = instant.hour
-                val nextHourMs = instant.let {
-                    it.toLocalDate().atTime(it.hour + 1, 0).atZone(zone).toInstant().toEpochMilli()
-                }
-                // For the 25-hour DST fall-back, atTime(h+1) is unambiguous; for the 23-hour
-                // spring-forward gap, the builder skips the missing hour — cursor still advances.
+                val nextHourMs = instant.truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+                    .plusHours(1).toInstant().toEpochMilli()
+                // truncatedTo + plusHours is safe at 23:00 and across DST boundaries:
+                // fall-back yields a 25-hour day, spring-forward a 23-hour day, with no
+                // invalid-hour crashes and no skipped/missing buckets.
                 val segEnd = minOf(end, nextHourMs).coerceAtLeast(cursor + 1)
                 val segMs = (segEnd - cursor).coerceAtLeast(0L)
                 if (segMs > 0) {
