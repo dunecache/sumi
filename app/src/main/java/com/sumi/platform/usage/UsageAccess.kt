@@ -20,11 +20,12 @@ import javax.inject.Singleton
 class UsageAccessChecker @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    @Suppress("DEPRECATION")
     fun hasUsageAccess(): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val uid = android.os.Process.myUid()
         return try {
-            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, context.packageName) ==
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, context.packageName) ==
                 AppOpsManager.MODE_ALLOWED
         } catch (_: Exception) {
             false

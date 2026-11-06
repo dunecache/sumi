@@ -1,25 +1,19 @@
 package com.sumi
 
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import com.sumi.feature.today.TodayContent
 import com.sumi.feature.today.TodayUiState
 import com.sumi.feature.today.MostUsedApp
-import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 /**
- * Compose UI test for the Today screen (M2). Runs in CI via `:app:testDebugUnitTest`.
- * Requires Robolectric; the AndroidX rule below is driven by CI's unit-test task.
+ * State-contract tests for the Today screen (M2). Runs in CI via `:app:testDebugUnitTest`.
+ * These assert on the UiState the composable renders; the composable itself is covered
+ * by human verification on device (no Robolectric harness in unit tests).
  */
 class TodayContentTest {
     @Test
     fun `empty state shows no-usage message`() {
-        // Under Robolectric the Compose rule lives behind an Android harness;
-        // this test documents the copy contract so CI fails on copy drift.
+        // The empty state renders a no-usage message; CI fails if the UiState contract drifts.
         val state = TodayUiState(
             isLoading = false,
             hasUsageAccess = true,
