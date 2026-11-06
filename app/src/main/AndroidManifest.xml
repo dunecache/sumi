@@ -11,6 +11,9 @@
          Declared here, never requested at first launch. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- RemoveWorkManagerInitializer ignore: SumiApplication implements Configuration.Provider
+         with HiltWorkerFactory, so WorkManager uses on-demand initialization and the default
+         initializer is removed below via tools:node="remove" (official hilt-work setup). -->
     <application
         android:name=".SumiApplication"
         android:allowBackup="false"
@@ -20,7 +23,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Sumi"
         android:usesCleartextTraffic="false"
-        tools:targetApi="35">
+        tools:targetApi="35"
+        tools:ignore="RemoveWorkManagerInitializer">
 
         <!-- hilt-work uses on-demand WorkManager initialization (HiltWorkManagerFactory).
              Remove the default initializer so androidx.hilt work doesn't deadlock at startup.
