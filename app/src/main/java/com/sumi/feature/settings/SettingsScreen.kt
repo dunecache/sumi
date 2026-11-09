@@ -18,13 +18,14 @@ import androidx.compose.ui.Modifier
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.core.designsystem.theme.SumiSpacing
 
-/** Settings (M2/M5): privacy, theme, data management (export/delete). */
+/** Settings (M2/M5): privacy, theme, data management (export/delete), diagnostics. */
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit,
     onDeleteAllData: () -> Unit = {},
     onExportData: () -> Unit = {},
+    diagnosticsLines: List<String> = emptyList(),
 ) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
         Spacer(Modifier.height(SumiSpacing.lg))
@@ -57,6 +58,22 @@ fun SettingsScreen(
         Spacer(Modifier.height(SumiSpacing.sm))
         TextButton(onClick = onDeleteAllData, modifier = Modifier.fillMaxWidth()) {
             Text("Delete all data")
+        }
+        Spacer(Modifier.height(SumiSpacing.xl))
+        Text(text = "Diagnostics (on this device)", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(SumiSpacing.sm))
+        Text(
+            text = "If Today shows nothing, these tell you why: permission off, or no data stored yet.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(SumiSpacing.sm))
+        diagnosticsLines.forEach { line ->
+            Text(
+                text = "• $line",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

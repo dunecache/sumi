@@ -143,7 +143,14 @@ fun SumiApp(
                     )
                 }
                 composable(Routes.SETTINGS) {
-                    SettingsScreen(themeMode = themeMode, onThemeSelected = onThemeSelected)
+                    val settingsViewModel: com.sumi.feature.settings.SettingsViewModel =
+                        androidx.hilt.navigation.compose.hiltViewModel()
+                    val diagnostics by settingsViewModel.diagnosticsLines.collectAsState()
+                    SettingsScreen(
+                        themeMode = themeMode,
+                        onThemeSelected = onThemeSelected,
+                        diagnosticsLines = diagnostics,
+                    )
                 }
                 composable(
                     route = Routes.appDetailPattern(),
