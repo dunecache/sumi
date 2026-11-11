@@ -123,13 +123,19 @@ fun SumiApp(
                 composable(Routes.ONBOARDING_INITIAL_SYNC) {
                     InitialSyncScreen(
                         uiState = usageAccessState,
-                        onFinish = { onboardingViewModel.runInitialSync { navController.navigate(Routes.ONBOARDING_FIRST_OVERVIEW) } },
+                        // Sync completion itself finishes onboarding: the flag is written
+                        // here, so an app kill before the preview screen cannot replay setup.
+                        onFinish = {
+                            onboardingViewModel.runInitialSync {
+                                onboardingViewModel.completeOnboarding()
+                                navController.navigate(Routes.ONBOARDING_FIRST_OVERVIEW)
+                            }
+                        },
                     )
                 }
                 composable(Routes.ONBOARDING_FIRST_OVERVIEW) {
                     FirstOverviewScreen(
-                        onFinish = {
-                            onboardingViewModel.completeOnboarding()
+                        onOpenApp = {
                             navController.navigate(Routes.TODAY) {
                                 popUpTo(Routes.ONBOARDING_WELCOME) { inclusive = true }
                             }

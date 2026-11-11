@@ -18,12 +18,23 @@ import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.feature.onboarding.UsageAccessUiState
 
-// Onboarding: Welcome → Privacy → Usage Access → Initial sync → First overview.
+// Onboarding: Welcome → Privacy → Usage Access → Initial sync → First overview (preview).
+// Setup completes when the initial sync finishes; the preview only opens the app.
 // No notification permission is requested here (PRINCIPLES.md, AGENTS.md §9).
+
+@Composable
+private fun StepLabel(step: Int) {
+    Text(
+        text = "Setup · $step of 4",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
 
 @Composable
 fun WelcomeScreen(onNext: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+        StepLabel(1)
         Spacer(Modifier.height(SumiSpacing.section))
         Text(
             text = "Understand your attention. Find your balance.",
@@ -47,6 +58,7 @@ fun WelcomeScreen(onNext: () -> Unit) {
 @Composable
 fun PrivacyScreen(onNext: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+        StepLabel(2)
         Spacer(Modifier.height(SumiSpacing.section))
         Text(text = "Private by default", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(SumiSpacing.md))
@@ -68,6 +80,7 @@ fun UsageAccessScreen(
     onContinue: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+        StepLabel(3)
         Spacer(Modifier.height(SumiSpacing.section))
         Text(text = "Usage Access", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(SumiSpacing.md))
@@ -103,6 +116,7 @@ fun InitialSyncScreen(
         UsageAccessUiState.Granted -> Column(
             Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal),
         ) {
+            StepLabel(4)
             Spacer(Modifier.height(SumiSpacing.section))
             Text(text = "Preparing your history", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(SumiSpacing.md))
@@ -123,18 +137,28 @@ fun InitialSyncScreen(
     }
 }
 
+/** Final onboarding screen: a preview of Today, clearly framed as "setup complete".
+ *  Onboarding is already persisted by the time this screen shows — the button only
+ *  opens the app. */
 @Composable
-fun FirstOverviewScreen(onFinish: () -> Unit) {
+fun FirstOverviewScreen(onOpenApp: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+        Text(
+            text = "Setup complete",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(SumiSpacing.section))
-        Text(text = "Your day, in perspective.", style = MaterialTheme.typography.displayLarge)
+        Text(text = "This is Today.", style = MaterialTheme.typography.displayLarge)
         Spacer(Modifier.height(SumiSpacing.md))
-        EmptyState(
-            title = "No usage yet",
-            message = "Sumi starts learning your day from now. Come back later.",
+        Text(
+            text = "Once you have used your phone a little, your day — screen time, " +
+                "most used apps, and rhythm — appears on this screen.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
-        Button(onClick = onFinish, modifier = Modifier.fillMaxWidth()) { Text("Finish") }
+        Button(onClick = onOpenApp, modifier = Modifier.fillMaxWidth()) { Text("Open Sumi") }
         Spacer(Modifier.height(SumiSpacing.xl))
     }
 }

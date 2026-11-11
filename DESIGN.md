@@ -132,12 +132,13 @@ Welcome, Permissions, Category detail, Focus session (active), Intentions editor
 
 ## 6. Onboarding
 
-Short and transparent:
+Short and transparent. Four setup steps, each labeled "Setup · n of 4":
 1. **Introduction** — "Understand your attention. Find your balance." State what Sumi does and does not do.
 2. **Privacy** — usage is processed and stored on this device only.
 3. **Usage Access** — explain why Android requires it; button opens system settings. Provide a clear "back from settings" state.
-4. **Initial synchronization** — calm progress, no spinner theatrics.
-5. **First overview** — show real usage with a one-line guide to reading it.
+4. **Initial synchronization** — calm progress, no spinner theatrics. **Setup completes here** (the flag is persisted when sync finishes).
+
+After setup: **First overview** — a preview of the Today screen, headed "Setup complete / This is Today." It is visually distinct from Today (no tab bar, different copy) and its button only opens the app.
 
 Do not ask for notification permission here.
 
