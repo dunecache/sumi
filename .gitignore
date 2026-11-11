@@ -15,8 +15,9 @@ captures/
 
 # Keystores / secrets
 *.jks
-*.keystore
 key.properties
+# Debug keystore IS committed for reproducible CI APKs (in-place updates); never use for release
+!app/debug.keystore
 
 # Misc
 *.log

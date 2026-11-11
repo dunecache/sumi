@@ -34,6 +34,18 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    // Debug APK from CI must install in-place over previous installs (dev data survives upgrades).
+    // This overrides AGP's built-in debug key, which CI would regenerate every run.
+    // Not a release secret — the key is committed intentionally (local-only development identity).
+    signingConfigs {
+        named("debug") {
+            storeFile = rootProject.file("app/debug.keystore")
+            storePassword = "android"
+            keyAlias = "sumi-debug"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
