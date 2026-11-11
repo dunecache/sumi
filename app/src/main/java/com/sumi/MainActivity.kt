@@ -5,8 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -33,9 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Collect on open; re-check Usage Access + collect on resume.
-        lifecycleScope.launch {
-            usageCollector.collectOnForeground()
-        }
+        // repeatOnLifecycle also fires when this activity starts; no second standalone collect.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 onboardingViewModel.refreshUsageAccess()
@@ -44,7 +46,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val onboardingCompleted by preferences.onboardingCompleted.collectAsState(initial = false)
+            // null until DataStore emits: startDestination must be correct on frame one.
+            val onboardingCompleted by preferences.onboardingCompleted.collectAsState(initial = null)
             val themeMode by preferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
             val darkTheme = when (themeMode) {
                 ThemeMode.LIGHT -> false
@@ -53,14 +56,29 @@ class MainActivity : ComponentActivity() {
             }
 
             SumiTheme(darkTheme = darkTheme) {
-                SumiApp(
-                    isOnboardingCompleted = onboardingCompleted,
-                    themeMode = themeMode,
-                    onboardingViewModel = onboardingViewModel,
-                    onThemeSelected = { mode ->
-                        lifecycleScope.launch { preferences.setThemeMode(mode) }
-                    },
-                )
+                when (val completed = onboardingCompleted) {
+                    null -> {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(
+                                    if (darkTheme) {
+                                        com.sumi.core.designsystem.theme.SumiColorTokens.BackgroundDark
+                                    } else {
+                                        com.sumi.core.designsystem.theme.SumiColorTokens.BackgroundLight
+                                    }
+                                ),
+                        )
+                    }
+                    else -> SumiApp(
+                        isOnboardingCompleted = completed,
+                        themeMode = themeMode,
+                        onboardingViewModel = onboardingViewModel,
+                        onThemeSelected = { mode ->
+                            lifecycleScope.launch { preferences.setThemeMode(mode) }
+                        },
+                    )
+                }
             }
         }
     }

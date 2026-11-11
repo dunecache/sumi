@@ -16,7 +16,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -61,23 +60,9 @@ fun SumiApp(
     onThemeSelected: (ThemeMode) -> Unit,
 ) {
     val navController = rememberNavController()
+    // Caller composes this graph only after the flag has loaded, so the
+    // start destination is correct on frame one — no re-routing band-aid.
     val startDestination = if (isOnboardingCompleted) Routes.TODAY else Routes.ONBOARDING_WELCOME
-
-    // DataStore emits after first composition; the initial=false placeholder above
-    // would otherwise pin a returning user on Welcome every cold start.
-    LaunchedEffect(isOnboardingCompleted) {
-        if (isOnboardingCompleted) {
-            val route = navController.currentDestination?.route
-            if (route == Routes.ONBOARDING_WELCOME || route == Routes.ONBOARDING_PRIVACY ||
-                route == Routes.ONBOARDING_USAGE_ACCESS || route == Routes.ONBOARDING_INITIAL_SYNC ||
-                route == Routes.ONBOARDING_FIRST_OVERVIEW
-            ) {
-                navController.navigate(Routes.TODAY) {
-                    popUpTo(Routes.ONBOARDING_WELCOME) { inclusive = true }
-                }
-            }
-        }
-    }
 
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
