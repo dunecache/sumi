@@ -77,7 +77,8 @@ class TodayLogicTest {
             listOf(app("com.android.systemui", "Android"), app("com.other.android", "Android")),
         )
         assertEquals("Android (systemui)", result[0].displayName)
-        assertEquals("Android (android)", result[1].displayName)
+        // Tail "android" would duplicate the label itself; falls back to the parent segment.
+        assertEquals("Android (other)", result[1].displayName)
     }
 
     @Test
