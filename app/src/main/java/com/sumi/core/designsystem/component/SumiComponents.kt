@@ -69,9 +69,20 @@ fun DurationText(durationMs: Long, modifier: Modifier = Modifier) {
 private const val MILLIS_PER_MINUTE = 60_000L
 private const val MINUTES_PER_HOUR = 60
 
+/**
+ * Duration formatting per the navigation/Today reference §4:
+ * `< 1min` (but nonzero) → `Under a minute` · `1–59min` → `{m}m` · `≥ 1h` → `{h}h {m}m`
+ * with zero minutes dropped (`5h`, never `5h 0m`). Never `0h`, never decimals or seconds.
+ * Exactly zero renders `0m` (a recorded total of none), which differs from a sub-minute value.
+ */
 fun formatDuration(durationMs: Long): String {
     val totalMinutes = (durationMs / MILLIS_PER_MINUTE).coerceAtLeast(0)
+    if (totalMinutes == 0L) return if (durationMs > 0L) "Under a minute" else "0m"
     val hours = totalMinutes / MINUTES_PER_HOUR
     val minutes = totalMinutes % MINUTES_PER_HOUR
-    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    return when {
+        hours == 0L -> "${minutes}m"
+        minutes == 0L -> "${hours}h"
+        else -> "${hours}h ${minutes}m"
+    }
 }
