@@ -3,6 +3,7 @@ package com.sumi.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -74,11 +75,21 @@ fun SumiApp(
                 TopAppBar(
                     title = { Text("Sumi") },
                     actions = {
-                        IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = "Settings",
-                            )
+                        // §2.2: gear on main tabs; back arrow on the settings route itself.
+                        if (currentRoute == Routes.SETTINGS) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Settings,
+                                    contentDescription = "Settings",
+                                )
+                            }
                         }
                     },
                 )
