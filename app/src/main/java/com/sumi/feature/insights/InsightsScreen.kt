@@ -28,6 +28,7 @@ import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.WeeklyBars
 import com.sumi.core.designsystem.component.formatDuration
+import com.sumi.core.designsystem.theme.ReflectionBody
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.domain.insights.InsightKind
 
@@ -112,13 +113,13 @@ fun InsightsScreen(
                             Row {
                                 Text(
                                     text = "·",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = ReflectionBody,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.width(SumiSpacing.xs))
                                 Text(
                                     text = insight.text,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = ReflectionBody,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontStyle = FontStyle.Italic,
                                 )
@@ -126,7 +127,7 @@ fun InsightsScreen(
                         } else {
                             Text(
                                 text = insight.text,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = ReflectionBody,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }

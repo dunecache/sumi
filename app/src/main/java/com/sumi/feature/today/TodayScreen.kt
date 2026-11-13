@@ -27,6 +27,7 @@ import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.TimelineStrip
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.NumericLarge
+import com.sumi.core.designsystem.theme.ReflectionBody
 import com.sumi.core.designsystem.theme.SumiSpacing
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -220,13 +221,13 @@ private fun TodayBody(
             TimelineStrip(hourlyTotals = state.timeline)
         }
 
-        // Summary sentence (§3.7): one quiet line, secondary size, not bold.
+        // Summary sentence (§3.7): one quiet line, reflection role (Literata), not bold.
         if (!state.isLoading) {
             state.observation?.let { note ->
                 Spacer(Modifier.height(SumiSpacing.md))
                 Text(
                     text = note,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = ReflectionBody,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

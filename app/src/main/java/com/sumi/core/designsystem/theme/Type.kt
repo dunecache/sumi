@@ -98,6 +98,17 @@ val SumiTypography = Typography(
 )
 
 /**
+ * Reflection role (Literata): observations and gentle suggestions at body size
+ * (DESIGN.md §3.2). Italic only for hedged interpretations (§7).
+ */
+val ReflectionBody = TextStyle(
+    fontFamily = SumiFontFamilies.Reflection,
+    fontWeight = FontWeight.Normal,
+    fontSize = 16.sp,
+    lineHeight = 24.sp,
+)
+
+/**
  * Numeric styles for durations and big numbers (IBM Plex Mono role). Tabular figures keep
  * multi-row durations column-aligned and stable while values refresh.
  */
