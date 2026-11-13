@@ -65,7 +65,13 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ---
 
 ## M2 — Core experience (MVP release)
-*Goal: a user opens Sumi and understands their day with zero configuration.*
+*Goal: a user opens Sumi on real data with a coherent, canonical visual identity.*
+
+> **Redesign pass (2026-11):** canonical Kanso Matcha v1.2 tokens now drive the full M3
+> color scheme; the Today timeline reads real hourly buckets (previously hardcoded zeros);
+> Apps rows and Today most-used show launcher icons, display names, durations and shares;
+> App detail renders real history; adaptive NavigationRail on ≥600dp; edge-to-edge on.
+> Ticks below reflect the code as of this pass.
 
 - [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
 - [x] **Apps**: searchable library with icon, name, today and weekly usage, category
