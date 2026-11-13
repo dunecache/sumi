@@ -70,15 +70,32 @@ class DefaultPackageCategoriesTest {
         val ids = DefaultPackageCategories.DEFAULT_IDS.toSet()
         // Spot-check each id is producible by at least one rule.
         val producible = listOf(
-            "com.instagram.android",
-            "com.whatsapp",
-            "com.google.android.youtube",
-            "com.slack",
-            "com.duolingo",
-            "com.amazon.kindle",
-            "com.mojang.minecraftpe",
-            "com.google.android.apps.nbu.files",
+            "com.instagram.android", // social
+            "com.whatsapp", // communication
+            "com.google.android.youtube", // entertainment
+            "com.slack", // productivity
+            "com.duolingo", // education
+            "com.amazon.kindle", // reading
+            "com.mojang.minecraftpe", // games
+            "com.google.android.apps.nbu.files", // utilities
+            "com.moonshot.kimichat", // ai
+            "com.tradingview.tradingviewapp", // finance
+            "com.brave.browser", // browser
         ).mapNotNull { DefaultPackageCategories.forPackage(it) }.toSet()
         assertThat(producible).isEqualTo(ids)
+    }
+
+    @Test
+    fun `new taxonomy clusters map to their seeds`() {
+        assertThat(DefaultPackageCategories.forPackage("com.moonshot.kimichat")).isEqualTo("ai") // Kimi
+        assertThat(DefaultPackageCategories.forPackage("com.deepseek.chat")).isEqualTo("ai") // DeepSeek
+        assertThat(DefaultPackageCategories.forPackage("com.tradingview.tradingviewapp")).isEqualTo("finance")
+        assertThat(DefaultPackageCategories.forPackage("com.binance.dev")).isEqualTo("finance")
+        assertThat(DefaultPackageCategories.forPackage("com.brave.browser")).isEqualTo("browser")
+        assertThat(DefaultPackageCategories.forPackage("org.mozilla.firefox")).isEqualTo("browser")
+        // Entertainment/Reading from the same device list:
+        assertThat(DefaultPackageCategories.forPackage("app.mihon")).isEqualTo("reading")
+        assertThat(DefaultPackageCategories.forPackage("com.nuvio.app")).isEqualTo("entertainment")
+        assertThat(DefaultPackageCategories.forPackage("com.google.android.apps.tachyon")).isEqualTo("communication")
     }
 }

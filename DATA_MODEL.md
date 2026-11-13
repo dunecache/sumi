@@ -88,7 +88,7 @@ Per-app per-day totals. Needed for the Apps list, weekly charts, and for histori
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | String (PK) | Stable slug: `social`, `communication`, `entertainment`, `productivity`, `education`, `reading`, `games`, `utilities` (seeds; user-created ids are slugs too) |
+| `id` | String (PK) | Stable slug: `social`, `communication`, `entertainment`, `productivity`, `education`, `reading`, `games`, `utilities`, `ai`, `finance`, `browser` (seeds; user-created ids are slugs too) |
 | `name` | String | Display name, user-editable |
 | `colorToken` | String | Design-system token name, **not** a hex value (`categoryColor1..7` or `categoryNeutral`) |
 | `sortOrder` | Int | **(schema v2)** Display order, 0-based; seeded order is the canonical default |
@@ -204,7 +204,7 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 - `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets).
 - `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2 against the real Room-exported v1 schema; **not yet executed anywhere**, no device/emulator available — see ROADMAP.md).
 - DAO tests with an in-memory database for: idempotent upsert, midnight split queries, aggregate rebuild equality, cascade/flag behavior for uninstalled apps.
-- Seed data (categories) is inserted idempotently at bootstrap (`CategoryBootstrap`); `isUserCreated` rows are never reseeded or overwritten.
+- Seed data (categories) is inserted at bootstrap (`CategoryBootstrap`): fresh installs get the full taxonomy; existing installs get only the seeds that are new in their version (`ai`, `finance`, `browser`) — ids the user deleted are never re-added; user-created rows with a colliding id win. `INSERT … IGNORE` keeps it idempotent; `isUserCreated` rows are never reseeded or overwritten.
 
 ## 9. Export format (M5)
 

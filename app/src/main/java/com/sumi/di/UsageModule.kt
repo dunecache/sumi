@@ -7,6 +7,8 @@ import com.sumi.domain.usage.UsageRepository
 import com.sumi.domain.usage.UsageStatsSource
 import com.sumi.platform.usage.DeviceExcludedPackagesResolver
 import com.sumi.platform.usage.ExcludedPackagesResolver
+import com.sumi.platform.applications.InstalledAppsSource
+import com.sumi.platform.applications.PackageManagerInstalledAppsSource
 import com.sumi.platform.usage.PlatformRebootSource
 import com.sumi.platform.usage.PlatformUsageSources
 import dagger.Binds
@@ -47,4 +49,11 @@ abstract class UsageBindsModule {
     abstract fun bindExcludedPackagesResolver(
         impl: DeviceExcludedPackagesResolver,
     ): ExcludedPackagesResolver
+
+    /** Launchable installed apps (app discovery backfill — the install library). */
+    @Binds
+    @Singleton
+    abstract fun bindInstalledAppsSource(
+        impl: PackageManagerInstalledAppsSource,
+    ): InstalledAppsSource
 }

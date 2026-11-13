@@ -39,6 +39,7 @@ class UsageCollector @Inject constructor(
             val from = now - HISTORY_MS
             repository.initialSyncFromUsageStats(from, now)
             repository.collectRecent(from, now)
+            repository.backfillInstalledApps()
         }
     }
 

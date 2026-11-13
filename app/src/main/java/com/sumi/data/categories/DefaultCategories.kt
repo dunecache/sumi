@@ -23,7 +23,26 @@ internal object DefaultCategories {
         AppCategory(DefaultPackageCategories.READING, "Reading", "method", sortOrder = 5),
         AppCategory(DefaultPackageCategories.GAMES, "Games", "ochre", sortOrder = 6),
         AppCategory(DefaultPackageCategories.UTILITIES, "Utilities", "matcha-2", sortOrder = 7),
+        AppCategory(DefaultPackageCategories.AI, "AI", "wisteria", sortOrder = 8),
+        AppCategory(DefaultPackageCategories.FINANCE, "Finance", "ochre", sortOrder = 9),
+        AppCategory(DefaultPackageCategories.BROWSER, "Browser", "clay-2", sortOrder = 10),
     )
+
+    /**
+     * Seeded ids that did not exist before this taxonomy revision. Existing installs
+     * get these rows added at bootstrap; ids that predate them are deliberately excluded
+     * because a user may have deleted one — deleted rows must stay deleted. New-seed ids
+     * cannot have been deleted (they never existed), so re-adding them is safe.
+     */
+    val BACKFILL_SEED_IDS: Set<String> = setOf(
+        DefaultPackageCategories.AI,
+        DefaultPackageCategories.FINANCE,
+        DefaultPackageCategories.BROWSER,
+    )
+
+    /** Rows an existing (pre-revision) install needs added — never for ids the user deleted. */
+    fun backfillSeeds(existingIds: Set<String>): List<AppCategory> =
+        ALL.filter { it.id in BACKFILL_SEED_IDS && it.id !in existingIds }
 
     /**
      * The color tokens the 2026-11 seeds shipped with, keyed by category id. Used only
