@@ -268,9 +268,45 @@ Test on a standard emulator **and** physical devices from manufacturers with agg
 
 ## 12. Open items
 
-- Default package → category mapping source (bundled list vs. `ApplicationInfo.category`).
+- ~~Default package → category mapping source~~ → decided: bundled list of well-known packages (`:domain` `DefaultPackageCategories`); `ApplicationInfo.category` was rejected as a sole source (unreliable, often unclassified).
 - Split-screen total rule validation on real devices (R8).
 - Overlap window length for reconciliation (§6).
 - Whether hidden apps count in totals (R13).
 - Database encryption decision.
 
+
+## 13. Category analytics (implemented 2026-11)
+
+Sumi has a user-manageable category system. Design tenets:
+
+- **Single primary category per app** (`applications.categoryId`, null = uncategorized).
+  This makes the no-double-count invariant structural, not a query convention.
+- **Category totals are derived at read time, never stored** (DATA_MODEL §5 rule 7).
+  `Domain` computes the breakdown from immutable `daily_app_usage` rows joined with the
+  current assignment. Percentages are denominated on the same window's total tracked
+  usage (uncategorized included).
+- **Reassignment policy: current assignment wins.** Historical category views are
+  re-derived from the untouched raw records at the next read; raw usage is never
+  rewritten. This is deliberately *not* point-in-time category history. Deleting a
+  category reassigns its apps to the user-chosen target (default: uncategorized);
+  user-assigned rows keep `isCategoryUserSet = true`, auto-classified rows keep
+  `isCategoryUserSet = false` so default classification can reclaim them.
+- **Classification precedence: user override > bundled default > uncategorized.**
+  `:domain`'s `DefaultPackageCategories` maps well-known packages to defaults and is
+  applied at row creation and at bootstrap (`CategoryBootstrap`). Unknown packages are
+  **never silently classified** — they stay uncategorized. Mapping runs on package
+  identifiers, never on display names.
+- Seeding is idempotent (`INSERT IGNORE`) and user edits are never overwritten.
+- Exclusion set: Sumi itself and (by R13, still open) the launcher. Everything else —
+  including system apps — is tracked unless hidden later by an explicit rule.
+
+## 14. Goals versus restriction (implemented 2026-11)
+
+The daily screen-time goal is an **awareness instrument**: it gates nothing, blocks
+nothing, and notifies no one. It is evaluated from the same daily aggregate as the
+headline statistic (never a separate source), computed in `:domain` (`DailyGoal`), and
+stored in DataStore (`daily_goal_minutes`, `daily_goal_enabled`). Exceeding the goal is
+reported in neutral language; remaining time is clamped at zero and never renders as a
+negative value. The Focus destination is conceptually separate and the goal is never a
+precondition for anything there. Any future enforcement feature would require explicit
+user consent, a separate design, and its own threat analysis — it is out of scope.

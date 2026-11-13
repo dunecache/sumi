@@ -13,7 +13,11 @@ object Routes {
     const val FOCUS = "focus"
     const val APPS = "apps"
     const val SETTINGS = "settings"
+    const val CATEGORY_MANAGER = "categories"
 
     fun appDetail(packageName: String) = "app-detail/$packageName"
     fun appDetailPattern() = "app-detail/{packageName}"
+
+    fun categoryDetail(categoryId: String) = "category/$categoryId"
+    fun categoryDetailPattern() = "category/{categoryId}"
 }

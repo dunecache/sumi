@@ -72,12 +72,25 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 > Apps rows and Today most-used show launcher icons, display names, durations and shares;
 > App detail renders real history; adaptive NavigationRail on ≥600dp; edge-to-edge on.
 > Ticks below reflect the code as of this pass.
+>
+> **Category analytics pass (2026-11):** persistent user-manageable categories (schema v2,
+> migration 1→2), read-time category derivation with the current-assignment-recalculates-
+> history policy, seeded defaults + bundled mapping (unknown apps stay uncategorized),
+> segmented distribution on Today and Insights, category detail screen (share, 7-day series,
+> app breakdown), category manager (create/rename/recolor/reorder/delete with reassignment),
+> prominent daily intention goal (DataStore-backed, pure awareness, never enforcement),
+> Apps filter/sort with category chips, assignment from app detail. Tests: domain category
+> and goal logic, app-level intention/filter/slug/derivation logic. NOT yet run: migration
+> test (androidTest, no device available) — see acceptance note below.
 
 - [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
 - [x] **Apps**: searchable library with icon, name, today and weekly usage, category
 - [x] **App detail**: individual usage history
-- [~] **Category detail**: group usage (category mapping + chips in place; dedicated detail screen pending)
+- [x] **Category detail**: total, share of tracked time, trailing-7-day series, app breakdown (current assignment; raw records never rewritten)
 - [x] App categories: default mapping + user override
+- [x] Category management screen: create / rename / recolor / reorder / delete with reassignment; persistence across restarts
+- [x] Uncategorized residual bucket; unknown packages never silently classified
+- [x] Daily intention goal: prominent Today card, edit sheet, disabled/reached/exceeded states, app-specific tests
 - [x] Daily and weekly charts (Compose Canvas)
 - [x] Usage timeline (activity across the day)
 - [x] Weekly overview: compare days

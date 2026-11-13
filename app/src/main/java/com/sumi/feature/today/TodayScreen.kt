@@ -15,9 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sumi.core.designsystem.component.AppUsageRow
+import com.sumi.core.designsystem.component.CategoryDistributionCard
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
@@ -38,16 +41,41 @@ import java.util.Locale
 @Composable
 fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
+    onOpenAppDetail: (packageName: String) -> Unit = {},
+    onOpenCategoryDetail: (categoryId: String) -> Unit = {},
+    onOpenCategories: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
     val iconLoader = remember(viewModel) { viewModel.iconLoader::iconFor }
-    TodayContent(state = state, iconLoader = iconLoader)
+    var showGoalSheet by remember { mutableStateOf(false) }
+    TodayContent(
+        state = state,
+        iconLoader = iconLoader,
+        onOpenAppDetail = onOpenAppDetail,
+        onOpenCategoryDetail = onOpenCategoryDetail,
+        onOpenCategories = onOpenCategories,
+        onGoalEdit = { showGoalSheet = true },
+    )
+    if (showGoalSheet) {
+        GoalEditSheet(
+            currentMinutes = state.intentionGoalMinutes,
+            enabled = state.intentionEnabled,
+            onDismiss = { showGoalSheet = false },
+            onSave = { viewModel.saveGoal(it); showGoalSheet = false },
+            onRemove = { viewModel.removeGoal(); showGoalSheet = false },
+            onEnabledChange = viewModel::setGoalEnabled,
+        )
+    }
 }
 
 @Composable
 fun TodayContent(
     state: TodayUiState,
     iconLoader: (suspend (String) -> Drawable?)? = null,
+    onOpenAppDetail: (packageName: String) -> Unit = {},
+    onOpenCategoryDetail: (categoryId: String) -> Unit = {},
+    onOpenCategories: () -> Unit = {},
+    onGoalEdit: () -> Unit = {},
 ) {
     when {
         // Loading keeps the layout with placeholders (§3.9) — previous content, never a spinner.
@@ -73,7 +101,14 @@ fun TodayContent(
                 )
                 Spacer(Modifier.weight(1f))
             }
-        else -> TodayBody(state = state, iconLoader = iconLoader)
+        else -> TodayBody(
+            state = state,
+            iconLoader = iconLoader,
+            onOpenAppDetail = onOpenAppDetail,
+            onOpenCategoryDetail = onOpenCategoryDetail,
+            onOpenCategories = onOpenCategories,
+            onGoalEdit = onGoalEdit,
+        )
     }
 }
 
@@ -90,7 +125,14 @@ private fun TodayHeader() {
 
 /** Populated (or placeholder-loading) layout, vertical order fixed per §3.1. */
 @Composable
-private fun TodayBody(state: TodayUiState, iconLoader: (suspend (String) -> Drawable?)?) {
+private fun TodayBody(
+    state: TodayUiState,
+    iconLoader: (suspend (String) -> Drawable?)?,
+    onOpenAppDetail: (packageName: String) -> Unit = {},
+    onOpenCategoryDetail: (categoryId: String) -> Unit = {},
+    onOpenCategories: () -> Unit = {},
+    onGoalEdit: () -> Unit = {},
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -120,6 +162,26 @@ private fun TodayBody(state: TodayUiState, iconLoader: (suspend (String) -> Draw
             )
         }
 
+        // Daily intention (§4): prominent, editable, purely informational — never an enforcement.
+        if (!state.isLoading) {
+            Spacer(Modifier.height(SumiSpacing.lg))
+            DailyIntentionCard(
+                state = state.intention,
+                onEdit = onGoalEdit,
+            )
+        }
+
+        // Category distribution (§5): total tracked, proportional bar, labeled list. Uncategorized last.
+        if (!state.isLoading && state.categories.isNotEmpty()) {
+            Spacer(Modifier.height(SumiSpacing.xl))
+            CategoryDistributionCard(
+                segments = state.categories,
+                totalDurationMs = state.trackedDurationMs,
+                onCategoryClick = onOpenCategoryDetail,
+                onSeeAll = onOpenCategories,
+            )
+        }
+
         // Most used (§3.5): ranked rows with icon, name, duration, share — no bulky cards.
         if (!state.isLoading && state.mostUsed.isNotEmpty()) {
             Spacer(Modifier.height(SumiSpacing.xl))
@@ -131,12 +193,14 @@ private fun TodayBody(state: TodayUiState, iconLoader: (suspend (String) -> Draw
                         packageName = app.packageName,
                         displayName = app.displayName,
                         durationMs = app.durationMs,
-                        shareOfTotal = if (state.totalDurationMs > 0L) {
-                            app.durationMs.toFloat() / state.totalDurationMs.toFloat()
+                        // App percentages use total tracked application usage as the denominator.
+                        shareOfTotal = if (state.trackedDurationMs > 0L) {
+                            app.durationMs.toFloat() / state.trackedDurationMs.toFloat()
                         } else {
                             null
                         },
                         iconLoader = iconLoader,
+                        onClick = { onOpenAppDetail(app.packageName) },
                     )
                 }
             }

@@ -1,5 +1,6 @@
 package com.sumi.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -15,6 +16,9 @@ data class AppCategory(
     @PrimaryKey val id: String, // stable slug, e.g. social, entertainment
     val name: String,
     val colorToken: String, // design-system token name, not a hex value
+    // Migration 1→2: display order (0-based) and whether the user created it.
+    @ColumnInfo(defaultValue = "0") val sortOrder: Int = 0,
+    @ColumnInfo(defaultValue = "0") val isUserCreated: Boolean = false,
 )
 
 @Entity(tableName = "applications")

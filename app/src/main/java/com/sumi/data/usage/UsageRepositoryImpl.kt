@@ -16,6 +16,7 @@ import com.sumi.core.database.entity.HourlyUsage as EntityHourlyUsage
 import com.sumi.core.database.entity.UsageSession as EntitySession
 import com.sumi.platform.applications.AppLabelResolver
 import com.sumi.domain.common.Clock
+import com.sumi.domain.categories.DefaultPackageCategories
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
 import com.sumi.domain.usage.Aggregation
@@ -225,7 +226,10 @@ class UsageRepositoryImpl @Inject constructor(
                     val existing = existingByPackage[pkg]
                     val label = labelResolver.labelFor(pkg)?.takeIf { it != pkg }
                     when {
-                        existing == null -> Application(pkg, label ?: pkg)
+                        // Fresh rows: seed a confident default when one exists; unknown
+                        // packages stay uncategorized (never silently classified).
+                        existing == null ->
+                            Application(pkg, label ?: pkg, categoryId = DefaultPackageCategories.forPackage(pkg))
                         // displayName == packageName marks the unresolved placeholder.
                         label != null && existing.displayName == existing.packageName ->
                             existing.copy(displayName = label)

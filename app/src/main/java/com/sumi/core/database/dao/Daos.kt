@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.sumi.core.database.entity.AppCategory
 import com.sumi.core.database.entity.Application
 import com.sumi.core.database.entity.CollectionState
 import com.sumi.core.database.entity.DailyAppUsage
@@ -11,6 +12,33 @@ import com.sumi.core.database.entity.DailyUsage
 import com.sumi.core.database.entity.HourlyUsage
 import com.sumi.core.database.entity.UsageSession
 import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface AppCategoryDao {
+    @Query("SELECT * FROM app_categories ORDER BY sortOrder ASC, name COLLATE NOCASE ASC")
+    fun observeAll(): Flow<List<AppCategory>>
+
+    @Query("SELECT * FROM app_categories ORDER BY sortOrder ASC, name COLLATE NOCASE ASC")
+    suspend fun getAll(): List<AppCategory>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(categories: List<AppCategory>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(category: AppCategory)
+
+    @Query("DELETE FROM app_categories WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("SELECT COUNT(*) FROM app_categories")
+    suspend fun count(): Int
+
+    @Query("SELECT * FROM app_categories WHERE id = :id")
+    suspend fun getById(id: String): AppCategory?
+}
+
+/** Projection for per-category application counts (GROUP BY categoryId). */
+data class CategoryCount(val categoryId: String?, val count: Int)
 
 @Dao
 interface ApplicationDao {
@@ -25,6 +53,38 @@ interface ApplicationDao {
 
     @Query("SELECT * FROM applications WHERE packageName = :packageName")
     suspend fun getByPackage(packageName: String): Application?
+
+    @Query("SELECT * FROM applications WHERE packageName = :packageName")
+    fun observeByPackage(packageName: String): Flow<Application?>
+
+    @Query("UPDATE applications SET categoryId = :categoryId, isCategoryUserSet = :userSet WHERE packageName = :packageName")
+    suspend fun setCategory(packageName: String, categoryId: String?, userSet: Boolean)
+
+    @Query("SELECT * FROM applications WHERE categoryId = :categoryId ORDER BY displayName COLLATE NOCASE")
+    fun observeByCategory(categoryId: String): Flow<List<Application>>
+
+    @Query("SELECT * FROM applications WHERE categoryId = :categoryId ORDER BY displayName COLLATE NOCASE")
+    suspend fun getByCategory(categoryId: String): List<Application>
+
+    @Query("SELECT * FROM applications WHERE categoryId IS NULL ORDER BY displayName COLLATE NOCASE")
+    fun observeUncategorized(): Flow<List<Application>>
+
+    @Query("SELECT * FROM applications WHERE categoryId IS NULL ORDER BY displayName COLLATE NOCASE")
+    suspend fun getUncategorized(): List<Application>
+
+    @Query("SELECT categoryId AS categoryId, COUNT(*) AS count FROM applications GROUP BY categoryId")
+    fun observeCategoryCounts(): Flow<List<CategoryCount>>
+    /** Rows never explicitly classified by the user; eligible for default assignment. */
+    @Query("SELECT * FROM applications WHERE isCategoryUserSet = 0 AND categoryId IS NULL")
+    suspend fun getUnclassified(): List<Application>
+
+    /** Auto-classified rows follow the deletion target (defaults still eligible afterwards). */
+    @Query("UPDATE applications SET categoryId = :to, isCategoryUserSet = 0 WHERE categoryId = :from AND isCategoryUserSet = 0")
+    suspend fun reassignAutoAssigned(from: String, to: String?)
+
+    /** User-assigned rows follow the deletion target and stay user-assigned. */
+    @Query("UPDATE applications SET categoryId = :to, isCategoryUserSet = 1 WHERE categoryId = :from AND isCategoryUserSet = 1")
+    suspend fun reassignUserAssigned(from: String, to: String?)
 }
 
 @Dao

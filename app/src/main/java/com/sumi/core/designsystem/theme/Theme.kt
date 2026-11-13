@@ -137,6 +137,18 @@ fun categoryColor(colorToken: String): Color {
     return extended.categories.getOrElse(categoryColorIndex(colorToken)) { extended.categories.first() }
 }
 
+/**
+ * Resolves a category color token; `categoryNeutral`/`neutral` map to a muted
+ * grey for residual or low-emphasis categories (accents never carry meaning alone).
+ */
+@Composable
+fun categoryColorOrNeutral(colorToken: String): Color =
+    if (colorToken == "categoryNeutral" || colorToken == "neutral") {
+        sumiExtendedColors().onSurfaceMuted
+    } else {
+        categoryColor(colorToken)
+    }
+
 @Composable
 fun SumiTheme(
     darkTheme: Boolean,

@@ -3,7 +3,9 @@ package com.sumi.feature.apps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sumi.core.database.dao.ApplicationDao
+import com.sumi.core.database.entity.AppCategory
 import com.sumi.core.database.entity.Application
+import com.sumi.data.categories.CategoryRepository
 import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
@@ -12,6 +14,7 @@ import com.sumi.platform.applications.AppIconLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,17 +30,38 @@ data class AppRow(
     val weekMs: Long,
 )
 
+/** Category chip shown under the search field. sortOrder mirrors the manager ordering. */
+data class CategoryFilterChip(
+    val id: String,
+    val name: String,
+    val colorToken: String,
+    val sortOrder: Int,
+)
+
+/** Category filter for the library. */
+sealed interface AppsFilter {
+    data object All : AppsFilter
+    data object Uncategorized : AppsFilter
+    data class Category(val id: String) : AppsFilter
+}
+
+enum class AppsSort { MOST_USED, LEAST_USED, ALPHABETICAL, CATEGORY }
+
 data class AppsUiState(
     val isLoading: Boolean = true,
     val apps: List<AppRow> = emptyList(),
     /** Total for today across all apps; denominates the per-row share bars. */
     val todayTotalMs: Long = 0L,
+    val categories: List<CategoryFilterChip> = emptyList(),
+    val filter: AppsFilter = AppsFilter.All,
+    val sort: AppsSort = AppsSort.MOST_USED,
 )
 
 @HiltViewModel
 class AppsViewModel @Inject constructor(
     private val applicationDao: ApplicationDao,
     private val repository: UsageRepository,
+    private val categoryRepository: CategoryRepository,
     private val clock: Clock,
     private val timeZone: TimeZoneProvider,
     iconLoader: AppIconLoader,
@@ -46,33 +70,52 @@ class AppsViewModel @Inject constructor(
     /** Platform icon resolution for row rendering; the UiState itself stays pure data. */
     val iconLoader: AppIconLoader = iconLoader
 
-    val uiState: StateFlow<AppsUiState> = combine(
-        applicationDao.observeInstalled(),
-        todayUsage(),
-        weekUsage(),
-    ) { applications, todayByApp, weekByApp ->
-        val rows = appRows(applications, todayByApp, weekByApp)
-        AppsUiState(
-            isLoading = false,
-            apps = rows,
-            todayTotalMs = todayByApp.values.sum(),
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppsUiState())
-
-    private val _query = kotlinx.coroutines.flow.MutableStateFlow("")
+    private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query
+
+    private val _filter = MutableStateFlow<AppsFilter>(AppsFilter.All)
+    val filter: StateFlow<AppsFilter> = _filter
+
+    private val _sort = MutableStateFlow(AppsSort.MOST_USED)
+    val sort: StateFlow<AppsSort> = _sort
 
     fun onQueryChange(value: String) {
         _query.value = value
     }
 
-    fun filtered(rows: List<AppRow>): List<AppRow> {
-        val q = _query.value.trim()
-        if (q.isEmpty()) return rows
-        return rows.filter {
-            it.displayName.contains(q, ignoreCase = true) || it.packageName.contains(q, ignoreCase = true)
-        }
+    fun onFilterChange(filter: AppsFilter) {
+        _filter.value = filter
     }
+
+    fun onSortChange(sort: AppsSort) {
+        _sort.value = sort
+    }
+
+    private val base = combine(
+        applicationDao.observeInstalled(),
+        todayUsage(),
+        weekUsage(),
+        categoryRepository.observeCategories(),
+    ) { applications, todayByApp, weekByApp, categories ->
+        BaseData(applications, todayByApp, weekByApp, categories)
+    }
+
+    private val params = combine(_query, _filter, _sort) { query, filter, sort ->
+        Triple(query, filter, sort)
+    }
+
+    val uiState: StateFlow<AppsUiState> = combine(base, params) { data, (q, f, s) ->
+        val rows = appRows(data.applications, data.todayByApp, data.weekByApp)
+        val chips = data.categories.map { CategoryFilterChip(it.id, it.name, it.colorToken, it.sortOrder) }
+        AppsUiState(
+            isLoading = false,
+            apps = filterAndSort(rows, q, chips, f, s),
+            todayTotalMs = data.todayByApp.values.sum(),
+            categories = chips,
+            filter = f,
+            sort = s,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppsUiState())
 
     private fun todayUsage(): Flow<Map<String, Long>> =
         repository.observeDailyAppUsage(todayKey()).map { rows ->
@@ -94,28 +137,64 @@ class AppsViewModel @Inject constructor(
         val today = todayKey()
         return (0..6).map { offset -> DateKey.shift(today, -offset.toLong()) }
     }
+
+    private data class BaseData(
+        val applications: List<Application>,
+        val todayByApp: Map<String, Long>,
+        val weekByApp: Map<String, Long>,
+        val categories: List<AppCategory>,
+    )
 }
 
 /**
- * Library rows: every installed app appears; used apps rank by today's usage (then name),
- * unused apps follow alphabetically. Weekly totals are summed across the trailing 7 days.
+ * Library rows: every installed app appears; weekly totals are summed across the
+ * trailing 7 days. Ordering is applied later by [filterAndSort].
  */
 internal fun appRows(
     applications: List<Application>,
     todayByApp: Map<String, Long>,
     weekByApp: Map<String, Long>,
-): List<AppRow> = applications
-    .map { app ->
-        AppRow(
-            packageName = app.packageName,
-            displayName = app.displayName,
-            categoryId = app.categoryId,
-            todayMs = todayByApp[app.packageName] ?: 0L,
-            weekMs = weekByApp[app.packageName] ?: 0L,
-        )
-    }
-    .sortedWith(
-        compareByDescending<AppRow> { it.todayMs }
-            .thenByDescending { it.weekMs }
-            .thenBy { it.displayName },
+): List<AppRow> = applications.map { app ->
+    AppRow(
+        packageName = app.packageName,
+        displayName = app.displayName,
+        categoryId = app.categoryId,
+        todayMs = todayByApp[app.packageName] ?: 0L,
+        weekMs = weekByApp[app.packageName] ?: 0L,
     )
+}
+
+/** Pure and tested (AppsLogicTest): search + category filter + sort, deterministic. */
+internal fun filterAndSort(
+    rows: List<AppRow>,
+    query: String,
+    categories: List<CategoryFilterChip>,
+    filter: AppsFilter,
+    sort: AppsSort,
+): List<AppRow> {
+    val q = query.trim()
+    val filtered = rows.filter { row ->
+        val matchesFilter = when (filter) {
+            AppsFilter.All -> true
+            AppsFilter.Uncategorized -> row.categoryId == null
+            is AppsFilter.Category -> row.categoryId == filter.id
+        }
+        val matchesQuery = q.isEmpty() ||
+            row.displayName.contains(q, ignoreCase = true) ||
+            row.packageName.contains(q, ignoreCase = true)
+        matchesFilter && matchesQuery
+    }
+    val byName = compareBy<AppRow> { it.displayName.lowercase() }
+    return when (sort) {
+        AppsSort.MOST_USED -> filtered.sortedWith(compareByDescending<AppRow> { it.todayMs }.then(byName))
+        AppsSort.LEAST_USED -> filtered.sortedWith(compareBy<AppRow> { it.todayMs }.then(byName))
+        AppsSort.ALPHABETICAL -> filtered.sortedWith(byName)
+        AppsSort.CATEGORY -> {
+            val order = categories.mapIndexed { index, chip -> chip.id to index }.toMap()
+            filtered.sortedWith(
+                compareBy<AppRow> { row -> row.categoryId?.let { order[it] } ?: Int.MAX_VALUE }
+                    .then(byName),
+            )
+        }
+    }
+}
