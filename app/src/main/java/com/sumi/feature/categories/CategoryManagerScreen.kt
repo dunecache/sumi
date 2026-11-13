@@ -61,26 +61,21 @@ internal val CATEGORY_COLOR_TOKENS = listOf(
 )
 
 /**
+ * Stateless content; see [CategoryManagerScreen] for the viewmodel wiring.
  * Category manager: rename, recolor, reorder, add, or delete categories. Deletion always
  * reassigns member apps (chosen target, default uncategorized). Uncategorized is a view,
  * not a category — it cannot be created, renamed, recolored, or deleted.
  */
 @Composable
-fun CategoryManagerScreen(
-    viewModel: CategoriesViewModel = hiltViewModel(),
+internal fun CategoryManagerContent(
+    state: CategoriesUiState,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    onMove: (CategoryRow, delta: Int) -> Unit = { _, _ -> },
+    onEdit: (CategoryRow) -> Unit = {},
+    onAdd: () -> Unit = {},
 ) {
-    val state by viewModel.uiState.collectAsState()
-    var adding by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<CategoryRow?>(null) }
-
-    if (state.isLoading) {
-        LoadingState()
-        return
-    }
-
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier
             .verticalScroll(rememberScrollState())
             .padding(SumiSpacing.screenHorizontal)
             .padding(top = SumiSpacing.lg),
@@ -99,20 +94,41 @@ fun CategoryManagerScreen(
                     category = category,
                     canMoveUp = index > 0,
                     canMoveDown = index < state.categories.size - 1,
-                    onMove = { delta -> viewModel.move(category.id, delta) },
-                    onClick = { editing = category },
+                    onMove = { delta -> onMove(category, delta) },
+                    onClick = { onEdit(category) },
                 )
             }
         }
         Spacer(Modifier.height(SumiSpacing.lg))
         Button(
-            onClick = { adding = true },
+            onClick = onAdd,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Add category")
         }
         Spacer(Modifier.height(SumiSpacing.xl))
     }
+}
+
+@Composable
+fun CategoryManagerScreen(
+    viewModel: CategoriesViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+    var adding by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<CategoryRow?>(null) }
+
+    if (state.isLoading) {
+        LoadingState()
+        return
+    }
+
+    CategoryManagerContent(
+        state = state,
+        onMove = { category, delta -> viewModel.move(category.id, delta) },
+        onEdit = { category -> editing = category },
+        onAdd = { adding = true },
+    )
 
     if (adding) {
         CategoryEditSheet(
