@@ -89,7 +89,12 @@ internal fun deriveState(
         // Category was deleted (or the id is stale) while this screen was open.
         return CategoryDetailUiState(isLoading = false, exists = false, categoryId = categoryId)
     }
-    val memberPackages = apps.mapTo(HashSet()) { it.packageName }
+    // Members are decided by the *current* assignment, not by whatever the caller passed
+    // in: only apps whose categoryId matches belong to this category's numbers. A
+    // reassigned app therefore leaves the old category immediately (current-assignment
+    // policy), and uncategorized apps never leak into any category bucket.
+    val members = apps.filter { it.categoryId == categoryId }
+    val memberPackages = members.mapTo(HashSet()) { it.packageName }
     val todayByPkg = todayUsage.associate { it.packageName to it.durationMs }
     val trackedToday = todayUsage.sumOf { it.durationMs }
     val todayMs = memberPackages.sumOf { todayByPkg[it] ?: 0L }
@@ -101,7 +106,7 @@ internal fun deriveState(
     }
     val weekTotal = week.sum()
 
-    val rows = apps.map { app ->
+    val rows = members.map { app ->
         val ms = todayByPkg[app.packageName] ?: 0L
         CategoryAppRow(
             packageName = app.packageName,
