@@ -71,7 +71,10 @@ object CategoryAnalytics {
             bucket.apps += 1
         }
         val named = buckets.map { (id, acc) ->
-            val name = id?.let { categoryNames[it] } ?: uncategorizedName
+            val name = when {
+                id == null -> uncategorizedName
+                else -> categoryNames[id] ?: id // raw id fallback when a category vanished
+            }
             CategoryUsage(id, name, acc.total, acc.apps)
         }
         val namedSorted = named
