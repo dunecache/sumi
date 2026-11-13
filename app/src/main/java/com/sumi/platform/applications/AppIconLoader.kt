@@ -28,18 +28,23 @@ class PackageManagerIconLoader @Inject constructor(
     private val dispatchers: AppDispatchers,
 ) : AppIconLoader {
 
-    // Cache nulls too: negative lookups (uninstalled/hidden) are the expensive repeat case.
-    private val cache = object : LruCache<String, Drawable?>(CACHE_ENTRIES) {}
+    // Negative lookups (uninstalled/hidden) are the expensive repeat case, so they are
+    // cached too — via a sentinel, since the platform LruCache rejects null values.
+    private val cache = LruCache<String, Any>(CACHE_ENTRIES)
 
     override suspend fun iconFor(packageName: String): Drawable? = withContext(dispatchers.io) {
         if (packageName.isBlank()) return@withContext null
-        cache.get(packageName) ?: loadAndCache(packageName)
+        when (val cached = cache.get(packageName)) {
+            null -> loadAndCache(packageName) // cache miss
+            NEGATIVE_ENTRY -> null // cached negative: no icon resolvable
+            else -> cached as Drawable
+        }
     }
 
     private fun loadAndCache(packageName: String): Drawable? {
         val pm = context.packageManager
         val icon = resolve(pm, packageName)
-        cache.put(packageName, icon)
+        cache.put(packageName, icon ?: NEGATIVE_ENTRY)
         return icon
     }
 
@@ -62,5 +67,8 @@ class PackageManagerIconLoader @Inject constructor(
 
     private companion object {
         const val CACHE_ENTRIES = 128
+
+        /** Sentinel for cached negative lookups; never returned to callers. */
+        val NEGATIVE_ENTRY = Any()
     }
 }
