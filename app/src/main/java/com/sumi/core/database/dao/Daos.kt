@@ -37,9 +37,6 @@ interface AppCategoryDao {
     suspend fun getById(id: String): AppCategory?
 }
 
-/** Projection for per-category application counts (GROUP BY categoryId). */
-data class CategoryCount(val categoryId: String?, val count: Int)
-
 @Dao
 interface ApplicationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -72,8 +69,6 @@ interface ApplicationDao {
     @Query("SELECT * FROM applications WHERE categoryId IS NULL ORDER BY displayName COLLATE NOCASE")
     suspend fun getUncategorized(): List<Application>
 
-    @Query("SELECT categoryId AS categoryId, COUNT(*) AS count FROM applications GROUP BY categoryId")
-    fun observeCategoryCounts(): Flow<List<CategoryCount>>
     /** Rows never explicitly classified by the user; eligible for default assignment. */
     @Query("SELECT * FROM applications WHERE isCategoryUserSet = 0 AND categoryId IS NULL")
     suspend fun getUnclassified(): List<Application>

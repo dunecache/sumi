@@ -17,12 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenu
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -229,7 +224,6 @@ private fun CategoryEditSheet(
     var color by remember { mutableStateOf(initialColor) }
     var showReassign by remember { mutableStateOf(false) }
     var target by remember { mutableStateOf<String?>(null) } // null = Uncategorized
-    var targetExpanded by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -298,33 +292,19 @@ private fun CategoryEditSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(SumiSpacing.sm))
-                ExposedDropdownMenuBox(
-                    expanded = targetExpanded,
-                    onExpandedChange = { targetExpanded = !targetExpanded },
-                ) {
-                    OutlinedTextField(
-                        value = otherCategories.firstOrNull { it.id == target }?.name ?: "Uncategorized",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Move apps to") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded) },
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+                TargetRow(
+                    name = "Uncategorized",
+                    colorToken = "categoryNeutral",
+                    selected = target == null,
+                    onClick = { target = null },
+                )
+                otherCategories.forEach { option ->
+                    TargetRow(
+                        name = option.name,
+                        colorToken = option.colorToken,
+                        selected = target == option.id,
+                        onClick = { target = option.id },
                     )
-                    ExposedDropdownMenu(
-                        expanded = targetExpanded,
-                        onDismissRequest = { targetExpanded = false },
-                    ) {
-                        ReassignMenuItem(label = "Uncategorized", selected = target == null) {
-                            target = null
-                            targetExpanded = false
-                        }
-                        otherCategories.forEach { option ->
-                            ReassignMenuItem(label = option.name, selected = target == option.id) {
-                                target = option.id
-                                targetExpanded = false
-                            }
-                        }
-                    }
                 }
                 Spacer(Modifier.height(SumiSpacing.sm))
                 Row(
@@ -357,21 +337,40 @@ private fun CategoryEditSheet(
 }
 
 @Composable
-private fun ReassignMenuItem(
-    label: String,
+private fun TargetRow(
+    name: String,
+    colorToken: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    DropdownMenuItem(
-        text = { Text(label) },
-        onClick = onClick,
-        leadingIcon = if (selected) {
-            { Icon(Icons.Filled.Check, contentDescription = "Selected") }
-        } else {
-            null
-        },
-    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClickLabel = "Move apps to $name", onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = "Move apps to $name" }
+            .padding(vertical = SumiSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ColorDot(colorToken = colorToken, size = TargetDot)
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = SumiSpacing.md),
+            maxLines = 1,
+        )
+        if (selected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = "Selected",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
+
+private val TargetDot = 20.dp
 
 /** Clickable role-button semantics for the color swatches. */
 private fun Modifier.clickableRoleButton(

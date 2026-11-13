@@ -2,6 +2,7 @@ package com.sumi.di
 
 import com.sumi.core.database.DatabaseFactory
 import com.sumi.core.database.SumiDatabase
+import com.sumi.core.database.dao.AppCategoryDao
 import com.sumi.core.database.dao.ApplicationDao
 import com.sumi.core.database.dao.CollectionStateDao
 import com.sumi.core.database.dao.DailyAppUsageDao
