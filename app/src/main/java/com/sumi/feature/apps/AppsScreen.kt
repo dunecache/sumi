@@ -1,5 +1,6 @@
 package com.sumi.feature.apps
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,13 +15,23 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sumi.core.designsystem.component.AppUsageRow
+import com.sumi.core.designsystem.component.DurationText
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
+import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.SumiSpacing
 
-/** Apps: searchable library (M2). Row shows icon placeholder, name, category chip. */
+/**
+ * Apps: searchable library. Rows show the launcher icon, the friendly display name,
+ * today's and the trailing week's usage, and a proportional share bar for today.
+ * Raw package identifiers never appear as the primary presentation; they live in
+ * App detail as quiet metadata.
+ */
 @Composable
 fun AppsScreen(
     viewModel: AppsViewModel = hiltViewModel(),
@@ -28,6 +39,7 @@ fun AppsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val query by viewModel.query.collectAsState()
+    val iconLoader = remember(viewModel) { viewModel.iconLoader::iconFor }
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
         Spacer(Modifier.height(SumiSpacing.lg))
         Text(text = "Apps", style = MaterialTheme.typography.headlineMedium)
@@ -54,11 +66,29 @@ fun AppsScreen(
                         message = "Try a different search.",
                     )
                 } else {
-                    LazyColumn(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(SumiSpacing.sm)) {
-                        items(filtered) { app ->
-                            androidx.compose.material3.ListItem(
-                                headlineContent = { Text(app.displayName) },
-                                supportingContent = { Text(app.packageName) },
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(SumiSpacing.sm)) {
+                        items(filtered, key = { it.packageName }) { app ->
+                            AppUsageRow(
+                                packageName = app.packageName,
+                                displayName = app.displayName,
+                                durationMs = app.todayMs,
+                                shareOfTotal = if (state.todayTotalMs > 0L && app.todayMs > 0L) {
+                                    app.todayMs.toFloat() / state.todayTotalMs.toFloat()
+                                } else {
+                                    null
+                                },
+                                iconLoader = iconLoader,
+                                onClick = { onOpenAppDetail(app.packageName) },
+                                trailing = {
+                                    Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                                        DurationText(durationMs = app.todayMs)
+                                        Text(
+                                            text = "wk ${formatWeek(app.weekMs)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
                             )
                         }
                     }
@@ -67,3 +97,6 @@ fun AppsScreen(
         }
     }
 }
+
+/** Compact week total; "wk" prefix keeps the trailing column readable. */
+private fun formatWeek(ms: Long): String = formatDuration(ms)

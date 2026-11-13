@@ -14,6 +14,9 @@ interface UsageRepository {
     /** Observed per-app totals for [dateKey], sorted by duration desc. */
     fun observeDailyAppUsage(dateKey: String): Flow<List<DailyAppUsage>>
 
+    /** Observed per-app totals across [dateKeys] (e.g. a trailing week). */
+    fun observeDailyAppUsageRange(dateKeys: List<String>): Flow<List<DailyAppUsage>>
+
     /** Observed hourly buckets for [dateKey]. */
     fun observeHourlyUsage(dateKey: String): Flow<List<HourlyUsage>>
 

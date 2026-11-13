@@ -83,6 +83,9 @@ interface DailyAppUsageDao {
     @Query("SELECT * FROM daily_app_usage WHERE dateKey = :dateKey")
     fun observeByDateKey(dateKey: String): Flow<List<DailyAppUsage>>
 
+    @Query("SELECT * FROM daily_app_usage WHERE dateKey IN (:dateKeys)")
+    fun observeByDateKeys(dateKeys: List<String>): Flow<List<DailyAppUsage>>
+
     @Query("SELECT * FROM daily_app_usage WHERE packageName = :packageName ORDER BY dateKey DESC")
     fun observeByPackage(packageName: String): Flow<List<DailyAppUsage>>
 

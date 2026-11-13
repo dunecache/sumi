@@ -32,6 +32,7 @@ import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -69,6 +70,13 @@ class UsageRepositoryImpl @Inject constructor(
             list.map { DailyAppUsage(it.dateKey, it.packageName, it.durationMs, parseSource(it.source)) }
                 .sortedByDescending { it.durationMs }
         }
+
+    override fun observeDailyAppUsageRange(dateKeys: List<String>): Flow<List<DailyAppUsage>> {
+        if (dateKeys.isEmpty()) return flowOf(emptyList())
+        return db.dailyAppUsageDao().observeByDateKeys(dateKeys).map { list ->
+            list.map { DailyAppUsage(it.dateKey, it.packageName, it.durationMs, parseSource(it.source)) }
+        }
+    }
 
     private fun observeDailyAppUsageEntities(dateKey: String): Flow<List<EntityDailyAppUsage>> =
         db.dailyAppUsageDao().observeByDateKey(dateKey)
