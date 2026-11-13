@@ -43,9 +43,26 @@ fun CategoryDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val iconLoader = remember(viewModel) { viewModel.iconLoader::iconFor }
+    CategoryDetailContent(
+        state = state,
+        iconLoader = iconLoader,
+        onOpenAppDetail = onOpenAppDetail,
+        onManageCategories = onManageCategories,
+    )
+}
+
+/** Stateless content; previews below exercise loading, removed and populated states. */
+@Composable
+internal fun CategoryDetailContent(
+    state: CategoryDetailUiState,
+    modifier: Modifier = Modifier,
+    iconLoader: (suspend (String) -> android.graphics.drawable.Drawable?)? = null,
+    onOpenAppDetail: (packageName: String) -> Unit = {},
+    onManageCategories: () -> Unit = {},
+) {
     when {
         state.isLoading -> LoadingState()
-        !state.exists -> Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+        !state.exists -> Column(modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
             Spacer(Modifier.height(SumiSpacing.lg))
             EmptyState(
                 title = "Category removed",
@@ -53,7 +70,7 @@ fun CategoryDetailScreen(
             )
         }
         else -> Column(
-            Modifier
+            modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(SumiSpacing.screenHorizontal),

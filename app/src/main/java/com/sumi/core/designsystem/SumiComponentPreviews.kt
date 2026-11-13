@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.sumi.core.designsystem.component.AppUsageRow
+import com.sumi.core.designsystem.component.CategoryDistributionCard
+import com.sumi.core.designsystem.component.CategorySegment
 import com.sumi.core.designsystem.component.TimelineStrip
 import com.sumi.core.designsystem.component.WeeklyBars
 import com.sumi.core.designsystem.theme.SumiTheme
@@ -82,6 +84,44 @@ private fun PreviewWeeklyLight() {
 @Composable
 private fun PreviewWeeklyDark() {
     SumiTheme(darkTheme = true) { Column { WeeklyBars(dailyTotals = SampleWeekly) } }
+}
+
+private val SampleCategorySegments = listOf(
+    CategorySegment("social", "Social", 3_000_000L, 0.71f, "categoryColor1"),
+    CategorySegment("entertainment", "Entertainment", 900_000L, 0.21f, "categoryColor2"),
+    CategorySegment(null, "Uncategorized", 300_000L, 0.08f, "categoryNeutral"),
+)
+
+@Composable
+private fun CategoryDistributionSample(segments: List<CategorySegment>) {
+    CategoryDistributionCard(
+        segments = segments,
+        totalDurationMs = segments.sumOf { it.durationMs },
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF3F1E9, name = "Distribution · Light")
+@Composable
+private fun PreviewDistributionLight() {
+    SumiTheme(darkTheme = false) { Column { CategoryDistributionSample(SampleCategorySegments) } }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF22251F, name = "Distribution · Dark")
+@Composable
+private fun PreviewDistributionDark() {
+    SumiTheme(darkTheme = true) { Column { CategoryDistributionSample(SampleCategorySegments) } }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF3F1E9, name = "Distribution · Empty day")
+@Composable
+private fun PreviewDistributionEmpty() {
+    SumiTheme(darkTheme = false) { Column { CategoryDistributionSample(emptyList()) } }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF3F1E9, name = "Distribution · Large font", fontScale = 1.5f)
+@Composable
+private fun PreviewDistributionLargeFont() {
+    SumiTheme(darkTheme = false) { Column { CategoryDistributionSample(SampleCategorySegments) } }
 }
 
 @Preview(showBackground = true, name = "Usage row · Large font", fontScale = 1.5f)
