@@ -313,6 +313,16 @@ Sumi has a user-manageable category system. Design tenets:
   (`dailyAppDao.getPackagesMissingApplicationRows`). Without this, apps whose usage lives
   only in history (events expire after days) were invisible in the Apps library and to
   Apps search.
+- **Install-library autodetection** runs at app start (`CategoryBootstrap`) and after
+  the first-sync import: every launchable installed app gets an `applications` row, even
+  with no usage history. Add-only — discovery never deletes rows and never overwrites
+  user edits. `InstalledAppsSource` uses the launcher query (`<queries>` MAIN/LAUNCHER,
+  the same visibility the app already declares; no `QUERY_ALL_PACKAGES`).
+- **New taxonomy (2026-11):** seeds gained `ai` (AI assistants), `finance` and `browser`;
+  fresh installs get the full taxonomy, existing installs receive them at bootstrap via a
+  backfill that inserts only ids that never existed before — ids the user deleted are
+  never resurrected, and a user-created category sharing a new id wins. Colors come from
+  the existing palette (`wisteria`, `ochre`, `clay-2`).
 
 ## 14. Goals versus restriction (implemented 2026-11)
 

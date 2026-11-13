@@ -32,15 +32,20 @@ class CategoryRepository @Inject constructor(
 ) {
 
     /**
-     * Seeds the default taxonomy on first launch (or first upgrade to schema 2, where
-     * the table has never been populated). Idempotent: does nothing once rows exist.
-     * Seeded rows still carrying their original positional color token are recolored
-     * to the primitive-named defaults afterwards (see [syncSeededColors]).
+     * Seeds the default taxonomy. Fresh installs (no rows at all) get [DefaultCategories.ALL];
+     * existing installs get only the seeds that did not exist when they upgraded (see
+     * [DefaultCategories.backfillSeeds] — ids the user deleted are never re-added).
+     * Idempotent.
      */
     suspend fun ensureSeeded() = withContext(dispatchers.io) {
-        if (categoryDao.count() == 0) {
+        val count = categoryDao.count()
+        if (count == 0) {
             categoryDao.insertAll(DefaultCategories.ALL)
+            return@withContext
         }
+        val existing = categoryDao.getAll().map { it.id }.toSet()
+        val missing = DefaultCategories.backfillSeeds(existing)
+        if (missing.isNotEmpty()) categoryDao.insertAll(missing)
     }
 
     /**

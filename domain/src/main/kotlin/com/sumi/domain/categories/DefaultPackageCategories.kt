@@ -22,6 +22,9 @@ object DefaultPackageCategories {
     const val READING = "reading"
     const val GAMES = "games"
     const val UTILITIES = "utilities"
+    const val AI = "ai"
+    const val FINANCE = "finance"
+    const val BROWSER = "browser"
 
     /** Default category ids; order mirrors the seeded taxonomy. */
     val DEFAULT_IDS = listOf(
@@ -33,6 +36,9 @@ object DefaultPackageCategories {
         READING,
         GAMES,
         UTILITIES,
+        AI,
+        FINANCE,
+        BROWSER,
     )
 
     // Exact package rules checked first, so they can disambiguate substrings
@@ -83,6 +89,90 @@ object DefaultPackageCategories {
         "com.imangi.templerun2" to GAMES, // Temple Run 2
         // Utilities
         "com.google.android.calculator" to UTILITIES,
+        // AI assistants
+        "com.moonshot.kimichat" to AI, // Kimi
+        "ai.perplexity.app.android" to AI, // Perplexity
+        "com.tongyi.intl" to AI, // Tongyi / Qwen
+        "com.openai.chatgpt" to AI, // ChatGPT
+        "ai.x.grok" to AI, // Grok
+        "com.anthropic.claude" to AI, // Claude
+        "com.deepseek.chat" to AI, // DeepSeek
+        "com.google.android.apps.labs.language.tailwind" to AI, // Google Labs (language models)
+        // Finance
+        "com.tradingview.tradingviewapp" to FINANCE,
+        "com.binance.dev" to FINANCE, // Binance
+        "com.redotpay" to FINANCE, // RedotPay
+        "ru.bpc.mobilebank.bpc" to FINANCE, // BPC mobile bank
+        // Browsers
+        "com.brave.browser" to BROWSER,
+        "org.mozilla.firefox" to BROWSER,
+        "com.duckduckgo.mobile.android" to BROWSER,
+        // Communication — apps whose ids don't contain their brand token
+        "com.google.android.apps.tachyon" to COMMUNICATION, // Google Duo / Meet (legacy id)
+        "ch.protonmail.android" to COMMUNICATION, // Proton Mail
+        // Utilities — download managers, VPN, developer tools
+        "idm.internet.download.manager" to UTILITIES,
+        "com.dv.adm" to UTILITIES,
+        "ch.protonvpn.android" to UTILITIES,
+        "proton.android.pass" to UTILITIES, // Proton Pass
+        "com.termux" to UTILITIES, // terminal (power user tool)
+        "com.esp_flash.esp_flash_app" to UTILITIES,
+        "io.serialflow.espflash" to UTILITIES,
+        "com.f0x1d.logfox" to UTILITIES, // logcat viewer
+        "app.local1st.files" to UTILITIES, // files manager
+        "me.zhanghai.android.files" to UTILITIES, // Material Files
+        "com.x8bit.bitwarden" to UTILITIES, // Bitwarden
+        "io.ente.auth" to UTILITIES, // Ente Auth
+        "com.truecaller" to UTILITIES,
+        "dev.leonlatsch.photok" to UTILITIES, // PhotoK editor
+        "app.morphe.android.apps.photos" to UTILITIES, // Gallery (patched)
+        "com.digibites.accubattery" to UTILITIES, // AccuBattery
+        "com.cloudflare.onedotonedotonedotone" to UTILITIES, // 1.1.1.1
+        "com.djezzy.internet" to UTILITIES, // Djezzy (carrier app)
+        "com.algeria.selfcare.app.android" to UTILITIES, // carrier self-care
+        "com.google.android.apps.chromecast.app" to UTILITIES,
+        // Entertainment — media streaming / downloaders / music id
+        "com.nuvio.app" to ENTERTAINMENT, // Nuvio (media streaming)
+        "com.stremio.one" to ENTERTAINMENT,
+        "com.simkl.lists" to ENTERTAINMENT, // SIMKL (media tracking)
+        "com.nuvio" to ENTERTAINMENT,
+        "com.metrolist.music" to ENTERTAINMENT, // Metrolist (YouTube Music client)
+        "app.morphe.android.youtube" to ENTERTAINMENT,
+        "app.morphe.android.apps.youtube.music" to ENTERTAINMENT,
+        "com.deniscerri.ytdl" to ENTERTAINMENT, // NewPipe family (video)
+        "com.deniscerri.ytdl.nodejs" to ENTERTAINMENT,
+        "com.deniscerri.ytdl.ffmpeg" to ENTERTAINMENT,
+        "com.google.android.videos" to ENTERTAINMENT, // Play Movies & TV (legacy)
+        "com.shazam.android" to ENTERTAINMENT,
+        // Reading — manga/book readers and newsletter/magazine sources
+        "app.mihon" to READING,
+        "app.komikku" to READING,
+        "eu.kanade.tachiyomi.yokai" to READING, // Yokai
+        "org.readera" to READING, // ReadEra
+        "com.substack.app" to READING,
+        "com.google.android.apps.magazines" to READING, // Play Newsstand (legacy)
+        "com.serein.reader" to READING,
+        "com.faultexception.reader" to READING,
+        "eu.kanade.tachiyomi.extension.all.mangaplus" to READING,
+        "eu.kanade.tachiyomi.extension.en.weebcentral" to READING,
+        "eu.kanade.tachiyomi.extension.all.comicklive" to READING,
+        "eu.kanade.tachiyomi.extension.en.ehentai" to READING,
+        "eu.kanade.tachiyomi.extension.all.nhentaito" to READING,
+        "eu.kanade.tachiyomi.extension.en.hentainexus" to READING,
+        "eu.kanade.tachiyomi.extension.all.mangadex" to READING,
+        // Education
+        "com.kanso.dictionary" to EDUCATION,
+        "com.tv5monde.apprendre" to EDUCATION, // TV5Monde Apprendre
+        // Games
+        "com.innersloth.spacemafia" to GAMES,
+        "com.blackpanther.ninjaarashi2" to GAMES, // Ninja Arashi 2
+        "com.noodlecake.altosadventure" to GAMES, // Alto's Adventure
+        "com.noodlecake.altosodyssey" to GAMES, // Alto's Odyssey
+        "com.ansangha.drdriving" to GAMES, // Dr. Driving
+        "com.nytimes.crossword" to GAMES,
+        // Productivity — notes
+        "md.obsidian" to PRODUCTIVITY, // Obsidian
+        "com.philkes.notallyx" to PRODUCTIVITY, // Notally
     )
 
     // Substring rules on the lowercased package identifier.

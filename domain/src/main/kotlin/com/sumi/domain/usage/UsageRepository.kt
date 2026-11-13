@@ -35,6 +35,14 @@ interface UsageRepository {
     /** One-time import of `UsageStats` aggregates; safe to call again (upserts). */
     suspend fun initialSyncFromUsageStats(fromUtcMs: Long, toUtcMs: Long)
 
+    /**
+     * Creates Application rows for every installed app that doesn't have one yet
+     * (discovered via the launcher query; see platform `InstalledAppsSource`).
+     * Labels resolve and confident defaults are seeded, never overwriting existing rows.
+     * Discovery creates; it never deletes rows for uninstalled apps.
+     */
+    suspend fun backfillInstalledApps()
+
     /** Recompute aggregates from stored sessions for all session-backed days. */
     suspend fun rebuildAggregates()
 }

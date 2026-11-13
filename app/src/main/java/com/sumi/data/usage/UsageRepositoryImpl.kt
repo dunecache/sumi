@@ -15,6 +15,7 @@ import com.sumi.core.database.entity.DailyUsage as EntityDailyUsage
 import com.sumi.core.database.entity.HourlyUsage as EntityHourlyUsage
 import com.sumi.core.database.entity.UsageSession as EntitySession
 import com.sumi.platform.applications.AppLabelResolver
+import com.sumi.platform.applications.InstalledAppsSource
 import com.sumi.platform.usage.ExcludedPackagesResolver
 import com.sumi.domain.common.Clock
 import com.sumi.domain.categories.DefaultPackageCategories
@@ -62,6 +63,7 @@ class UsageRepositoryImpl @Inject constructor(
     private val dispatchers: AppDispatchers,
     private val labelResolver: AppLabelResolver,
     private val excludedPackages: ExcludedPackagesResolver,
+    private val installedApps: InstalledAppsSource,
 ) : UsageRepository {
 
     override fun observeDailyTotal(dateKey: String): Flow<DailyUsage?> =
@@ -311,6 +313,29 @@ class UsageRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    /**
+     * Auto-detect the installed apps (launcher query) and create Application rows for
+     * any that are missing. Founds the Apps library on *installed* apps, not only apps
+     * that have generated usage events — so apps the user never opened are also visible
+     * (with 0m usage) and can be categorized early.
+     *
+     * Excluded device furniture (Sumi itself, the launcher, the IME) is never added.
+     * Existing rows are never overwritten; discovery creates only what is missing.
+     * Called at app start (bootstrap) and again on onboarding completion.
+     */
+    override suspend fun backfillInstalledApps() =
+        withContext(dispatchers.io) {
+            val discovered = installedApps.launchablePackages()
+            if (discovered.isEmpty()) return@withContext
+            val excluded = excludedPackages.resolve()
+            val candidates = discovered.filterNot { UsageExclusions.isExcluded(it, excluded) }
+            if (candidates.isEmpty()) return@withContext
+            val existing = applicationDao.getByPackages(candidates).map { it.packageName }.toSet()
+            val missing = candidates.filterNot { it in existing }
+            if (missing.isEmpty()) return@withContext
+            ensureApplicationRows(missing)
+        }
 
     override suspend fun initialSyncFromUsageStats(fromUtcMs: Long, toUtcMs: Long) =
         withContext(dispatchers.io) {
