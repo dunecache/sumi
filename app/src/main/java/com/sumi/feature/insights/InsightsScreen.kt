@@ -1,29 +1,44 @@
 package com.sumi.feature.insights
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.hilt.navigation.compose.hiltViewModel
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.component.SumiCard
+import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.WeeklyBars
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.domain.insights.InsightKind
 
-/** Insights (M3): facts plain, interpretations hedged with a quiet marker. */
+/**
+ * Insights (M3): facts plain, interpretations hedged and visually quiet — italic, muted,
+ * with a small leading marker (DESIGN.md §7). No prefix rewriting of engine copy.
+ */
 @Composable
 fun InsightsScreen(viewModel: InsightsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
-    Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(SumiSpacing.screenHorizontal),
+    ) {
         Spacer(Modifier.height(SumiSpacing.lg))
         Text(text = "Insights", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(SumiSpacing.md))
@@ -43,23 +58,37 @@ fun InsightsScreen(viewModel: InsightsViewModel = hiltViewModel()) {
                 SumiCard {
                     WeeklyBars(dailyTotals = state.weeklyTotals, caption = "Daily screen time this week")
                 }
-                Spacer(Modifier.height(SumiSpacing.md))
-                state.insights.forEach { insight ->
-                    Text(
-                        text = (if (insight.kind == InsightKind.INTERPRETATION) "This might be " else "") + insight.text.lowercaseFirst(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (insight.kind == InsightKind.INTERPRETATION) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(Modifier.height(SumiSpacing.xl))
+                SumiSectionHeader("OBSERVATIONS")
+                Spacer(Modifier.height(SumiSpacing.sm))
+                Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.sm)) {
+                    state.insights.forEach { insight ->
+                        if (insight.kind == InsightKind.INTERPRETATION) {
+                            Row {
+                                Text(
+                                    text = "·",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.width(SumiSpacing.xs))
+                                Text(
+                                    text = insight.text,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontStyle = FontStyle.Italic,
+                                )
+                            }
                         } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                    )
-                    Spacer(Modifier.height(SumiSpacing.xs))
+                            Text(
+                                text = insight.text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
                 }
+                Spacer(Modifier.height(SumiSpacing.lg))
             }
         }
     }
 }
-
-private fun String.lowercaseFirst(): String =
-    if (isEmpty()) this else this[0].lowercaseChar() + substring(1)

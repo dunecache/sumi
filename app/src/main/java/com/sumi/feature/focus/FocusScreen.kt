@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -24,7 +26,12 @@ import com.sumi.core.designsystem.theme.SumiSpacing
 @Composable
 fun FocusScreen() {
     var intention by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(SumiSpacing.screenHorizontal),
+    ) {
         Spacer(Modifier.height(SumiSpacing.lg))
         Text(text = "Focus", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(SumiSpacing.md))

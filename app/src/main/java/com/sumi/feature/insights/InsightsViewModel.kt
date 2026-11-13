@@ -44,13 +44,15 @@ class InsightsViewModel @Inject constructor(
                 weekly += (total?.totalDurationMs ?: 0L)
             }
             val sessions = repository.observeSessionsForDate(today).first()
-            val summary = if (sessions.isEmpty() && dailyTotals.isEmpty()) {
+            // Real hourly buckets now feed the rhythm analysis (was emptyList before).
+            val hourly = repository.observeHourlyUsage(today).first()
+            val summary = if (sessions.isEmpty() && dailyTotals.isEmpty() && hourly.isEmpty()) {
                 null
             } else {
                 InsightsEngine.summarize(
                     sessions = sessions,
                     dailyTotals = dailyTotals,
-                    hourly = emptyList(),
+                    hourly = hourly,
                     zone = timeZone.currentZone(),
                     nowUtcMs = clock.nowUtcMs(),
                 )
