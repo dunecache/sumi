@@ -15,6 +15,7 @@ import com.sumi.core.database.entity.DailyUsage as EntityDailyUsage
 import com.sumi.core.database.entity.HourlyUsage as EntityHourlyUsage
 import com.sumi.core.database.entity.UsageSession as EntitySession
 import com.sumi.platform.applications.AppLabelResolver
+import com.sumi.platform.usage.ExcludedPackagesResolver
 import com.sumi.domain.common.Clock
 import com.sumi.domain.categories.DefaultPackageCategories
 import com.sumi.domain.common.DateKey
@@ -27,6 +28,7 @@ import com.sumi.domain.usage.Normalization
 import com.sumi.domain.usage.RebootBoundarySource
 import com.sumi.domain.usage.SessionReconstruction
 import com.sumi.domain.usage.UsageEventSource
+import com.sumi.domain.usage.UsageExclusions
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.domain.usage.UsageSession
 import com.sumi.domain.usage.UsageStatsSource
@@ -59,6 +61,7 @@ class UsageRepositoryImpl @Inject constructor(
     private val timeZone: TimeZoneProvider,
     private val dispatchers: AppDispatchers,
     private val labelResolver: AppLabelResolver,
+    private val excludedPackages: ExcludedPackagesResolver,
 ) : UsageRepository {
 
     override fun observeDailyTotal(dateKey: String): Flow<DailyUsage?> =
@@ -117,11 +120,16 @@ class UsageRepositoryImpl @Inject constructor(
             val zoneChanged = prevState != null && prevState.lastTimeZoneId.isNotEmpty() &&
                 prevState.lastTimeZoneId != zone.id
 
+            // §15: device furniture (Sumi itself, the launcher, the IME) is never tracked.
+            // The set is resolved per run because the launcher and IME can change.
+            val excluded = excludedPackages.resolve()
+            pruneExcludedUsage(excluded)
+
             val raw = eventSource.loadRawEvents(
                 maxOf(fromUtcMs, (prevState?.lastEventTimeCollected ?: fromUtcMs) - OVERLAP_MS),
                 toUtcMs,
             )
-            val normalized = Normalization.normalize(raw)
+            val normalized = Normalization.normalize(UsageExclusions.filterEvents(raw, excluded))
             val sessions = SessionReconstruction.reconstruct(
                 normalized, nowUtcMs = toUtcMs, rebootUtcMs = rebootSource.rebootInstantsUtcMs())
 
@@ -242,11 +250,62 @@ class UsageRepositoryImpl @Inject constructor(
             Unit
         }
 
+    /**
+     * Removes stored usage of excluded packages (ARCHITECTURE.md §15).
+     *
+     * Rows collected before the exclusion policy existed would otherwise keep Sumi's own
+     * time — and the launcher/IME time — in the totals forever. The affected days' daily
+     * totals are recomputed from the remaining sessions, so the headline stays the union
+     * of the sessions that are actually kept (DATA_MODEL §5 rule 8).
+     *
+     * Only packages in the excluded set are touched — never a user app. Idempotent: a
+     * second run finds no rows for the excluded packages and does nothing.
+     */
+    private suspend fun pruneExcludedUsage(excluded: Set<String>) {
+        if (excluded.isEmpty()) return
+        val packages = excluded.toList()
+        val affectedDays = (
+            sessionDao.getDateKeysByPackages(packages) +
+                dailyAppDao.getDateKeysByPackages(packages) +
+                hourlyDao.getDateKeysByPackages(packages)
+            ).toSortedSet()
+        val hasApplicationRows = applicationDao.getByPackages(packages).isNotEmpty()
+        if (affectedDays.isEmpty() && !hasApplicationRows) return
+        val zone = timeZone.currentZone()
+        val now = clock.nowUtcMs()
+        db.withTransaction {
+            sessionDao.deleteByPackages(packages)
+            dailyAppDao.deleteByPackages(packages)
+            hourlyDao.deleteByPackages(packages)
+            // Library rows for device furniture would show up as zero-usage apps.
+            if (hasApplicationRows) applicationDao.deleteByPackages(packages)
+            affectedDays.forEach { day ->
+                val remaining = UsageExclusions.filterSessions(
+                    sessionDao.getByDateKey(day).map { it.toDomain() },
+                    excluded,
+                )
+                val totals = Aggregation.dailyTotals(remaining, zone, now)
+                dailyDao.deleteByDateKeys(listOf(day))
+                if (totals.isNotEmpty()) {
+                    dailyDao.upsertAll(
+                        totals.map {
+                            EntityDailyUsage(it.dateKey, it.totalDurationMs, it.lastCollectedAtUtcMs)
+                        },
+                    )
+                }
+            }
+        }
+    }
+
     override suspend fun initialSyncFromUsageStats(fromUtcMs: Long, toUtcMs: Long) =
         withContext(dispatchers.io) {
             val now = clock.nowUtcMs()
             val zone = timeZone.currentZone()
-            val aggregates = statsSource.loadDailyAggregates(fromUtcMs, toUtcMs, zone)
+            val excluded = excludedPackages.resolve()
+            val aggregates = UsageExclusions.filterAggregates(
+                statsSource.loadDailyAggregates(fromUtcMs, toUtcMs, zone),
+                excluded,
+            )
             val sessionDays = sessionDao.getAllDateKeys().toSet()
             // Session-backed days replace aggregate-only rows.
             val filtered = aggregates.filter { it.dateKey !in sessionDays }

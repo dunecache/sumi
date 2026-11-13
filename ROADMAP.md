@@ -82,6 +82,14 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 > Apps filter/sort with category chips, assignment from app detail. Tests: domain category
 > and goal logic, app-level intention/filter/slug/derivation logic. NOT yet run: migration
 > test (androidTest, no device available) — see acceptance note below.
+>
+> **Excluded packages pass (2026-11):** device furniture (Sumi itself, the default
+> launcher, the current IME, System UI, the `android` framework) is never tracked —
+> dropped before session reconstruction, dropped on `UsageStats` import, and pruned
+> from history with the affected days' totals recomputed. Rules in `:domain`
+> (`UsageExclusions`, unit-tested), device set resolved per collection run in the
+> platform layer (`DeviceExcludedPackagesResolver`) because the launcher/IME can
+> change. R13 (hidden apps counting toward totals) stays open and unchanged.
 
 - [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
 - [x] **Apps**: searchable library with icon, name, today and weekly usage, category
@@ -96,6 +104,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Weekly overview: compare days
 - [x] Loading, empty, permission-missing, and partial-data states
 - [x] Hide app (excluded from stats display)
+- [x] Excluded packages: Sumi itself, the default launcher, the current IME, System UI and the `android` framework are never tracked (events, aggregates and stored history)
 - [x] Settings: privacy, data management (export, delete)
 
 **Acceptance criteria (MVP success)**
@@ -206,4 +215,5 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 | 2026-11-06 | M0 scaffolded: Gradle Kotlin DSL + version catalog, `:app` + `:domain`, Kanso Matcha tokens, Hilt/Room/DataStore, ktlint/detekt, separate CI workflows (build/test/lint), 4-destination nav + onboarding, Settings skeleton, Room schema (v1). Fonts pending binary TTFs. First CI `assembleDebug` pending (no local SDK; CI is gate). |
 | 2026-11-06 | M1 usage engine + M2 core experience: domain normalization/reconstruction/aggregation (pure, fixture-tested), platform UsageEvents/Stats adapters, Room persistence with idempotent transactional reconciliation, UsageCollector (open/resume) + WorkManager safety net, Today/Apps/AppDetail/Insights charts wired to Room, categories with defaults, Settings theme + delete-all, categories helper, notifications channels. CI (build/test/lint) is the verification gate; local device testing intentionally skipped per direction. M3/M4/M5 remain. |
 | 2026-11-06 | V1 complete (M3): deterministic rule-based insights with fact/interpretation tagging and graceful degradation, unit-tested; fonts pulled from google/fonts and wired into Type.kt (Inter/Literata/Plex Mono). Focus intentions + notification channels land as V1.5 scaffolding. M4/M5 remain. Verification agents run after V1 (per direction), not during. |
+| 2026-11-13 | Category analytics + daily intention goal (schema v2, migration 1→2) and the excluded-packages policy (Sumi itself, launcher, IME, System UI, framework) landed on `feat/category-analytics-goal`; category totals derived at read time, goal is awareness only (never enforcement). Rules in `:domain` (`CategoryAnalytics`, `DailyGoal`, `UsageExclusions`) — unit-tested on the JVM. NOT yet run on a device: the Room 1→2 migration test (androidTest), Compose UI tests, dark mode / font scale / TalkBack verification. |
 

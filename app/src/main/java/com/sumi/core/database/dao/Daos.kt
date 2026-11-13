@@ -51,6 +51,13 @@ interface ApplicationDao {
     @Query("SELECT * FROM applications WHERE packageName = :packageName")
     suspend fun getByPackage(packageName: String): Application?
 
+    /** Library rows of the given packages (exclusion pruning). */
+    @Query("SELECT * FROM applications WHERE packageName IN (:packages)")
+    suspend fun getByPackages(packages: List<String>): List<Application>
+
+    @Query("DELETE FROM applications WHERE packageName IN (:packages)")
+    suspend fun deleteByPackages(packages: List<String>)
+
     @Query("SELECT * FROM applications WHERE packageName = :packageName")
     fun observeByPackage(packageName: String): Flow<Application?>
 
@@ -108,6 +115,13 @@ interface UsageSessionDao {
     @Query("SELECT DISTINCT dateKey FROM usage_sessions")
     suspend fun getAllDateKeys(): List<String>
 
+    /** Days that hold sessions of the given packages (exclusion pruning). */
+    @Query("SELECT DISTINCT dateKey FROM usage_sessions WHERE packageName IN (:packages)")
+    suspend fun getDateKeysByPackages(packages: List<String>): List<String>
+
+    @Query("DELETE FROM usage_sessions WHERE packageName IN (:packages)")
+    suspend fun deleteByPackages(packages: List<String>)
+
     @Query("DELETE FROM usage_sessions")
     suspend fun deleteAll()
 }
@@ -150,6 +164,13 @@ interface DailyAppUsageDao {
     @Query("DELETE FROM daily_app_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)
 
+    /** Days that hold per-app rows of the given packages (exclusion pruning). */
+    @Query("SELECT DISTINCT dateKey FROM daily_app_usage WHERE packageName IN (:packages)")
+    suspend fun getDateKeysByPackages(packages: List<String>): List<String>
+
+    @Query("DELETE FROM daily_app_usage WHERE packageName IN (:packages)")
+    suspend fun deleteByPackages(packages: List<String>)
+
     @Query("DELETE FROM daily_app_usage")
     suspend fun deleteAll()
 }
@@ -164,6 +185,13 @@ interface HourlyUsageDao {
 
     @Query("DELETE FROM hourly_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)
+
+    /** Days that hold hourly rows of the given packages (exclusion pruning). */
+    @Query("SELECT DISTINCT dateKey FROM hourly_usage WHERE packageName IN (:packages)")
+    suspend fun getDateKeysByPackages(packages: List<String>): List<String>
+
+    @Query("DELETE FROM hourly_usage WHERE packageName IN (:packages)")
+    suspend fun deleteByPackages(packages: List<String>)
 
     @Query("DELETE FROM hourly_usage")
     suspend fun deleteAll()

@@ -5,6 +5,8 @@ import com.sumi.domain.usage.RebootBoundarySource
 import com.sumi.domain.usage.UsageEventSource
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.domain.usage.UsageStatsSource
+import com.sumi.platform.usage.DeviceExcludedPackagesResolver
+import com.sumi.platform.usage.ExcludedPackagesResolver
 import com.sumi.platform.usage.PlatformRebootSource
 import com.sumi.platform.usage.PlatformUsageSources
 import dagger.Binds
@@ -38,4 +40,11 @@ abstract class UsageBindsModule {
     @Binds
     @Singleton
     abstract fun bindUsageRepository(impl: UsageRepositoryImpl): UsageRepository
+
+    /** Packages that are never tracked (Sumi itself, the launcher, the IME). */
+    @Binds
+    @Singleton
+    abstract fun bindExcludedPackagesResolver(
+        impl: DeviceExcludedPackagesResolver,
+    ): ExcludedPackagesResolver
 }
