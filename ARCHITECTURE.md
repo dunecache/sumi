@@ -307,6 +307,12 @@ Sumi has a user-manageable category system. Design tenets:
 - Exclusion set: see §15 — device furniture (Sumi itself, the launcher, the IME, System UI)
   is never tracked. Everything else — including ordinary system apps — is tracked unless
   the user hides it (R13).
+- **Application rows are created by every collection path**, not just the events reconcile:
+  the 90-day `UsageStats` import creates them too (`ensureApplicationRows`), and each
+  collection run self-heals rows that exist only in imported history
+  (`dailyAppDao.getPackagesMissingApplicationRows`). Without this, apps whose usage lives
+  only in history (events expire after days) were invisible in the Apps library and to
+  Apps search.
 
 ## 14. Goals versus restriction (implemented 2026-11)
 
