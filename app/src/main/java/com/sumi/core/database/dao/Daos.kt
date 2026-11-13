@@ -22,6 +22,9 @@ interface ApplicationDao {
 
     @Query("SELECT * FROM applications")
     suspend fun getAll(): List<Application>
+
+    @Query("SELECT * FROM applications WHERE packageName = :packageName")
+    suspend fun getByPackage(packageName: String): Application?
 }
 
 @Dao

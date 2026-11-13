@@ -78,6 +78,11 @@ class UsageRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeAppDailyUsage(packageName: String): Flow<List<DailyAppUsage>> =
+        db.dailyAppUsageDao().observeByPackage(packageName).map { list ->
+            list.map { DailyAppUsage(it.dateKey, it.packageName, it.durationMs, parseSource(it.source)) }
+        }
+
     private fun observeDailyAppUsageEntities(dateKey: String): Flow<List<EntityDailyAppUsage>> =
         db.dailyAppUsageDao().observeByDateKey(dateKey)
 
