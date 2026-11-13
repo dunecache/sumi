@@ -297,6 +297,13 @@ Sumi has a user-manageable category system. Design tenets:
   **never silently classified** — they stay uncategorized. Mapping runs on package
   identifiers, never on display names.
 - Seeding is idempotent (`INSERT IGNORE`) and user edits are never overwritten.
+- Seeded color tokens use the primitive names (`matcha-4`, `mist`, `clay-2`, `wisteria`,
+  `ochre`, `method`, `matcha-2`); rows still on the 2026-11 positional tokens
+  (`categoryColor{n}` / `categoryNeutral`) are recolored at bootstrap by
+  `CategoryRepository.syncSeededColors()` — only rows the user never touched, and
+  `sortOrder` is preserved. Legacy tokens resolve forever via `categoryColorIndex`.
+- Uncategorized always renders in `stone-1`; `constant` (7th palette slot) is reserved
+  and never assigned to a category.
 - Exclusion set: see §15 — device furniture (Sumi itself, the launcher, the IME, System UI)
   is never tracked. Everything else — including ordinary system apps — is tracked unless
   the user hides it (R13).
@@ -308,8 +315,10 @@ nothing, and notifies no one. It is evaluated from the same daily aggregate as t
 headline statistic (never a separate source), computed in `:domain` (`DailyGoal`), and
 stored in DataStore (`daily_goal_minutes`, `daily_goal_enabled`). Exceeding the goal is
 reported in neutral language; remaining time is clamped at zero and never renders as a
-negative value. The Focus destination is conceptually separate and the goal is never a
-precondition for anything there. Any future enforcement feature would require explicit
+negative value. The progress indicator uses the calm accent and switches to terracotta
+(the warning hue, unused elsewhere) only once the self-set target is crossed. The Focus
+destination is conceptually separate and the goal is never a precondition for anything
+there. Any future enforcement feature would require explicit
 user consent, a separate design, and its own threat analysis — it is out of scope.
 
 ## 15. Excluded packages — device furniture (implemented 2026-11)

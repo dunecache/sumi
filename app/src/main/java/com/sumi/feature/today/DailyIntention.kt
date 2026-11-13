@@ -16,15 +16,16 @@ import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.core.designsystem.theme.sumiExtendedColors
 import com.sumi.domain.goal.DailyGoal
 import com.sumi.domain.goal.DailyGoalProgress
 import com.sumi.domain.goal.DailyGoalStatus
 
 /**
  * Daily intention goal (Today section). An awareness instrument only: it never blocks,
- * gates, or notifies. Framing stays calm and non-judgmental (DESIGN.md §5); exceeding the
- * goal is reported in neutral language, never in alarm hues — and remaining time is never
- * shown as negative (there is no such value).
+ * gates, or notifies. Framing stays calm and non-judgmental (DESIGN.md §5). Remaining
+ * time is never shown as negative, and the copy stays neutral — only the progress
+ * indicator switches to the terracotta warning hue once the self-set target is crossed.
  */
 sealed interface DailyIntentionState {
     /** No goal set, or the goal is configured but paused. The UI shows a quiet call-to-action. */
@@ -74,6 +75,7 @@ fun DailyIntentionCard(
             }
             is DailyIntentionState.Progress -> {
                 val progress = state.progress
+                val extended = sumiExtendedColors()
                 Spacer(Modifier.height(SumiSpacing.xs))
                 Text(
                     text = "${formatDuration(progress.usedMs)} of ${formatDuration(progress.goalMs)} used",
@@ -84,9 +86,14 @@ fun DailyIntentionCard(
                 LinearProgressIndicator(
                     progress = { progress.fraction.coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth(),
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    // Exceeding the goal never switches hue: calm neutrality by design.
-                    color = MaterialTheme.colorScheme.primary,
+                    // Calm matcha track; the bar switches to terracotta only when the
+                    // (self-set, optional) target is crossed — warning, never a category color.
+                    trackColor = extended.matchaTrack,
+                    color = if (progress.status == DailyGoalStatus.EXCEEDED) {
+                        extended.terracotta
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
                 )
                 Spacer(Modifier.height(SumiSpacing.sm))
                 Text(

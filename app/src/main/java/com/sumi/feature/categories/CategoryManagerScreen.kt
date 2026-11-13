@@ -48,16 +48,21 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 
-/** Color tokens a user can pick for a category. Neutral grey stays available for low-key categories. */
+/**
+ * Colors a user can pick for a category. These are the primitive names from the
+ * canonical charts palette (uncategorized uses `stone-1`); the 2026-11
+ * `categoryColor{n}` positional tokens still resolve for existing rows but are no
+ * longer offered. `constant` is deliberately not offered — it is reserved (warning).
+ */
 internal val CATEGORY_COLOR_TOKENS = listOf(
-    "categoryColor1",
-    "categoryColor2",
-    "categoryColor3",
-    "categoryColor4",
-    "categoryColor5",
-    "categoryColor6",
-    "categoryColor7",
-    "categoryNeutral",
+    "matcha-4",
+    "mist",
+    "clay-2",
+    "wisteria",
+    "ochre",
+    "method",
+    "matcha-2",
+    "stone-1",
 )
 
 /**
@@ -310,7 +315,7 @@ private fun CategoryEditSheet(
                 Spacer(Modifier.height(SumiSpacing.sm))
                 TargetRow(
                     name = "Uncategorized",
-                    colorToken = "categoryNeutral",
+                    colorToken = "stone-1",
                     selected = target == null,
                     onClick = { target = null },
                 )

@@ -116,7 +116,7 @@ class InsightsViewModel @Inject constructor(
                 name = usage.name,
                 durationMs = usage.durationMs,
                 share = if (total > 0L) usage.durationMs.toFloat() / total.toFloat() else 0f,
-                colorToken = usage.categoryId?.let { colors[it] } ?: "categoryNeutral",
+                colorToken = usage.categoryId?.let { colors[it] } ?: "stone-1",
             )
         }
         val social = breakdown.categories.firstOrNull { it.categoryId == DefaultPackageCategories.SOCIAL }

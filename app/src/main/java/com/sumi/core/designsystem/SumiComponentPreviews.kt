@@ -87,9 +87,9 @@ private fun PreviewWeeklyDark() {
 }
 
 private val SampleCategorySegments = listOf(
-    CategorySegment("social", "Social", 3_000_000L, 0.71f, "categoryColor1"),
-    CategorySegment("entertainment", "Entertainment", 900_000L, 0.21f, "categoryColor2"),
-    CategorySegment(null, "Uncategorized", 300_000L, 0.08f, "categoryNeutral"),
+    CategorySegment("social", "Social", 3_000_000L, 0.71f, "matcha-4"),
+    CategorySegment("entertainment", "Entertainment", 900_000L, 0.21f, "mist"),
+    CategorySegment(null, "Uncategorized", 300_000L, 0.08f, "stone-1"),
 )
 
 @Composable

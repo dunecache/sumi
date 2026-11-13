@@ -201,7 +201,7 @@ private fun CategoryPickerSheet(
             Spacer(Modifier.height(SumiSpacing.lg))
             PickerRow(
                 name = "Uncategorized",
-                colorToken = "categoryNeutral",
+                colorToken = "stone-1",
                 selected = selectedId == null,
                 onClick = { onSelect(null) },
             )

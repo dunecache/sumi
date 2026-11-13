@@ -38,7 +38,7 @@ data class AppDetailUiState(
     /** Category assignment; null = uncategorized. */
     val categoryId: String? = null,
     val categoryName: String = "Uncategorized",
-    val categoryColorToken: String = "categoryNeutral",
+    val categoryColorToken: String = "stone-1",
     /** True when the user explicitly chose the assignment (vs. automatic default). */
     val categoryUserSet: Boolean = false,
     /** Options for the assignment picker (all known categories). */
@@ -86,7 +86,7 @@ class AppDetailViewModel @Inject constructor(
             sessionSummary = sessionSummary(todaySessions, clock.nowUtcMs()),
             categoryId = app?.categoryId,
             categoryName = current?.name ?: "Uncategorized",
-            categoryColorToken = current?.colorToken ?: "categoryNeutral",
+            categoryColorToken = current?.colorToken ?: "stone-1",
             categoryUserSet = app?.isCategoryUserSet == true,
             categories = categories.map { CategoryOption(it.id, it.name, it.colorToken) },
         )

@@ -24,6 +24,7 @@ class CategoryBootstrap @Inject constructor(
         scope.launch {
             runCatching {
                 repository.ensureSeeded()
+                repository.syncSeededColors()
                 repository.classifyPendingAssignments()
             }
         }
