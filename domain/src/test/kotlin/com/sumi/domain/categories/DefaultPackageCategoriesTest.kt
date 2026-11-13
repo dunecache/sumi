@@ -31,6 +31,17 @@ class DefaultPackageCategoriesTest {
     }
 
     @Test
+    fun `reddit clients map to social`() {
+        // Already covered by the `reddit` substring rule (pinning behaviour):
+        assertThat(DefaultPackageCategories.forPackage("com.reddit.frontpage")).isEqualTo("social") // official
+        assertThat(DefaultPackageCategories.forPackage("com.andrewshu.android.reddit")).isEqualTo("social") // Reddit is Fun
+        assertThat(DefaultPackageCategories.forPackage("it.d4w.android.proreddit")).isEqualTo("social") // Boost for Reddit
+        assertThat(DefaultPackageCategories.forPackage("com.laurencedawson.redditbrowser")).isEqualTo("social") // Relay
+        // Needs an exact rule (contains no "reddit"):
+        assertThat(DefaultPackageCategories.forPackage("com.alienblue.app")).isEqualTo("social") // Alien Blue
+    }
+
+    @Test
     fun `exact rules take precedence over substrings`() {
         // Messenger shares the "facebook" substring but is communication, not social.
         assertThat(DefaultPackageCategories.forPackage("com.facebook.orca")).isEqualTo("communication")

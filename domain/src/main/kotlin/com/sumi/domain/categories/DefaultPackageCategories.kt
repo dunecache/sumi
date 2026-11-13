@@ -52,6 +52,7 @@ object DefaultPackageCategories {
         // Social — TikTok ships a different package id per region.
         "com.ss.android.ugc.trill" to SOCIAL, // TikTok (Asia)
         "com.zhiliaoapp.musically" to SOCIAL, // TikTok (global)
+        "com.alienblue.app" to SOCIAL, // Alien Blue (defunct; kept for legacy devices)
         // Communication
         "org.thoughtcrime.securesms" to COMMUNICATION, // Signal
         "com.google.android.gm" to COMMUNICATION, // Gmail
