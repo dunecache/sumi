@@ -22,6 +22,17 @@
     <!-- Records reboot instants for usage-engine R5. No special permission needed. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- App discovery per AGENTS.md §2: visibility of launchable apps only, via the
+         launcher intent filter (never QUERY_ALL_PACKAGES). This is what lets Sumi
+         resolve display labels and launcher icons (platform/applications) for
+         packages already seen in usage stats. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <!-- RemoveWorkManagerInitializer ignore: SumiApplication implements Configuration.Provider
          with HiltWorkerFactory, so WorkManager uses on-demand initialization and the default
          initializer is removed below via tools:node="remove" (official hilt-work setup). -->
