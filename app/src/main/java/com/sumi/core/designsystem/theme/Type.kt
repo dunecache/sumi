@@ -29,11 +29,23 @@ val SumiTypography = Typography(
         fontSize = 32.sp,
         lineHeight = 40.sp,
     ),
+    displaySmall = TextStyle(
+        fontFamily = SumiFontFamilies.Reflection,
+        fontWeight = FontWeight.Normal,
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
+    ),
     headlineMedium = TextStyle(
         fontFamily = SumiFontFamilies.Interface,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = SumiFontFamilies.Interface,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        lineHeight = 26.sp,
     ),
     titleLarge = TextStyle(
         fontFamily = SumiFontFamilies.Interface,
@@ -71,14 +83,30 @@ val SumiTypography = Typography(
         fontSize = 12.sp,
         lineHeight = 16.sp,
     ),
+    labelSmall = TextStyle(
+        fontFamily = SumiFontFamilies.Interface,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+    ),
+    bodySmall = TextStyle(
+        fontFamily = SumiFontFamilies.Interface,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+    ),
 )
 
-/** Numeric style for durations and big numbers (IBM Plex Mono role). */
+/**
+ * Numeric styles for durations and big numbers (IBM Plex Mono role). Tabular figures keep
+ * multi-row durations column-aligned and stable while values refresh.
+ */
 val NumericLarge = TextStyle(
     fontFamily = SumiFontFamilies.Numeric,
     fontWeight = FontWeight.Medium,
     fontSize = 36.sp,
     lineHeight = 44.sp,
+    fontFeatureSettings = "tnum",
 )
 
 val NumericBody = TextStyle(
@@ -86,4 +114,5 @@ val NumericBody = TextStyle(
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     lineHeight = 20.sp,
+    fontFeatureSettings = "tnum",
 )

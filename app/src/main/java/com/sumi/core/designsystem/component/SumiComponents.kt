@@ -9,9 +9,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sumi.core.designsystem.theme.SumiFontFamilies
+import com.sumi.core.designsystem.theme.NumericBody
 import com.sumi.core.designsystem.theme.SumiSpacing
 import java.util.Locale
 
@@ -40,7 +39,6 @@ fun SumiSectionHeader(
         text = title.uppercase(Locale.getDefault()),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.Medium,
         modifier = modifier,
     )
 }
@@ -60,8 +58,7 @@ fun SumiLabel(text: String, modifier: Modifier = Modifier) {
 fun DurationText(durationMs: Long, modifier: Modifier = Modifier) {
     Text(
         text = formatDuration(durationMs),
-        style = MaterialTheme.typography.bodyLarge,
-        fontFamily = SumiFontFamilies.Numeric,
+        style = NumericBody,
         modifier = modifier,
     )
 }
