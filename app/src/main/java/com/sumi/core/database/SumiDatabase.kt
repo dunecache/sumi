@@ -5,7 +5,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.sumi.core.database.dao.AppCategoryDao
-import com.sumi.core.database.dao.AppCategoryDao
 import com.sumi.core.database.dao.ApplicationDao
 import com.sumi.core.database.dao.CollectionStateDao
 import com.sumi.core.database.dao.DailyAppUsageDao
