@@ -37,6 +37,9 @@ object DefaultPackageCategories {
 
     // Exact package rules checked first, so they can disambiguate substrings
     // (e.g. Messenger's com.facebook.orca is Communication despite containing "facebook").
+    // Rule for new additions: a substring rule covers anything whose package id contains
+    // the token unambiguously; exact rules exist for the rest (regional app ids, apps
+    // whose ids don't contain their brand token).
     private val EXACT_RULES: Map<String, String> = mapOf(
         "com.facebook.orca" to COMMUNICATION, // Messenger
         "com.twitter.android" to SOCIAL,
@@ -46,6 +49,39 @@ object DefaultPackageCategories {
         "com.amazon.kindle" to READING,
         "com.hbo.hbonow" to ENTERTAINMENT,
         "com.nianticlabs.pokemongo" to GAMES,
+        // Social — TikTok ships a different package id per region.
+        "com.ss.android.ugc.trill" to SOCIAL, // TikTok (Asia)
+        "com.zhiliaoapp.musically" to SOCIAL, // TikTok (global)
+        // Communication
+        "org.thoughtcrime.securesms" to COMMUNICATION, // Signal
+        "com.google.android.gm" to COMMUNICATION, // Gmail
+        "com.tencent.mm" to COMMUNICATION, // WeChat
+        "jp.naver.line.android" to COMMUNICATION, // LINE (the `linecorp` substring rule misses it)
+        "com.skype.raider" to COMMUNICATION,
+        "com.skype.m2" to COMMUNICATION, // Skype Lite
+        "com.google.android.apps.meetings" to COMMUNICATION, // Meet
+        // Entertainment
+        "com.amazon.avod.thirdpartyclient" to ENTERTAINMENT, // Prime Video
+        // Productivity
+        "com.google.android.calendar" to PRODUCTIVITY,
+        "com.microsoft.office.word" to PRODUCTIVITY,
+        "com.microsoft.office.excel" to PRODUCTIVITY,
+        "com.microsoft.office.powerpoint" to PRODUCTIVITY,
+        "com.microsoft.office.onenote" to PRODUCTIVITY,
+        "com.evernote" to PRODUCTIVITY,
+        "com.google.android.apps.tasks" to PRODUCTIVITY,
+        // Reading
+        "com.overdrive.mobile.android.libby" to READING, // Libby
+        // Games
+        "com.supercell.brawlstars" to GAMES,
+        "com.mobile.legends" to GAMES, // Mobile Legends
+        "com.garena.game.codm" to GAMES, // CoD Mobile
+        "com.tencent.ig" to GAMES, // PUBG Mobile
+        "com.epicgames.fortnite" to GAMES,
+        "com.mihoyo.genshinimpact" to GAMES,
+        "com.imangi.templerun2" to GAMES, // Temple Run 2
+        // Utilities
+        "com.google.android.calculator" to UTILITIES,
     )
 
     // Substring rules on the lowercased package identifier.
