@@ -23,7 +23,6 @@ object DatabaseModule {
     fun provideDatabase(factory: DatabaseFactory): SumiDatabase = factory.get()
 
     @Provides fun provideApplicationDao(db: SumiDatabase): ApplicationDao = db.applicationDao()
-    @Provides fun provideAppCategoryDao(db: SumiDatabase): AppCategoryDao = db.appCategoryDao()
     @Provides fun provideUsageSessionDao(db: SumiDatabase): UsageSessionDao = db.usageSessionDao()
     @Provides fun provideDailyUsageDao(db: SumiDatabase): DailyUsageDao = db.dailyUsageDao()
     @Provides fun provideDailyAppUsageDao(db: SumiDatabase): DailyAppUsageDao = db.dailyAppUsageDao()
