@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * Canonical Kanso Matcha v1.2 color tokens (semantic layer, both modes), sourced from
- * `~/kanso/kanso_design_system` (tokens/semantic/*.json + tokens/charts.json). Values are
+ * the design-system repository (semantic tokens + charts palette). Values are
  * WCAG-validated by that repository's contrast checker (v1.1/v1.2 amendments applied);
  * do not tweak hexes here — amend the canonical spec first, then sync.
  *
