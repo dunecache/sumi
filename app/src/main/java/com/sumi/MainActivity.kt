@@ -3,6 +3,7 @@ package com.sumi
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
@@ -36,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Edge-to-edge: Sumi draws behind the system bars; Scaffold + M3 components
+        // consume insets. Light/dark icon appearance follows the composed theme.
+        enableEdgeToEdge()
 
         // Collect on open; re-check Usage Access + collect on resume.
         // repeatOnLifecycle also fires when this activity starts; no second standalone collect.

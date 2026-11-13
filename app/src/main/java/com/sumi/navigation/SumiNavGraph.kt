@@ -1,24 +1,35 @@
 package com.sumi.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.outlined.CenterFocusWeak
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavType
@@ -41,13 +52,20 @@ import com.sumi.feature.onboarding.sections.WelcomeScreen
 import com.sumi.feature.settings.SettingsScreen
 import com.sumi.feature.today.TodayScreen
 
-private data class BottomDestination(val route: String, val label: String, val icon: ImageVector)
+private data class BottomDestination(
+    val route: String,
+    val label: String,
+    val iconUnselected: ImageVector,
+    val iconSelected: ImageVector,
+)
 
+// One coherent icon family: outlined when at rest, filled when selected. Consistent
+// metaphors — a day for Today, a chart for Insights, a calm ring for Focus, a grid for Apps.
 private val BottomDestinations = listOf(
-    BottomDestination(Routes.TODAY, "Today", Icons.Filled.Home),
-    BottomDestination(Routes.INSIGHTS, "Insights", Icons.Filled.Info),
-    BottomDestination(Routes.FOCUS, "Focus", Icons.Filled.Star),
-    BottomDestination(Routes.APPS, "Apps", Icons.Filled.Apps),
+    BottomDestination(Routes.TODAY, "Today", Icons.Outlined.WbSunny, Icons.Filled.WbSunny),
+    BottomDestination(Routes.INSIGHTS, "Insights", Icons.Outlined.Insights, Icons.Filled.Insights),
+    BottomDestination(Routes.FOCUS, "Focus", Icons.Outlined.CenterFocusWeak, Icons.Filled.CenterFocusStrong),
+    BottomDestination(Routes.APPS, "Apps", Icons.Outlined.GridView, Icons.Filled.GridView),
 )
 
 private val MainRoutes = BottomDestinations.map { it.route } + Routes.SETTINGS
@@ -68,6 +86,27 @@ fun SumiApp(
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val showBottomBar = currentRoute in MainRoutes
+
+    // 200ms cross-fades between destinations; skipped entirely when the system animator
+    // scale is 0 (reduced motion), per DESIGN.md §3.4.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val animatorScale = remember {
+        android.provider.Settings.Global.getFloat(
+            context.contentResolver,
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f,
+        )
+    }
+    val navEnter: EnterTransition = if (animatorScale == 0f) {
+        EnterTransition.None
+    } else {
+        fadeIn(animationSpec = tween(200))
+    }
+    val navExit: ExitTransition = if (animatorScale == 0f) {
+        ExitTransition.None
+    } else {
+        fadeOut(animationSpec = tween(200))
+    }
 
     Scaffold(
         topBar = {
@@ -97,10 +136,13 @@ fun SumiApp(
         },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                // M3 NavigationBar, customized to stay understated: tonal bar surface,
+                // default-size indicator, consistent icon pair per destination.
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     BottomDestinations.forEach { dest ->
+                        val selected = currentRoute == dest.route
                         NavigationBarItem(
-                            selected = currentRoute == dest.route,
+                            selected = selected,
                             onClick = {
                                 navController.navigate(dest.route) {
                                     popUpTo(Routes.TODAY) { saveState = true }
@@ -108,7 +150,12 @@ fun SumiApp(
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(imageVector = dest.icon, contentDescription = dest.label) },
+                            icon = {
+                                Icon(
+                                    imageVector = if (selected) dest.iconSelected else dest.iconUnselected,
+                                    contentDescription = dest.label,
+                                )
+                            },
                             label = { Text(dest.label) },
                         )
                     }
@@ -117,7 +164,14 @@ fun SumiApp(
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
-            NavHost(navController = navController, startDestination = startDestination) {
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                enterTransition = { navEnter },
+                exitTransition = { navExit },
+                popEnterTransition = { navEnter },
+                popExitTransition = { navExit },
+            ) {
                 composable(Routes.ONBOARDING_WELCOME) {
                     WelcomeScreen(onNext = { navController.navigate(Routes.ONBOARDING_PRIVACY) })
                 }
