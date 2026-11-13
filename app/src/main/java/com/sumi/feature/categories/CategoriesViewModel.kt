@@ -36,15 +36,15 @@ class CategoriesViewModel @Inject constructor(
 
     val uiState: StateFlow<CategoriesUiState> = combine(
         categoryRepository.observeCategories(),
-        applicationDao.observeCategoryCounts(),
-    ) { categories, counts ->
-        val perId = counts.filter { it.categoryId != null }.associate { it.categoryId!! to it.count }
+        applicationDao.observeInstalled(),
+    ) { categories, installed ->
+        val perId = installed.mapNotNull { it.categoryId }.groupingBy { it }.eachCount()
         CategoriesUiState(
             isLoading = false,
             categories = categories.map {
                 CategoryRow(it.id, it.name, it.colorToken, it.isUserCreated, perId[it.id] ?: 0)
             },
-            uncategorizedCount = counts.firstOrNull { it.categoryId == null }?.count ?: 0,
+            uncategorizedCount = installed.count { it.categoryId == null },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CategoriesUiState())
 
