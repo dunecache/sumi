@@ -8,7 +8,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Kanso Matcha Material 3 themes over the canonical v1.2 tokens. No alarm red for ordinary
+ * Kanso Matcha Material 3 themes over the canonical v1.3.0 tokens. No alarm red for ordinary
  * usage (the `error` role exists for data-deletion confirmation only); no dynamic color —
  * Sumi keeps one recognizable identity across devices. See DESIGN.md §2–§3.
  */

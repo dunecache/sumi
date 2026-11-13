@@ -3,11 +3,12 @@ package com.sumi.core.designsystem.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Canonical Kanso Matcha v1.2 color tokens (semantic layer, both modes), sourced from
+ * Canonical Kanso Matcha v1.3.0 color tokens (semantic layer, both modes), sourced from
  * the design-system repository (`tokens/primitives/<mode>.json`, `tokens/semantic/<mode>.json`,
- * `tokens/charts.json`). Values are WCAG-validated by that repository's contrast checker
- * (v1.1/v1.2 amendments applied); do not tweak hexes here — amend the canonical spec
- * first, then sync.
+ * `tokens/charts.json`). v1.3.0 ("Evening Zen revised dark palette") replaced every
+ * Evening Zen primitive/semantic value; Morning Matcha is untouched. Values are
+ * WCAG-validated by that repository's contrast checker (v1.1/v1.3 amendments applied);
+ * do not tweak hexes here — amend the canonical spec first, then sync.
  *
  * Always reference tokens by name, never by hex, in feature code. The new usage-UI
  * tokens (`Stone1*`, `Matcha1*`, `Terracotta*`) are named after their primitives; the
@@ -47,44 +48,44 @@ object SumiColorTokens {
     val DiffRemovedFgLight = Color(0xFF914B45)
     val DiffRemovedBgLight = Color(0xFFEAD8D2)
 
-    // ---- Evening Zen (dark): deep warm charcoal, quiet botanical accents ----
+    // ---- Evening Zen (dark): deep forest, luminous sage, layered surfaces (v1.3.0) ----
     // Named primitives (tokens/primitives/evening-zen.json): `background` = ink-0,
-    // `surface` = ink-1, `surface-elevated` = ink-2, `surface-sunken` = ink-3.
-    val BackgroundDark = Color(0xFF22251F)
-    val SurfaceDark = Color(0xFF2D3129)
-    val SurfaceElevatedDark = Color(0xFF363A31)
-    val SurfaceSunkenDark = Color(0xFF1C1F1A)
-    val SurfaceAccentDark = Color(0xFF41483A) // matcha-1
-    val OnBackgroundDark = Color(0xFFE8E5D9) // stone-3
-    val OnSurfaceMutedDark = Color(0xFFB5B5A9) // stone-2
-    val BorderSubtleDark = Color(0xFF41463B) // ink-3
-    val BorderStrongDark = Color(0xFF83877F)
-    val AccentPrimaryDark = Color(0xFFA3AE91) // matcha-3
-    val AccentStrongDark = Color(0xFFC1CCAC) // matcha-4
-    val AccentSecondaryDark = Color(0xFF858F76) // matcha-2
-    val SelectionDark = Color(0xFF41483A)
-    val FocusDark = Color(0xFFA3AE91)
-    val SuccessDark = Color(0xFFC1CCAC)
-    val WarningDark = Color(0xFFD2B477)
-    val DangerDark = Color(0xFFE1A59C) // bright-terracotta text convention
-    val InfoDark = Color(0xFF9CB8BA)
-    val ClayDark = Color(0xFFB58E79) // clay-1
+    // `surface` = ink-1, `surface-elevated` = ink-2, `surface-sunken` = derived (#10160F).
+    val BackgroundDark = Color(0xFF171F18)
+    val SurfaceDark = Color(0xFF263326)
+    val SurfaceElevatedDark = Color(0xFF364735)
+    val SurfaceSunkenDark = Color(0xFF10160F)
+    val SurfaceAccentDark = Color(0xFF3B4C35) // matcha-1
+    val OnBackgroundDark = Color(0xFFE9EEE2) // stone-3
+    val OnSurfaceMutedDark = Color(0xFFB2BBAB) // text-muted (derived from stone-1; fails <4.5:1 raw)
+    val BorderSubtleDark = Color(0xFF3D4A3B) // border-subtle (derived; not ink-3)
+    val BorderStrongDark = Color(0xFF829875) // matcha-2
+    val AccentPrimaryDark = Color(0xFFB0C39C) // matcha-3
+    val AccentStrongDark = Color(0xFFD2E4BB) // matcha-4
+    val AccentSecondaryDark = Color(0xFF829875) // matcha-2
+    val SelectionDark = Color(0xFF3B4C35) // matcha-1
+    val FocusDark = Color(0xFFB0C39C) // matcha-3
+    val SuccessDark = Color(0xFFD2E4BB) // matcha-4
+    val WarningDark = Color(0xFFD9BD7E) // ochre
+    val DangerDark = Color(0xFFE1ACA4) // bright-terracotta text convention
+    val InfoDark = Color(0xFFA5C5C3) // mist
+    val ClayDark = Color(0xFFC19A82) // clay-1
 
-    val DiffRemovedFgDark = Color(0xFFE1A59C)
+    val DiffRemovedFgDark = Color(0xFFE1ACA4)
     val DiffRemovedBgDark = Color(0xFF49332F)
 
     // Named primitives used by the usage UI (synced above):
-    val Stone1Dark = Color(0xFFAAA99B) // neutral grey — uncategorized residual bucket
-    val Matcha1Dark = Color(0xFF41483A) // quiet track fill for the daily intention ring
-    val TerracottaDark = Color(0xFFD28B80) // warning hue — ONLY for the over-goal state
+    val Stone1Dark = Color(0xFFA6B09D) // neutral grey — uncategorized residual bucket
+    val Matcha1Dark = Color(0xFF3B4C35) // quiet track fill for the daily intention ring
+    val TerracottaDark = Color(0xFFD68D82) // warning hue — ONLY for the over-goal state
 
     // Category/chart palettes (canonical charts.json, 7 muted hues per mode).
     // Never relied on alone — always paired with a label (DESIGN.md §3.1).
     // Positions stay stable for persisted `categoryColor{n}` tokens; the *names* in the
-    // comments are the primitives each position maps to (Step 2 aliases them in code):
-    // [0] matcha-4 · [1] mist · [2] clay-2 · [3] wisteria · [4] ochre · [5] method · [6] constant.
-    // `constant` evening == `terracotta` evening (#D28B80): it is warning-adjacent, so it
-    // is NOT assigned to any category (see DESIGN.md §3.1).
+    // comments are the primitives each position maps to (Step 2 aliases them in code).
+    // Morning: [0] matcha-4 · [1] mist · [2] clay-2 · [3] wisteria · [4] ochre · [5] method · [6] constant.
+    // Evening (v1.3.0): [0] matcha-3 · [1] mist · [2] clay-2 · [3] wisteria · [4] ochre · [5] matcha-2 · [6] terracotta.
+    // Persisted tokens resolve by position; morning and evening slot values are synced.
     val CategoryColorsLight = listOf(
         Color(0xFF626D4F), // matcha-4
         Color(0xFF4F7075), // mist
@@ -95,13 +96,13 @@ object SumiColorTokens {
         Color(0xFF925F50), // constant (reserved, unassigned)
     )
     val CategoryColorsDark = listOf(
-        Color(0xFFA3AE91), // matcha-4
-        Color(0xFF9CB8BA), // mist
-        Color(0xFFD0A78F), // clay-2
-        Color(0xFFB5A4C8), // wisteria
-        Color(0xFFD2B477), // ochre
-        Color(0xFF9BBBAA), // method
-        Color(0xFFD28B80), // constant (reserved, unassigned)
+        Color(0xFFB0C39C), // matcha-3
+        Color(0xFFA5C5C3), // mist
+        Color(0xFFD8B49B), // clay-2
+        Color(0xFFC1B1D2), // wisteria
+        Color(0xFFD9BD7E), // ochre
+        Color(0xFF829875), // matcha-2
+        Color(0xFFD68D82), // terracotta (reserved, warning hue)
     )
 }
 
