@@ -154,7 +154,7 @@ fun SumiApp(
                     )
                 }
                 composable(Routes.TODAY) {
-                    TodayScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) })
+                    TodayScreen()
                 }
                 composable(Routes.INSIGHTS) { InsightsScreen() }
                 composable(Routes.FOCUS) { FocusScreen() }

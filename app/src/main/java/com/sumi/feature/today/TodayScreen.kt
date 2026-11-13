@@ -1,29 +1,28 @@
 package com.sumi.feature.today
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sumi.core.designsystem.component.DurationText
+import com.sumi.core.designsystem.component.AppUsageRow
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.TimelineStrip
 import com.sumi.core.designsystem.component.formatDuration
-import com.sumi.core.designsystem.theme.SumiFontFamilies
+import com.sumi.core.designsystem.theme.NumericLarge
 import com.sumi.core.designsystem.theme.SumiSpacing
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -31,43 +30,49 @@ import java.util.Locale
 
 /**
  * Today per the navigation/Today reference §3: date eyebrow, serif headline, one primary
- * metric, most-used (≤5), timeline, one summary sentence, settings link — in that fixed
- * order, nothing else. Neutral framing only; loading renders em-dashes, never spinners.
+ * metric, most-used (≤5), timeline, one summary sentence — in that fixed order, nothing
+ * else. Settings lives in the top app bar only (no duplicate link at the bottom).
+ * Neutral framing only; loading renders em-dashes, never spinners.
  */
 @Composable
 fun TodayScreen(
-    onOpenSettings: () -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-    TodayContent(state = state, onOpenSettings = onOpenSettings)
+    val iconLoader = remember(viewModel) { viewModel.iconLoader::iconFor }
+    TodayContent(state = state, iconLoader = iconLoader)
 }
 
 @Composable
-fun TodayContent(state: TodayUiState, onOpenSettings: () -> Unit) {
+fun TodayContent(
+    state: TodayUiState,
+    iconLoader: (suspend (String) -> android.graphics.drawable.Drawable?)? = null,
+) {
     when {
         // Loading keeps the layout with placeholders (§3.9) — previous content, never a spinner.
-        state.isLoading -> TodayBody(state = state, onOpenSettings = onOpenSettings)
-        !state.hasUsageAccess -> TodayShell(
-            onOpenSettings = onOpenSettings,
-            content = {
-                EmptyState(
-                    title = "Usage Access is off",
-                    message = "Sumi starts learning your day from now. Enable Usage Access to see your usage.",
-                )
-            },
-        )
-        state.totalDurationMs == 0L && state.mostUsed.isEmpty() && state.previousDayDurationMs == null ->
-            TodayShell(
-                onOpenSettings = onOpenSettings,
-                content = {
-                    EmptyState(
-                        title = "No usage yet",
-                        message = "Sumi starts learning your day from now. Come back later.",
-                    )
-                },
+        state.isLoading -> TodayBody(state = state, iconLoader = iconLoader)
+        !state.hasUsageAccess -> Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+            Spacer(Modifier.height(SumiSpacing.lg))
+            TodayHeader()
+            Spacer(Modifier.weight(1f))
+            EmptyState(
+                title = "Usage Access is off",
+                message = "Sumi starts learning your day from now. Enable Usage Access to see your usage.",
             )
-        else -> TodayBody(state = state, onOpenSettings = onOpenSettings)
+            Spacer(Modifier.weight(1f))
+        }
+        state.totalDurationMs == 0L && state.mostUsed.isEmpty() && state.previousDayDurationMs == null ->
+            Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+                Spacer(Modifier.height(SumiSpacing.lg))
+                TodayHeader()
+                Spacer(Modifier.weight(1f))
+                EmptyState(
+                    title = "No usage yet",
+                    message = "Sumi starts learning your day from now. Come back later.",
+                )
+                Spacer(Modifier.weight(1f))
+            }
+        else -> TodayBody(state = state, iconLoader = iconLoader)
     }
 }
 
@@ -82,40 +87,20 @@ private fun TodayHeader() {
     Text(text = "Your day, in perspective.", style = MaterialTheme.typography.displayLarge)
 }
 
-/** Column shell: header, arbitrary content, settings link pinned to the bottom (§3.8). */
-@Composable
-private fun TodayShell(
-    onOpenSettings: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
-        Spacer(Modifier.height(SumiSpacing.lg))
-        TodayHeader()
-        Spacer(Modifier.height(SumiSpacing.lg))
-        content()
-        Spacer(Modifier.weight(1f))
-        SettingsLink(onOpenSettings)
-    }
-}
-
-/** Settings text link: accent by default, ≥48dp touch target (§3.8, §7). */
-@Composable
-private fun SettingsLink(onOpenSettings: () -> Unit) {
-    TextButton(
-        onClick = onOpenSettings,
-        modifier = Modifier.heightIn(min = SumiSpacing.minTouchTarget),
-    ) { Text("Settings") }
-}
-
 /** Populated (or placeholder-loading) layout, vertical order fixed per §3.1. */
 @Composable
-private fun TodayBody(state: TodayUiState, onOpenSettings: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+private fun TodayBody(state: TodayUiState, iconLoader: (suspend (String) -> android.graphics.drawable.Drawable?)?) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(SumiSpacing.screenHorizontal),
+    ) {
         Spacer(Modifier.height(SumiSpacing.lg))
         TodayHeader()
-        Spacer(Modifier.height(SumiSpacing.md))
+        Spacer(Modifier.height(SumiSpacing.xl))
 
-        // Primary metric (§3.4): one number, normal weight, primary text — never accent, never a warning hue.
+        // Primary metric (§3.4): one number, tabular mono, primary text — never accent, never a warning hue.
         Text(
             text = "Screen time today",
             style = MaterialTheme.typography.labelMedium,
@@ -123,39 +108,50 @@ private fun TodayBody(state: TodayUiState, onOpenSettings: () -> Unit) {
         )
         Text(
             text = if (state.isLoading) "—" else formatDuration(state.totalDurationMs),
-            style = MaterialTheme.typography.displayLarge,
-            fontFamily = SumiFontFamilies.Numeric,
+            style = NumericLarge,
         )
-        state.previousDayDurationMs?.let { yesterday ->
+        Spacer(Modifier.height(SumiSpacing.xs))
+        state.comparison?.let { comparison ->
             Text(
-                text = "Yesterday: ${formatDuration(yesterday)}",
+                text = if (state.isLoading) "—" else comparison,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        // Most used (§3.5): max 5 rows, label + duration only — no bars, no percentages, no icons.
+        // Most used (§3.5): ranked rows with icon, name, duration, share — no bulky cards.
         if (!state.isLoading && state.mostUsed.isNotEmpty()) {
-            Spacer(Modifier.height(SumiSpacing.md))
+            Spacer(Modifier.height(SumiSpacing.xl))
             SumiSectionHeader("MOST USED")
             Spacer(Modifier.height(SumiSpacing.sm))
-            state.mostUsed.forEach { app ->
-                Row(Modifier.fillMaxWidth().padding(vertical = SumiSpacing.xs)) {
-                    Text(
-                        text = app.displayName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f),
+            Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.xs)) {
+                state.mostUsed.forEach { app ->
+                    AppUsageRow(
+                        packageName = app.packageName,
+                        displayName = app.displayName,
+                        durationMs = app.durationMs,
+                        shareOfTotal = if (state.totalDurationMs > 0L) {
+                            app.durationMs.toFloat() / state.totalDurationMs.toFloat()
+                        } else {
+                            null
+                        },
+                        iconLoader = iconLoader,
                     )
-                    DurationText(durationMs = app.durationMs)
                 }
             }
         }
 
-        // Timeline (§3.6): ghost bars read as "no data yet", never an error.
-        Spacer(Modifier.height(SumiSpacing.md))
+        // Timeline (§3.6): real hourly buckets; ghost bars read as "no data yet", never an error.
+        Spacer(Modifier.height(SumiSpacing.xl))
         SumiSectionHeader("TIMELINE")
         Spacer(Modifier.height(SumiSpacing.sm))
         SumiCard {
+            Text(
+                text = "When was the phone in use today?",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(SumiSpacing.md))
             TimelineStrip(hourlyTotals = state.timeline)
         }
 
@@ -167,11 +163,9 @@ private fun TodayBody(state: TodayUiState, onOpenSettings: () -> Unit) {
                     text = note,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Start,
                 )
             }
         }
-        Spacer(Modifier.weight(1f))
-        SettingsLink(onOpenSettings)
+        Spacer(Modifier.height(SumiSpacing.lg))
     }
 }

@@ -12,6 +12,7 @@ import com.sumi.domain.usage.DailyAppUsage
 import com.sumi.domain.usage.HourlyUsage
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.platform.usage.UsageAccessChecker
+import com.sumi.platform.applications.AppIconLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,10 +52,14 @@ class TodayViewModel @Inject constructor(
     private val checker: UsageAccessChecker,
     private val clock: Clock,
     private val timeZone: TimeZoneProvider,
+    iconLoader: AppIconLoader,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodayUiState())
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
+
+    /** Platform icon resolution for row rendering; the UiState itself stays pure data. */
+    val iconLoader: AppIconLoader = iconLoader
 
     init {
         observe()
