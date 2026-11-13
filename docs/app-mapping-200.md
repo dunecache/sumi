@@ -72,6 +72,25 @@ H: com.google.android.apps.nbu.files (Files), com.google.android.calculator
 M: com.sec.android.app.sbrowser (Samsung Internet — browser; intentionally unmapped),
    com.miui.notes? (notes — Productivity if anything; verify), com.baidu.*? no
 
+## Reddit clients (asked and answered)
+
+How many Android Reddit clients are there? Historically ~8–10; in practice few remain after
+the 2023 API changes. Coverage in this mapping:
+
+| Client | Package id | Status |
+|---|---|---|
+| Reddit (official) | `com.reddit.frontpage` | ✅ substring `reddit` |
+| Reddit is Fun | `com.andrewshu.android.reddit` | ✅ substring |
+| Boost for Reddit | `it.d4w.android.proreddit` | ✅ substring |
+| Relay for Reddit | `com.laurencedawson.redditbrowser` / `...redditbrowserpro` | ✅ substring |
+| Sync for Reddit | `me.ccrama.redditsync` (id uncertain) | ✅ if id correct |
+| Alien Blue (defunct) | `com.alienblue.app` | ✅ exact rule added |
+| Slide for Reddit, Joey for Reddit | ids not verified | unverified — do not add without checking an install |
+
+Lesson encoded in the map: a package id containing `reddit` already lands in Social, so
+new wrappers need no rules unless they pick an unrelated id — and unverified ids must
+stay out (fail-safe → Uncategorized).
+
 ## Deliberately NOT mapped
 - Browsers (Chrome/Firefox/Samsung Internet/Edge) — biggest-drift category by design decision pending;
   see the "should browsers be uncategorized?" note below.
