@@ -168,6 +168,10 @@ interface DailyAppUsageDao {
     @Query("SELECT DISTINCT dateKey FROM daily_app_usage WHERE packageName IN (:packages)")
     suspend fun getDateKeysByPackages(packages: List<String>): List<String>
 
+    /** Packages present in imported history with no Application row yet (library self-heal). */
+    @Query("SELECT DISTINCT packageName FROM daily_app_usage WHERE packageName NOT IN (SELECT packageName FROM applications)")
+    suspend fun getPackagesMissingApplicationRows(): List<String>
+
     @Query("DELETE FROM daily_app_usage WHERE packageName IN (:packages)")
     suspend fun deleteByPackages(packages: List<String>)
 

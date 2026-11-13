@@ -125,6 +125,12 @@ class UsageRepositoryImpl @Inject constructor(
             val excluded = excludedPackages.resolve()
             pruneExcludedUsage(excluded)
 
+            // Self-heal the library for packages that exist only in the imported history
+            // (aggregate rows written before this fix, or from the 90-day import).
+            // Steady state: one cheap query returning no rows.
+            val missingLibraryRows = dailyAppDao.getPackagesMissingApplicationRows()
+            if (missingLibraryRows.isNotEmpty()) ensureApplicationRows(missingLibraryRows)
+
             val raw = eventSource.loadRawEvents(
                 maxOf(fromUtcMs, (prevState?.lastEventTimeCollected ?: fromUtcMs) - OVERLAP_MS),
                 toUtcMs,
@@ -223,32 +229,41 @@ class UsageRepositoryImpl @Inject constructor(
                     ),
                 )
                 // Ensure Application rows exist for stats display; keep user fields intact.
-                // Labels resolve here too: new rows get the real app name, and rows still
-                // carrying the package id as a placeholder get upgraded when a label
-                // becomes resolvable (launcher visibility, app installed since collection).
-                val windowPackages = finalizedEntities.map { it.packageName }.distinct()
-                val existingByPackage = windowPackages.mapNotNull { pkg ->
-                    applicationDao.getByPackage(pkg)?.let { pkg to it }
-                }.toMap()
-                val rows = windowPackages.map { pkg ->
-                    val existing = existingByPackage[pkg]
-                    val label = labelResolver.labelFor(pkg)?.takeIf { it != pkg }
-                    when {
-                        // Fresh rows: seed a confident default when one exists; unknown
-                        // packages stay uncategorized (never silently classified).
-                        existing == null ->
-                            Application(pkg, label ?: pkg, categoryId = DefaultPackageCategories.forPackage(pkg))
-                        // displayName == packageName marks the unresolved placeholder.
-                        label != null && existing.displayName == existing.packageName ->
-                            existing.copy(displayName = label)
-                        else -> null
-                    }
-                }.filterNotNull()
-                if (rows.isNotEmpty()) applicationDao.upsertAll(rows)
+                ensureApplicationRows(finalizedEntities.map { it.packageName })
                 Unit
             }
             Unit
         }
+
+    /**
+     * Creates Application rows for packages seen in any collection path and upgrades
+     * placeholder rows when their real label becomes resolvable. Keeps user fields
+     * intact (categoryId, isHidden, isCategoryUserSet are never overwritten; a fresh
+     * row gets a confident default from the bundled mapping or stays uncategorized).
+     * Callers must run this inside their own transaction when atomicity matters.
+     */
+    private suspend fun ensureApplicationRows(packages: List<String>) {
+        val distinct = packages.distinct()
+        if (distinct.isEmpty()) return
+        val existingByPackage = distinct.mapNotNull { pkg ->
+            applicationDao.getByPackage(pkg)?.let { pkg to it }
+        }.toMap()
+        val rows = distinct.map { pkg ->
+            val existing = existingByPackage[pkg]
+            val label = labelResolver.labelFor(pkg)?.takeIf { it != pkg }
+            when {
+                // Fresh rows: seed a confident default when one exists; unknown
+                // packages stay uncategorized (never silently classified).
+                existing == null ->
+                    Application(pkg, label ?: pkg, categoryId = DefaultPackageCategories.forPackage(pkg))
+                // displayName == packageName marks the unresolved placeholder.
+                label != null && existing.displayName == existing.packageName ->
+                    existing.copy(displayName = label)
+                else -> null
+            }
+        }.filterNotNull()
+        if (rows.isNotEmpty()) applicationDao.upsertAll(rows)
+    }
 
     /**
      * Removes stored usage of excluded packages (ARCHITECTURE.md §15).
@@ -317,6 +332,10 @@ class UsageRepositoryImpl @Inject constructor(
                         },
                     )
                 }
+                // The 90-day import must also create Application rows — otherwise apps with
+                // history but no recent events (last events only survive ~7 days) are missing
+                // from the Apps library and from Apps search.
+                ensureApplicationRows(aggregates.map { it.packageName })
                 collectionDao.upsert(
                     (collectionDao.get() ?: CollectionState()).copy(
                         initialSyncCompleted = true,
