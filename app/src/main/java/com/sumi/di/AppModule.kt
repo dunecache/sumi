@@ -7,7 +7,9 @@ import com.sumi.domain.common.TimeZoneProvider
 import com.sumi.domain.common.systemClock
 import com.sumi.domain.common.systemTimeZoneProvider
 import com.sumi.platform.applications.AppIconLoader
+import com.sumi.platform.applications.AppLabelResolver
 import com.sumi.platform.applications.PackageManagerIconLoader
+import com.sumi.platform.applications.PackageManagerLabelResolver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,4 +35,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAppIconLoader(impl: PackageManagerIconLoader): AppIconLoader = impl
+
+    @Provides
+    @Singleton
+    fun provideAppLabelResolver(impl: PackageManagerLabelResolver): AppLabelResolver = impl
 }

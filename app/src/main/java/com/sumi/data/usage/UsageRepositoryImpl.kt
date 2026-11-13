@@ -14,6 +14,7 @@ import com.sumi.core.database.entity.DailyAppUsage as EntityDailyAppUsage
 import com.sumi.core.database.entity.DailyUsage as EntityDailyUsage
 import com.sumi.core.database.entity.HourlyUsage as EntityHourlyUsage
 import com.sumi.core.database.entity.UsageSession as EntitySession
+import com.sumi.platform.applications.AppLabelResolver
 import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
@@ -56,6 +57,7 @@ class UsageRepositoryImpl @Inject constructor(
     private val clock: Clock,
     private val timeZone: TimeZoneProvider,
     private val dispatchers: AppDispatchers,
+    private val labelResolver: AppLabelResolver,
 ) : UsageRepository {
 
     override fun observeDailyTotal(dateKey: String): Flow<DailyUsage?> =
@@ -212,11 +214,25 @@ class UsageRepositoryImpl @Inject constructor(
                     ),
                 )
                 // Ensure Application rows exist for stats display; keep user fields intact.
-                val known = applicationDao.getAll().mapTo(mutableSetOf()) { it.packageName }
-                val missing = finalizedEntities.map { it.packageName }.filter { it !in known }.distinct()
-                if (missing.isNotEmpty()) {
-                    applicationDao.upsertAll(missing.map { Application(it, it) })
-                }
+                // Labels resolve here too: new rows get the real app name, and rows still
+                // carrying the package id as a placeholder get upgraded when a label
+                // becomes resolvable (launcher visibility, app installed since collection).
+                val windowPackages = finalizedEntities.map { it.packageName }.distinct()
+                val existingByPackage = windowPackages.mapNotNull { pkg ->
+                    applicationDao.getByPackage(pkg)?.let { pkg to it }
+                }.toMap()
+                val rows = windowPackages.map { pkg ->
+                    val existing = existingByPackage[pkg]
+                    val label = labelResolver.labelFor(pkg)?.takeIf { it != pkg }
+                    when {
+                        existing == null -> Application(pkg, label ?: pkg)
+                        // displayName == packageName marks the unresolved placeholder.
+                        label != null && existing.displayName == existing.packageName ->
+                            existing.copy(displayName = label)
+                        else -> null
+                    }
+                }.filterNotNull()
+                if (rows.isNotEmpty()) applicationDao.upsertAll(rows)
                 Unit
             }
             Unit
