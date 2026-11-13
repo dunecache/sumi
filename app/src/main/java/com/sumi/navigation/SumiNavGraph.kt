@@ -6,7 +6,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CenterFocusStrong
@@ -23,6 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -30,8 +36,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -108,70 +117,104 @@ fun SumiApp(
         fadeOut(animationSpec = tween(200))
     }
 
-    Scaffold(
-        topBar = {
-            if (showBottomBar) {
-                TopAppBar(
-                    title = { Text("Sumi") },
-                    actions = {
-                        // §2.2: gear on main tabs; back arrow on the settings route itself.
-                        if (currentRoute == Routes.SETTINGS) {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                )
-                            }
-                        } else {
-                            IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Settings,
-                                    contentDescription = "Settings",
-                                )
-                            }
-                        }
-                    },
-                )
-            }
-        },
-        bottomBar = {
-            if (showBottomBar) {
-                // M3 NavigationBar, customized to stay understated: tonal bar surface,
-                // default-size indicator, consistent icon pair per destination.
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                    BottomDestinations.forEach { dest ->
-                        val selected = currentRoute == dest.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(dest.route) {
-                                    popUpTo(Routes.TODAY) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+    // Adaptive M3 navigation: bottom bar on compact widths, rail on expanded (≥ 600dp).
+    BoxWithConstraints {
+        val expanded = maxWidth >= ExpandedWidthThreshold
+
+        Scaffold(
+            topBar = {
+                if (showBottomBar) {
+                    TopAppBar(
+                        title = { Text("Sumi") },
+                        actions = {
+                            // §2.2: gear on main tabs; back arrow on the settings route itself.
+                            if (currentRoute == Routes.SETTINGS) {
+                                IconButton(onClick = { navController.popBackStack() }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                    )
                                 }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (selected) dest.iconSelected else dest.iconUnselected,
-                                    contentDescription = dest.label,
-                                )
-                            },
-                            label = { Text(dest.label) },
-                        )
+                            } else {
+                                IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Settings,
+                                        contentDescription = "Settings",
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
+            },
+            bottomBar = {
+                if (showBottomBar && !expanded) {
+                    // M3 NavigationBar, customized to stay understated: tonal bar surface,
+                    // default-size indicator, consistent icon pair per destination.
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                        BottomDestinations.forEach { dest ->
+                            NavigationBarItem(
+                                selected = currentRoute == dest.route,
+                                onClick = { navController.navigateTab(dest.route) },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (currentRoute == dest.route) {
+                                            dest.iconSelected
+                                        } else {
+                                            dest.iconUnselected
+                                        },
+                                        contentDescription = dest.label,
+                                    )
+                                },
+                                label = { Text(dest.label) },
+                            )
+                        }
                     }
                 }
-            }
-        },
-    ) { padding ->
-        Box(Modifier.padding(padding)) {
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                enterTransition = { navEnter },
-                exitTransition = { navExit },
-                popEnterTransition = { navEnter },
-                popExitTransition = { navExit },
+            },
+        ) { padding ->
+            Row(
+                Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
             ) {
+                if (showBottomBar && expanded) {
+                    NavigationRail(containerColor = Color.Transparent) {
+                        BottomDestinations.forEach { dest ->
+                            NavigationRailItem(
+                                selected = currentRoute == dest.route,
+                                onClick = { navController.navigateTab(dest.route) },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (currentRoute == dest.route) {
+                                            dest.iconSelected
+                                        } else {
+                                            dest.iconUnselected
+                                        },
+                                        contentDescription = dest.label,
+                                    )
+                                },
+                                label = { Text(dest.label) },
+                            )
+                        }
+                    }
+                }
+                // Editorial max width keeps long text readable on tablets.
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = startDestination,
+                        enterTransition = { navEnter },
+                        exitTransition = { navExit },
+                        popEnterTransition = { navEnter },
+                        popExitTransition = { navExit },
+                        modifier = Modifier.widthIn(max = ContentMaxWidth),
+                    ) {
                 composable(Routes.ONBOARDING_WELCOME) {
                     WelcomeScreen(onNext = { navController.navigate(Routes.ONBOARDING_PRIVACY) })
                 }
@@ -234,7 +277,21 @@ fun SumiApp(
                     val pkg = backStackEntry.arguments?.getString("packageName") ?: ""
                     AppDetailScreen(packageName = pkg)
                 }
+                    }
+                }
             }
         }
     }
 }
+
+/** Tab navigation options shared by the bar and the rail (M3 adaptive guidance). */
+private fun androidx.navigation.NavHostController.navigateTab(route: String) {
+    navigate(route) {
+        popUpTo(Routes.TODAY) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+private val ExpandedWidthThreshold = 600.dp
+private val ContentMaxWidth = 640.dp
