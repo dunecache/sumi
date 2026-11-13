@@ -105,13 +105,22 @@ object SumiColorTokens {
     )
 }
 
-/** Index into the canonical category palette for a `categoryColor{n}` token name. */
+/**
+ * Index into the canonical category palette for a token name.
+ *
+ * Accepts both the persisted positional names `categoryColor{n}` (unchanged for rows
+ * written before the primitive sync) and the primitive names the canonical charts
+ * carry (`matcha-4`, `mist`, …). Tokens that are not palette entries (neutral grey,
+ * sage accent) resolve to 0; callers must check for them before using this — see
+ * [com.sumi.core.designsystem.theme.categoryColorOrNeutral].
+ */
 fun categoryColorIndex(colorToken: String): Int = when (colorToken) {
-    "categoryColor1" -> 0
-    "categoryColor2" -> 1
-    "categoryColor3" -> 2
-    "categoryColor4" -> 3
-    "categoryColor5" -> 4
-    "categoryColor6" -> 5
-    else -> 6
+    "categoryColor1", "matcha-4" -> 0
+    "categoryColor2", "mist" -> 1
+    "categoryColor3", "clay-2" -> 2
+    "categoryColor4", "wisteria" -> 3
+    "categoryColor5", "ochre" -> 4
+    "categoryColor6", "method" -> 5
+    "categoryColor7", "constant" -> 6
+    else -> 0
 }

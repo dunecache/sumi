@@ -17,8 +17,8 @@ import org.junit.Test
 class CategoryDetailLogicTest {
 
     private val categories = listOf(
-        AppCategory("social", "Social", "categoryColor1", sortOrder = 0),
-        AppCategory("entertainment", "Entertainment", "categoryColor3", sortOrder = 2),
+        AppCategory("social", "Social", "matcha-4", sortOrder = 0),
+        AppCategory("entertainment", "Entertainment", "ochre", sortOrder = 2),
     )
 
     private fun app(pkg: String, name: String, categoryId: String?) =

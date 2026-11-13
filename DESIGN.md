@@ -47,7 +47,9 @@ Use roles, not raw colors.
 
 Rules:
 - **No alarm red** for ordinary usage. There is no "danger" role in the usage UI. A `destructive` role exists only for data deletion confirmation.
-- Category colors come from a muted, harmonious palette of `categoryColor1…n` tokens (earth, moss, clay, stone, sky-gray, bamboo). They must be distinguishable in both themes and never rely on color alone (add label or pattern).
+- Category colors come from a muted, harmonious palette of primitive chart tokens (`matcha-4`, `mist`, `clay-2`, `wisteria`, `ochre`, `method`) named after the canonical charts palette; the positional `categoryColor{n}` tokens persisted before the sync still resolve. Hues are fixed to the category, never to rank; they must be distinguishable in both themes and never rely on color alone (add label or pattern).
+- `matcha-2` is the sage accent (utilities/secondary), `stone-1` is the uncategorized residual, and the 7th palette slot `constant` is reserved — never assigned. `terracotta` is the warning hue: the over-goal state only (intention ring). Nothing else may use it.
+- Charts are separated by the card-colored 2dp gap (muted hues blend); the intention ring's empty track uses `matcha-1`, not gray.
 - Minimum contrast: 4.5:1 for body text, 3:1 for large text and chart marks against their background.
 
 ### 3.2 Typography
@@ -103,7 +105,7 @@ Order, most important first:
 2. Hero line (Literata): "Your day, in perspective."
 3. Total screen time (Plex Mono, large) with caption "Screen time today".
 4. Comparison with the previous day (neutral wording, no up/down arrows in red/green).
-5. **Daily intention** card: configured target, time used, remaining (never negative), one elegant progress indicator, edit/remove in place. Neutral, never a warning hue. When unset, a quiet call-to-action.
+5. **Daily intention** card: configured target, time used, remaining (never negative), one elegant progress indicator, edit/remove in place. Copy stays neutral; only the progress indicator switches to terracotta once the self-set target is crossed. When unset, a quiet call-to-action.
 6. **Where your time goes** (category distribution): total tracked, segmented proportional bar, labelled list (color dot + name + duration + %, never color alone). Tap through to category detail; "See all" leads to the deeper analytics destination.
 7. **Most used** list: top 3–5 apps with icon, name, duration. Tap opens app detail.
 8. Daily timeline (activity across the day).

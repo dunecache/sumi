@@ -17,7 +17,7 @@ private fun sampleCategoryState() = CategoryDetailUiState(
     exists = true,
     categoryId = "social",
     name = "Social",
-    colorToken = "categoryColor1",
+    colorToken = "matcha-4",
     todayMs = 3_000_000L, // 50m
     todayShare = 0.71f,
     week = listOf(2L, 1L, 4L, 3L, 6L, 5L, 5L).map { it * 600_000L },
@@ -72,9 +72,9 @@ private fun PreviewCategoryDetailNoApps() {
 private fun sampleManagerState() = CategoriesUiState(
     isLoading = false,
     categories = listOf(
-        CategoryRow("social", "Social", "categoryColor1", false, 12),
-        CategoryRow("entertainment", "Entertainment", "categoryColor2", false, 8),
-        CategoryRow("everything-else", "Everything else", "categoryColor6", true, 3),
+        CategoryRow("social", "Social", "matcha-4", false, 12),
+        CategoryRow("entertainment", "Entertainment", "mist", false, 8),
+        CategoryRow("everything-else", "Everything else", "method", true, 3),
     ),
     uncategorizedCount = 27,
 )

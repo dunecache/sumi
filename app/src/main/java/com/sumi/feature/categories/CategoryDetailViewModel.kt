@@ -34,7 +34,7 @@ data class CategoryDetailUiState(
     val exists: Boolean = true,
     val categoryId: String = "",
     val name: String = "",
-    val colorToken: String = "categoryColor1",
+    val colorToken: String = "matcha-4",
     val todayMs: Long = 0L,
     /** Share of today's *tracked* (per-app) usage; the documented denominator. */
     val todayShare: Float = 0f,

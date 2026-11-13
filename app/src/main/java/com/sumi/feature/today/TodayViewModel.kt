@@ -252,7 +252,7 @@ internal fun categorySegments(
             name = usage.name,
             durationMs = usage.durationMs,
             share = if (total > 0L) usage.durationMs.toFloat() / total.toFloat() else 0f,
-            colorToken = usage.categoryId?.let { colorById[it] } ?: "categoryNeutral",
+            colorToken = usage.categoryId?.let { colorById[it] } ?: "stone-1",
         )
     }
 }

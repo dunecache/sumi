@@ -31,8 +31,8 @@ private fun samplePopulatedState() = TodayUiState(
     intentionEnabled = true,
     intentionGoalMinutes = 180,
     categories = listOf(
-        CategorySegment("social", "Social", 3_000_000L, 0.71f, "categoryColor1"),
-        CategorySegment(null, "Uncategorized", 1_200_000L, 0.29f, "categoryNeutral"),
+        CategorySegment("social", "Social", 3_000_000L, 0.71f, "matcha-4"),
+        CategorySegment(null, "Uncategorized", 1_200_000L, 0.29f, "stone-1"),
     ),
     trackedDurationMs = 4_200_000L,
 )

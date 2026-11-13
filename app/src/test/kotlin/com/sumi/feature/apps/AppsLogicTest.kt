@@ -7,8 +7,8 @@ import org.junit.Test
 class AppsLogicTest {
 
     private val chips = listOf(
-        CategoryFilterChip("social", "Social", "categoryColor1", sortOrder = 0),
-        CategoryFilterChip("education", "Education", "categoryColor5", sortOrder = 4),
+        CategoryFilterChip("social", "Social", "matcha-4", sortOrder = 0),
+        CategoryFilterChip("education", "Education", "wisteria", sortOrder = 4),
     )
 
     private fun row(pkg: String, name: String, category: String?, today: Long) =

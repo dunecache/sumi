@@ -34,10 +34,25 @@ class CategoryRepository @Inject constructor(
     /**
      * Seeds the default taxonomy on first launch (or first upgrade to schema 2, where
      * the table has never been populated). Idempotent: does nothing once rows exist.
+     * Seeded rows still carrying their original positional color token are recolored
+     * to the primitive-named defaults afterwards (see [syncSeededColors]).
      */
     suspend fun ensureSeeded() = withContext(dispatchers.io) {
         if (categoryDao.count() == 0) {
             categoryDao.insertAll(DefaultCategories.ALL)
+        }
+    }
+
+    /**
+     * Recolors seeded categories that still carry their original 2026-11 positional
+     * token to the primitive-named default. Rows the user recolored (or reordered —
+     * `sortOrder` is preserved) are untouched. Idempotent.
+     */
+    suspend fun syncSeededColors() = withContext(dispatchers.io) {
+        val updated = DefaultCategories.recolorUntouchedDefaults(categoryDao.getAll())
+        if (updated.isEmpty()) return@withContext
+        db.withTransaction {
+            updated.forEach { categoryDao.upsert(it) }
         }
     }
 
