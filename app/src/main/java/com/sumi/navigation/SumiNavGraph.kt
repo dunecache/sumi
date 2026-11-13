@@ -274,8 +274,8 @@ fun SumiApp(
                     route = Routes.appDetailPattern(),
                     arguments = listOf(navArgument("packageName") { type = NavType.StringType }),
                 ) { backStackEntry ->
-                    val pkg = backStackEntry.arguments?.getString("packageName") ?: ""
-                    AppDetailScreen(packageName = pkg)
+                    // The package id arrives via SavedStateHandle in AppDetailViewModel.
+                    AppDetailScreen()
                 }
                     }
                 }

@@ -34,7 +34,6 @@ import com.sumi.core.designsystem.theme.SumiSpacing
  */
 @Composable
 fun AppDetailScreen(
-    packageName: String,
     viewModel: AppDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()

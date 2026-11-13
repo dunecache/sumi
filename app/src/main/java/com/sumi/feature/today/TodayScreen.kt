@@ -1,5 +1,6 @@
 package com.sumi.feature.today
 
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -46,7 +47,7 @@ fun TodayScreen(
 @Composable
 fun TodayContent(
     state: TodayUiState,
-    iconLoader: (suspend (String) -> android.graphics.drawable.Drawable?)? = null,
+    iconLoader: (suspend (String) -> Drawable?)? = null,
 ) {
     when {
         // Loading keeps the layout with placeholders (§3.9) — previous content, never a spinner.
@@ -89,7 +90,7 @@ private fun TodayHeader() {
 
 /** Populated (or placeholder-loading) layout, vertical order fixed per §3.1. */
 @Composable
-private fun TodayBody(state: TodayUiState, iconLoader: (suspend (String) -> android.graphics.drawable.Drawable?)?) {
+private fun TodayBody(state: TodayUiState, iconLoader: (suspend (String) -> Drawable?)?) {
     Column(
         Modifier
             .fillMaxSize()

@@ -80,7 +80,7 @@ fun AppsScreen(
                                 iconLoader = iconLoader,
                                 onClick = { onOpenAppDetail(app.packageName) },
                                 trailing = {
-                                    Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                                    Column(horizontalAlignment = Alignment.End) {
                                         DurationText(durationMs = app.todayMs)
                                         Text(
                                             text = "wk ${formatWeek(app.weekMs)}",
