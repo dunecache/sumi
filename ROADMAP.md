@@ -68,6 +68,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 *Goal: a user opens Sumi on real data with a coherent, canonical visual identity.*
 
 > **Redesign pass (2026-11):** canonical Kanso Matcha v1.2 tokens now drive the full M3
+> color scheme; v1.3.0 (2026-11-13) replaces the Evening Zen dark palette end-to-end
+> (primitives + semantic + charts + diff tokens); Morning Matcha untouched.
 > color scheme; the Today timeline reads real hourly buckets (previously hardcoded zeros);
 > Apps rows and Today most-used show launcher icons, display names, durations and shares;
 > App detail renders real history; adaptive NavigationRail on ≥600dp; edge-to-edge on.
@@ -222,4 +224,5 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 | 2026-11-13 | Category colors synced to named primitives: seeded taxonomy stores `matcha-4`/`clay-2`/`ochre`/`mist`/`wisteria`/`method` (Utilities = `matcha-2`, residual = `stone-1`); bootstrap `syncSeededColors` recolors rows still on the 2026-11 positional tokens (user recolors/reorders untouched, `sortOrder` preserved); intention ring track = `matcha-1`, over-goal switches only the ring to terracotta; `constant` reserved and never assigned. |
 | 2026-11-13 | Library self-heal: the 90-day `UsageStats` import now creates Application rows, and every collection run backfills rows that exist only in imported history — apps used before events retention (days) no longer vanish from the Apps library and Apps search. |
 | 2026-11-13 | Previews added for the redesign-pass screens/components (TodayContent loading/permission-missing/empty/populated, daily-intention states, goal sheet, distribution card, category detail/manager); `CategoryDetailContent`/`CategoryManagerContent` extracted as stateless internal composables to make the screens previewable. |
+| 2026-11-13 | Evening Zen synced to canonical v1.3.0 ("revised dark palette"): primitives/semantic/charts/diff tokens replaced; Morning Matcha untouched; dark chart palette = matcha-3/mist/clay-2/wisteria/ochre/matcha-2/terracotta; `constant` reserved; previews backgrounds updated. |
 

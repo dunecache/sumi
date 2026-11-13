@@ -3,7 +3,7 @@
 Visual, interaction, and content design for Sumi, built on the **Kanso Matcha** system
 (Zen × Wabi-Sabi × Matcha). Companion docs: `PRINCIPLES.md`, `ROADMAP.md`.
 
-> **Note on tokens:** the canonical **Kanso Matcha v1.2** semantic tokens (both modes, WCAG-validated) are now the source of truth for `core/designsystem/theme/Color.kt`, mapped onto the full Material 3 color scheme. The values in the tables below are the original provisional placeholders kept for history; the shipped app uses the canonical set (see the design-system repository). Always reference tokens by name, never by hex, in feature code.
+> **Note on tokens:** the canonical **Kanso Matcha v1.3.0** semantic tokens (Morning Matcha unchanged; Evening Zen revised dark palette) are now the source of truth for `core/designsystem/theme/Color.kt`, mapped onto the full Material 3 color scheme. The values in the tables below are the original provisional placeholders kept for history; the shipped app uses the canonical set (see the design-system repository). Always reference tokens by name, never by hex, in feature code.
 
 ## 1. Personality
 

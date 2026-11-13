@@ -44,7 +44,7 @@ private fun PreviewUsageRowLight() {
     SumiTheme(darkTheme = false) { Column { UsageRowSample() } }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF22251F, name = "Usage row · Dark")
+@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Usage row · Dark")
 @Composable
 private fun PreviewUsageRowDark() {
     SumiTheme(darkTheme = true) { Column { UsageRowSample() } }
@@ -62,7 +62,7 @@ private fun PreviewTimelineLight() {
     SumiTheme(darkTheme = false) { Column { TimelineStrip(hourlyTotals = SampleHourly) } }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF22251F, name = "Timeline · Dark")
+@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Timeline · Dark")
 @Composable
 private fun PreviewTimelineDark() {
     SumiTheme(darkTheme = true) { Column { TimelineStrip(hourlyTotals = SampleHourly) } }
@@ -80,7 +80,7 @@ private fun PreviewWeeklyLight() {
     SumiTheme(darkTheme = false) { Column { WeeklyBars(dailyTotals = SampleWeekly) } }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF22251F, name = "Weekly · Dark")
+@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Weekly · Dark")
 @Composable
 private fun PreviewWeeklyDark() {
     SumiTheme(darkTheme = true) { Column { WeeklyBars(dailyTotals = SampleWeekly) } }
@@ -106,7 +106,7 @@ private fun PreviewDistributionLight() {
     SumiTheme(darkTheme = false) { Column { CategoryDistributionSample(SampleCategorySegments) } }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF22251F, name = "Distribution · Dark")
+@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Distribution · Dark")
 @Composable
 private fun PreviewDistributionDark() {
     SumiTheme(darkTheme = true) { Column { CategoryDistributionSample(SampleCategorySegments) } }
