@@ -88,13 +88,21 @@ Per-app per-day totals. Needed for the Apps list, weekly charts, and for histori
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | String (PK) | Stable slug, e.g. `social`, `entertainment`, `learning`, `work`, `communication`, `other` |
-| `name` | String | Display name (localizable resource key preferred) |
-| `colorToken` | String | Design-system token name, **not** a hex value |
+| `id` | String (PK) | Stable slug: `social`, `communication`, `entertainment`, `productivity`, `education`, `reading`, `games`, `utilities` (seeds; user-created ids are slugs too) |
+| `name` | String | Display name, user-editable |
+| `colorToken` | String | Design-system token name, **not** a hex value (`categoryColor1..7` or `categoryNeutral`) |
+| `sortOrder` | Int | **(schema v2)** Display order, 0-based; seeded order is the canonical default |
+| `isUserCreated` | Boolean | **(schema v2)** True for user-created categories; defaults are deletable too |
 
-Seeded on first run. Categories are neutral; no category is labeled good or bad.
+Seeded on first launch (and on first upgrade to v2, where the table was never populated) —
+`INSERT ... IGNORE`, so user renames/recolors/reorders are never overwritten by seeding.
+Categories are neutral; no category is labeled good or bad.
 
-### 2.7 UsageGoal
+### 2.7 UsageGoal (not implemented)
+
+Reserved shape for app/category-scoped goals. **Not implemented.** The daily screen-time goal
+ships as a DataStore-only value (§3) — an awareness instrument that gates nothing. This table
+would be the extension path for per-app goals; it is not created in schema v2.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -144,6 +152,8 @@ Single-row table for the collection cursor.
 | `onboarding_completed` | Boolean | |
 | `theme_mode` | Enum | `SYSTEM`, `LIGHT`, `DARK` |
 | `notifications_enabled` | Boolean | Global switch, default off |
+| `daily_goal_minutes` | Int? | Daily screen-time intention in minutes; absent = no goal. Read alongside `daily_goal_enabled` |
+| `daily_goal_enabled` | Boolean | Default true. False = goal kept but paused; UI shows the disabled state. The goal gates nothing, ever (see ARCHITECTURE.md §14) |
 | `quiet_periods` | Serialized list | Start/end local times and days; small enough for DataStore |
 | `daily_intention` | String? + date key | Today's intention text |
 | `reminders_per_day_cap` | Int | Bounded notification rate |
@@ -173,6 +183,8 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 4. `DailyUsage[d].totalDurationMs` = length of the union of all session intervals overlapping day `d` (avoids double counting in multi-window).
 5. All of the above are recomputed for **touched days only** during reconciliation.
 6. A "rebuild aggregates" operation recomputes 2–4 from sessions for all days with `source = SESSIONS` and must match stored values exactly.
+7. **Category totals are derived at read time, never stored.** For a window W, `CategoryUsage(c) = Σ durationMs FROM daily_app_usage JOIN applications ON packageName WHERE dateKey ∈ W AND applications.categoryId = c`, with `NULL` categoryId folded into the *Uncategorized* bucket. Percentages use Σ durationMs of the same window (including Uncategorized) as the denominator. Consequences: reassigning an app retroactively re-derives all historical category views; raw usage rows are never rewritten; `Σ category durations == Σ per-app durations` for every window by construction. (Implemented in `:domain` — `CategoryAnalytics.breakdown`.)
+8. **Excluded packages never reach the database.** Device furniture — Sumi itself, the default launcher, the current IME, System UI (`com.android.systemui`) and the `android` framework — is dropped before session reconstruction, dropped on `UsageStats` aggregate import, and pruned from history (sessions, per-app daily/hourly rows, library rows) with the affected days' daily totals recomputed from the remaining sessions. The rules live in `:domain` (`UsageExclusions`); the device-specific set is resolved per collection run by the platform layer (`DeviceExcludedPackagesResolver`), because the launcher and the IME can change while the app runs. Pruning is one-way: rows already removed are not restored if the device set changes later.
 
 ## 6. Time zone handling
 
@@ -189,10 +201,10 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 
 ## 8. Migrations and testing
 
-- `exportSchema = true`; schemas committed to the repo.
-- `MigrationTestHelper` test for every version bump.
+- `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets).
+- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2 against the real Room-exported v1 schema; **not yet executed anywhere**, no device/emulator available — see ROADMAP.md).
 - DAO tests with an in-memory database for: idempotent upsert, midnight split queries, aggregate rebuild equality, cascade/flag behavior for uninstalled apps.
-- Seed data (categories) tested via a `Callback`.
+- Seed data (categories) is inserted idempotently at bootstrap (`CategoryBootstrap`); `isUserCreated` rows are never reseeded or overwritten.
 
 ## 9. Export format (M5)
 

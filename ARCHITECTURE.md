@@ -268,9 +268,89 @@ Test on a standard emulator **and** physical devices from manufacturers with agg
 
 ## 12. Open items
 
-- Default package → category mapping source (bundled list vs. `ApplicationInfo.category`).
+- ~~Default package → category mapping source~~ → decided: bundled list of well-known packages (`:domain` `DefaultPackageCategories`); `ApplicationInfo.category` was rejected as a sole source (unreliable, often unclassified).
 - Split-screen total rule validation on real devices (R8).
 - Overlap window length for reconciliation (§6).
 - Whether hidden apps count in totals (R13).
 - Database encryption decision.
 
+
+## 13. Category analytics (implemented 2026-11)
+
+Sumi has a user-manageable category system. Design tenets:
+
+- **Single primary category per app** (`applications.categoryId`, null = uncategorized).
+  This makes the no-double-count invariant structural, not a query convention.
+- **Category totals are derived at read time, never stored** (DATA_MODEL §5 rule 7).
+  `Domain` computes the breakdown from immutable `daily_app_usage` rows joined with the
+  current assignment. Percentages are denominated on the same window's total tracked
+  usage (uncategorized included).
+- **Reassignment policy: current assignment wins.** Historical category views are
+  re-derived from the untouched raw records at the next read; raw usage is never
+  rewritten. This is deliberately *not* point-in-time category history. Deleting a
+  category reassigns its apps to the user-chosen target (default: uncategorized);
+  user-assigned rows keep `isCategoryUserSet = true`, auto-classified rows keep
+  `isCategoryUserSet = false` so default classification can reclaim them.
+- **Classification precedence: user override > bundled default > uncategorized.**
+  `:domain`'s `DefaultPackageCategories` maps well-known packages to defaults and is
+  applied at row creation and at bootstrap (`CategoryBootstrap`). Unknown packages are
+  **never silently classified** — they stay uncategorized. Mapping runs on package
+  identifiers, never on display names.
+- Seeding is idempotent (`INSERT IGNORE`) and user edits are never overwritten.
+- Exclusion set: see §15 — device furniture (Sumi itself, the launcher, the IME, System UI)
+  is never tracked. Everything else — including ordinary system apps — is tracked unless
+  the user hides it (R13).
+
+## 14. Goals versus restriction (implemented 2026-11)
+
+The daily screen-time goal is an **awareness instrument**: it gates nothing, blocks
+nothing, and notifies no one. It is evaluated from the same daily aggregate as the
+headline statistic (never a separate source), computed in `:domain` (`DailyGoal`), and
+stored in DataStore (`daily_goal_minutes`, `daily_goal_enabled`). Exceeding the goal is
+reported in neutral language; remaining time is clamped at zero and never renders as a
+negative value. The Focus destination is conceptually separate and the goal is never a
+precondition for anything there. Any future enforcement feature would require explicit
+user consent, a separate design, and its own threat analysis — it is out of scope.
+
+## 15. Excluded packages — device furniture (implemented 2026-11)
+
+Sumi measures time spent in *apps*. Some packages are always in the foreground by the
+system and are not apps the user chooses to open:
+
+| Package | Why it is excluded |
+|---|---|
+| Sumi itself | Opening Sumi to look at your usage must not inflate your usage |
+| The default launcher (HOME) | Time on the home screen is not app usage |
+| The current input method | The keyboard is not an app |
+| System UI (`com.android.systemui`), `android` | Status bar, notification shade, recents overlay, framework |
+
+**Rules live in the domain, the device set lives in the platform.**
+`:domain`'s `UsageExclusions` owns the rules and the filtering (`isExcluded`,
+`filterEvents`, `filterAggregates`) and is unit-tested. The platform layer
+(`DeviceExcludedPackagesResolver`) resolves the *device-specific* set — Sumi's own
+package, the package owning the default HOME activity, and the package of the current
+IME (`Settings.Secure.DEFAULT_INPUT_METHOD`) — per collection run, because the launcher
+and the IME can change while the app runs. Resolution never throws: an unresolvable
+launcher or IME simply means that package is not excluded.
+
+**Where the rules are applied**
+- Collection: excluded packages' events are dropped before session reconstruction, so
+  they never become sessions and never reach the aggregates.
+- Import: excluded packages' `UsageStats` aggregate rows are dropped on initial sync.
+- History: rows stored before the policy existed are pruned on the next collection, and
+  the affected days' daily totals are recomputed from the remaining sessions, so the
+  headline stays the union of the sessions that are kept. Only packages in the excluded
+  set are touched — never a user app. Library rows (`applications`) are pruned too, so
+  device furniture never shows up as a zero-usage app in the library.
+
+Pruning is **one-way**: rows already removed are not restored if the device set changes
+later (e.g. the user switches to another launcher). The new launcher's own usage is
+tracked from that point on.
+
+**Why it matters for the category system.** Without this, Sumi's own foreground time
+lands in *Uncategorized* and inflates the total the user is trying to understand. It is
+a correctness issue, not a cosmetic one: the numbers have to describe the user's apps.
+
+**Still open (R13).** Whether *hidden* apps (a user-facing "hide this app" switch)
+count toward totals is a separate decision and is unchanged: hidden apps are still
+counted today.

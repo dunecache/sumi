@@ -120,6 +120,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.espresso)
     androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.room.testing)
     debugImplementation(libs.compose.ui.tooling)
 }
 

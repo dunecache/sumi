@@ -1,8 +1,10 @@
 package com.sumi.feature.appdetail
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sumi.core.database.dao.ApplicationDao
+import com.sumi.data.categories.CategoryRepository
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
@@ -18,8 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-/** App detail state: friendly identity plus real per-day history and today's sessions. */
+/** App detail state: friendly identity plus real per-day history and category assignment. */
 data class AppDetailUiState(
     val isLoading: Boolean = true,
     val displayName: String = "",
@@ -32,12 +35,28 @@ data class AppDetailUiState(
     val month: List<Long> = List(30) { 0L },
     /** One-line neutral session summary for today, or null when no sessions exist. */
     val sessionSummary: String? = null,
+    /** Category assignment; null = uncategorized. */
+    val categoryId: String? = null,
+    val categoryName: String = "Uncategorized",
+    val categoryColorToken: String = "categoryNeutral",
+    /** True when the user explicitly chose the assignment (vs. automatic default). */
+    val categoryUserSet: Boolean = false,
+    /** Options for the assignment picker (all known categories). */
+    val categories: List<CategoryOption> = emptyList(),
+)
+
+/** One row in the category picker. */
+data class CategoryOption(
+    val id: String,
+    val name: String,
+    val colorToken: String,
 )
 
 @HiltViewModel
 class AppDetailViewModel @Inject constructor(
     private val applicationDao: ApplicationDao,
     private val repository: UsageRepository,
+    private val categoryRepository: CategoryRepository,
     private val clock: Clock,
     private val timeZone: TimeZoneProvider,
     iconLoader: AppIconLoader,
@@ -52,8 +71,11 @@ class AppDetailViewModel @Inject constructor(
     val uiState: StateFlow<AppDetailUiState> = combine(
         repository.observeAppDailyUsage(packageName),
         repository.observeSessionsForPackageAndDate(packageName, todayKey()),
-    ) { daily, todaySessions ->
+        applicationDao.observeByPackage(packageName),
+        categoryRepository.observeCategories(),
+    ) { daily, todaySessions, app, categories ->
         val today = todayKey()
+        val current = categories.firstOrNull { it.id == app?.categoryId }
         AppDetailUiState(
             isLoading = false,
             displayName = displayNameFallback(),
@@ -62,8 +84,18 @@ class AppDetailViewModel @Inject constructor(
             week = dailySeries(daily, today, 7),
             month = dailySeries(daily, today, 30),
             sessionSummary = sessionSummary(todaySessions, clock.nowUtcMs()),
+            categoryId = app?.categoryId,
+            categoryName = current?.name ?: "Uncategorized",
+            categoryColorToken = current?.colorToken ?: "categoryNeutral",
+            categoryUserSet = app?.isCategoryUserSet == true,
+            categories = categories.map { CategoryOption(it.id, it.name, it.colorToken) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppDetailUiState())
+
+    /** Explicit user assignment — always wins over defaults. Pass null for uncategorized. */
+    fun setCategory(categoryId: String?) {
+        viewModelScope.launch { categoryRepository.setAppCategory(packageName, categoryId) }
+    }
 
     /** Fallback label; the friendly display name arrives via the app row once loaded. */
     private var cachedName: String? = null

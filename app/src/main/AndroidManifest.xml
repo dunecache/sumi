@@ -25,11 +25,17 @@
     <!-- App discovery per AGENTS.md §2: visibility of launchable apps only, via the
          launcher intent filter (never QUERY_ALL_PACKAGES). This is what lets Sumi
          resolve display labels and launcher icons (platform/applications) for
-         packages already seen in usage stats. -->
+         packages already seen in usage stats.
+         The HOME entry makes the default launcher visible so it can be resolved and
+         excluded from tracked usage (platform/usage/ExcludedPackagesResolver). -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
         </intent>
     </queries>
 

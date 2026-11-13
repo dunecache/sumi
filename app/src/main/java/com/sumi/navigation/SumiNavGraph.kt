@@ -50,6 +50,8 @@ import androidx.navigation.navArgument
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.feature.appdetail.AppDetailScreen
 import com.sumi.feature.apps.AppsScreen
+import com.sumi.feature.categories.CategoryDetailScreen
+import com.sumi.feature.categories.CategoryManagerScreen
 import com.sumi.feature.focus.FocusScreen
 import com.sumi.feature.insights.InsightsScreen
 import com.sumi.feature.onboarding.OnboardingViewModel
@@ -79,6 +81,14 @@ private val BottomDestinations = listOf(
 
 private val MainRoutes = BottomDestinations.map { it.route } + Routes.SETTINGS
 
+// Detail/management routes render below the top bar with a back arrow; the bottom bar stays hidden.
+private val SubRoutes = setOf(
+    Routes.SETTINGS,
+    Routes.appDetailPattern(),
+    Routes.CATEGORY_MANAGER,
+    Routes.categoryDetailPattern(),
+)
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SumiApp(
@@ -95,6 +105,8 @@ fun SumiApp(
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val showBottomBar = currentRoute in MainRoutes
+    val isSubRoute = currentRoute in SubRoutes
+    val showTopBar = showBottomBar || isSubRoute
 
     // 200ms cross-fades between destinations; skipped entirely when the system animator
     // scale is 0 (reduced motion), per DESIGN.md §3.4.
@@ -123,12 +135,12 @@ fun SumiApp(
 
         Scaffold(
             topBar = {
-                if (showBottomBar) {
+                if (showTopBar) {
                     TopAppBar(
                         title = { Text("Sumi") },
                         actions = {
-                            // §2.2: gear on main tabs; back arrow on the settings route itself.
-                            if (currentRoute == Routes.SETTINGS) {
+                            // Sub-routes get a back arrow; the tabbed destinations keep the gear.
+                            if (isSubRoute) {
                                 IconButton(onClick = { navController.popBackStack() }) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -251,13 +263,32 @@ fun SumiApp(
                     )
                 }
                 composable(Routes.TODAY) {
-                    TodayScreen()
+                    TodayScreen(
+                        onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
+                        onOpenCategoryDetail = { id -> navController.navigate(Routes.categoryDetail(id)) },
+                        onOpenCategories = { navController.navigateTab(Routes.INSIGHTS) },
+                    )
                 }
-                composable(Routes.INSIGHTS) { InsightsScreen() }
+                composable(Routes.INSIGHTS) {
+                    InsightsScreen(
+                        onOpenCategoryDetail = { id -> navController.navigate(Routes.categoryDetail(id)) },
+                    )
+                }
                 composable(Routes.FOCUS) { FocusScreen() }
                 composable(Routes.APPS) {
                     AppsScreen(
                         onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
+                        onManageCategories = { navController.navigate(Routes.CATEGORY_MANAGER) },
+                    )
+                }
+                composable(Routes.CATEGORY_MANAGER) { CategoryManagerScreen() }
+                composable(
+                    route = Routes.categoryDetailPattern(),
+                    arguments = listOf(navArgument("categoryId") { type = NavType.StringType }),
+                ) {
+                    CategoryDetailScreen(
+                        onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
+                        onManageCategories = { navController.navigate(Routes.CATEGORY_MANAGER) },
                     )
                 }
                 composable(Routes.SETTINGS) {

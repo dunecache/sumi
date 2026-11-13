@@ -103,10 +103,11 @@ Order, most important first:
 2. Hero line (Literata): "Your day, in perspective."
 3. Total screen time (Plex Mono, large) with caption "Screen time today".
 4. Comparison with the previous day (neutral wording, no up/down arrows in red/green).
-5. **Most used** list: top 3–5 apps with icon, name, duration.
-6. Usage distribution (by category).
-7. Daily timeline (activity across the day).
-8. One small reflection or observation (Literata, optional).
+5. **Daily intention** card: configured target, time used, remaining (never negative), one elegant progress indicator, edit/remove in place. Neutral, never a warning hue. When unset, a quiet call-to-action.
+6. **Where your time goes** (category distribution): total tracked, segmented proportional bar, labelled list (color dot + name + duration + %, never color alone). Tap through to category detail; "See all" leads to the deeper analytics destination.
+7. **Most used** list: top 3–5 apps with icon, name, duration. Tap opens app detail.
+8. Daily timeline (activity across the day).
+9. One small reflection or observation (Literata, optional).
 
 Charts here answer: *where did my time go today, and when?*
 

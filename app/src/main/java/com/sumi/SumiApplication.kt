@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.sumi.platform.background.CollectionWorker
+import com.sumi.data.categories.CategoryBootstrap
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -17,6 +18,9 @@ class SumiApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var categoryBootstrap: CategoryBootstrap
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setMinimumLoggingLevel(Log.INFO)
@@ -26,6 +30,7 @@ class SumiApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         scheduleSafetyNet()
+        categoryBootstrap.run()
     }
 
     /** 15-minute minimum periodic safety net; collection is not a live tracker. */

@@ -2,6 +2,7 @@ package com.sumi.feature.insights
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,17 +13,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sumi.core.designsystem.component.CategoryDistributionCard
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.WeeklyBars
+import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.domain.insights.InsightKind
 
@@ -31,7 +36,10 @@ import com.sumi.domain.insights.InsightKind
  * with a small leading marker (DESIGN.md §7). No prefix rewriting of engine copy.
  */
 @Composable
-fun InsightsScreen(viewModel: InsightsViewModel = hiltViewModel()) {
+fun InsightsScreen(
+    viewModel: InsightsViewModel = hiltViewModel(),
+    onOpenCategoryDetail: (categoryId: String) -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsState()
     Column(
         Modifier
@@ -57,6 +65,43 @@ fun InsightsScreen(viewModel: InsightsViewModel = hiltViewModel()) {
                 Spacer(Modifier.height(SumiSpacing.sm))
                 SumiCard {
                     WeeklyBars(dailyTotals = state.weeklyTotals, caption = "Daily screen time this week")
+                }
+                if (state.categories.isNotEmpty()) {
+                    Spacer(Modifier.height(SumiSpacing.xl))
+                    CategoryDistributionCard(
+                        title = "WHERE THE WEEK WENT",
+                        segments = state.categories,
+                        totalDurationMs = state.weekTrackedMs,
+                        onCategoryClick = onOpenCategoryDetail,
+                    )
+                }
+                state.socialWeekMs?.let { socialMs ->
+                    Spacer(Modifier.height(SumiSpacing.md))
+                    SumiCard {
+                        Text(
+                            text = "TIME IN SOCIAL APPS",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(SumiSpacing.xs))
+                        Text(
+                            text = "${formatDuration(socialMs)} this week",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(SumiSpacing.xs))
+                        Text(
+                            text = "${(state.socialWeekShare * 100).toInt()}% of tracked time",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = { onOpenCategoryDetail(com.sumi.domain.categories.DefaultPackageCategories.SOCIAL) },
+                            contentPadding = PaddingValues(horizontal = 0.dp),
+                        ) {
+                            Text("Open social analytics")
+                        }
+                    }
                 }
                 Spacer(Modifier.height(SumiSpacing.xl))
                 SumiSectionHeader("OBSERVATIONS")

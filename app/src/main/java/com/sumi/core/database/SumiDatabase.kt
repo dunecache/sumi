@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.sumi.core.database.dao.AppCategoryDao
 import com.sumi.core.database.dao.ApplicationDao
 import com.sumi.core.database.dao.CollectionStateDao
 import com.sumi.core.database.dao.DailyAppUsageDao
@@ -21,7 +22,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// M0 foundation: schema per DATA_MODEL.md. M1 fills the usage engine.
+// Schema per DATA_MODEL.md. Migration 1→2 adds the category system (sortOrder, isUserCreated).
 @Database(
     entities = [
         Application::class,
@@ -32,11 +33,12 @@ import javax.inject.Singleton
         AppCategory::class,
         CollectionState::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class SumiDatabase : RoomDatabase() {
     abstract fun applicationDao(): ApplicationDao
+    abstract fun appCategoryDao(): AppCategoryDao
     abstract fun usageSessionDao(): UsageSessionDao
     abstract fun dailyUsageDao(): DailyUsageDao
     abstract fun dailyAppUsageDao(): DailyAppUsageDao
@@ -50,7 +52,7 @@ abstract class SumiDatabase : RoomDatabase() {
             context.applicationContext,
             SumiDatabase::class.java,
             DB_NAME,
-        ).addMigrations().build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 }
 
