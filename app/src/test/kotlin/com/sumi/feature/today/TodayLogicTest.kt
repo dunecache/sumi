@@ -2,6 +2,7 @@ package com.sumi.feature.today
 
 import com.sumi.core.database.entity.Application
 import com.sumi.domain.usage.DailyAppUsage
+import com.sumi.domain.usage.HourlyUsage
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -36,6 +37,66 @@ class TodayLogicTest {
         // 33m total with a top app must not produce "0h" (build 2026-11-12 bug).
         val mostUsed = listOf(MostUsedApp("com.a", "launcher3", 8L * 60_000L))
         assertEquals("33m today — launcher3 took the largest share.", observationFor(33L * 60_000L, mostUsed))
+    }
+
+    // --- hourlyTotals (timeline §3.6) ---
+
+    @Test
+    fun `empty hourly rows render all-zero timeline`() {
+        assertEquals(List(24) { 0L }, hourlyTotals(emptyList()))
+    }
+
+    @Test
+    fun `per-app rows sum into wall-clock buckets`() {
+        val totals = hourlyTotals(
+            listOf(
+                HourlyUsage("2026-11-12", 9, "com.a", 10L),
+                HourlyUsage("2026-11-12", 9, "com.b", 5L),
+                HourlyUsage("2026-11-12", 21, "com.a", 42L),
+            ),
+        )
+        assertEquals(15L, totals[9])
+        assertEquals(42L, totals[21])
+        assertEquals(0L, totals[0])
+    }
+
+    @Test
+    fun `out-of-range hours clamp instead of crashing`() {
+        val totals = hourlyTotals(
+            listOf(
+                HourlyUsage("2026-11-12", 24, "com.a", 7L),
+                HourlyUsage("2026-11-12", -1, "com.b", 3L),
+            ),
+        )
+        assertEquals(7L, totals[23])
+        assertEquals(3L, totals[0])
+    }
+
+    // --- yesterdayComparison (§5.1-4, neutral wording) ---
+
+    @Test
+    fun `tiny deltas read as unchanged`() {
+        assertEquals("About the same as yesterday.", yesterdayComparison(10L * 60_000L, 8L * 60_000L))
+    }
+
+    @Test
+    fun `minutes delta phrased neutrally`() {
+        assertEquals(
+            "About 20m less than yesterday.",
+            yesterdayComparison(2L * 60_000L * 60, 2L * 60_000L * 60 + 20L * 60_000L),
+        )
+        assertEquals(
+            "About 20m more than yesterday.",
+            yesterdayComparison(2L * 60_000L * 60 + 20L * 60_000L, 2L * 60_000L * 60),
+        )
+    }
+
+    @Test
+    fun `hours delta reuses duration formatting`() {
+        assertEquals(
+            "About 2h 15m more than yesterday.",
+            yesterdayComparison(3L * 60_000L * 60 + 15L * 60_000L, 60_000L * 60),
+        )
     }
 
     // --- mostUsedApps (§3.5) ---

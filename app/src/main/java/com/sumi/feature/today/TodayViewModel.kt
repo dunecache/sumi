@@ -9,6 +9,7 @@ import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
 import com.sumi.domain.usage.DailyAppUsage
+import com.sumi.domain.usage.HourlyUsage
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.platform.usage.UsageAccessChecker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +26,8 @@ data class TodayUiState(
     val totalDurationMs: Long = 0L,
     /** Null = no data was collected for yesterday; renderers omit the line instead of printing "0m". */
     val previousDayDurationMs: Long? = null,
+    /** Neutral comparison wording, or null when yesterday has no data (line omitted). */
+    val comparison: String? = null,
     val mostUsed: List<MostUsedApp> = emptyList(),
     val timeline: List<Long> = List(HOURS_PER_DAY) { 0L }, // hourly totals 0..23
     val observation: String? = null,
@@ -65,16 +68,20 @@ class TodayViewModel @Inject constructor(
                 repository.observeDailyTotal(today),
                 repository.observeDailyTotal(yesterday),
                 repository.observeDailyAppUsage(today),
+                repository.observeHourlyUsage(today),
                 applicationDao.observeInstalled(),
-            ) { todayTotal, yesterdayTotal, perApp, applications ->
+            ) { todayTotal, yesterdayTotal, perApp, hourly, applications ->
                 val mostUsed = mostUsedApps(perApp, applications)
                 TodayUiState(
                     isLoading = false,
                     hasUsageAccess = checker.hasUsageAccess(),
                     totalDurationMs = todayTotal?.totalDurationMs ?: 0L,
                     previousDayDurationMs = yesterdayTotal?.totalDurationMs,
+                    comparison = yesterdayTotal?.let {
+                        yesterdayComparison(todayTotal?.totalDurationMs ?: 0L, it.totalDurationMs)
+                    },
                     mostUsed = mostUsed,
-                    timeline = List(TodayUiState.HOURS_PER_DAY) { 0L },
+                    timeline = hourlyTotals(hourly),
                     observation = observationFor(todayTotal?.totalDurationMs ?: 0L, mostUsed),
                 )
             }.collect { _uiState.value = it }
@@ -82,8 +89,38 @@ class TodayViewModel @Inject constructor(
     }
 }
 
-/** Milliseconds per minute for the sub-minute summary template. */
+/** Milliseconds per minute for comparison math and summary thresholds. */
 private const val MILLIS_PER_MINUTE = 60_000L
+
+/** Deltas under this many minutes read as "about the same" (no noise for tiny changes). */
+private const val SIMILAR_THRESHOLD_MINUTES = 5L
+
+/**
+ * Neutral previous-day comparison (DESIGN.md §5.1-4: no up/down arrows in red/green):
+ * deltas under five minutes read as unchanged; otherwise the magnitude is reused from
+ * [formatDuration] — "About 20m less than yesterday." / "About 2h 15m more than yesterday."
+ */
+internal fun yesterdayComparison(todayMs: Long, yesterdayMs: Long): String {
+    val delta = todayMs - yesterdayMs
+    val absMinutes = kotlin.math.abs(delta) / MILLIS_PER_MINUTE
+    if (absMinutes < SIMILAR_THRESHOLD_MINUTES) return "About the same as yesterday."
+    val amount = formatDuration(absMinutes * MILLIS_PER_MINUTE)
+    return if (delta < 0) "About $amount less than yesterday." else "About $amount more than yesterday."
+}
+
+/**
+ * Sums per-app hourly buckets into 24 wall-clock totals for the timeline strip.
+ * Hour values from aggregation are always 0–23 (zone `hour`); values outside that range
+ * are clamped defensively so malformed rows can never crash rendering.
+ */
+internal fun hourlyTotals(hourly: List<HourlyUsage>): List<Long> {
+    val totals = MutableList(TodayUiState.HOURS_PER_DAY) { 0L }
+    for (row in hourly) {
+        val index = row.hour.coerceIn(0, TodayUiState.HOURS_PER_DAY - 1)
+        totals[index] += row.durationMs.coerceAtLeast(0L)
+    }
+    return totals
+}
 
 /**
  * Calm summary templates (navigation/Today reference §3.7), in priority order:
