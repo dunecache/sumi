@@ -200,8 +200,8 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 
 ## 8. Migrations and testing
 
-- `exportSchema = true`; schemas committed to the repo (`app/schemas`).
-- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2; not yet executed anywhere, see ROADMAP.md).
+- `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets).
+- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2 against the real Room-exported v1 schema; **not yet executed anywhere**, no device/emulator available — see ROADMAP.md).
 - DAO tests with an in-memory database for: idempotent upsert, midnight split queries, aggregate rebuild equality, cascade/flag behavior for uninstalled apps.
 - Seed data (categories) is inserted idempotently at bootstrap (`CategoryBootstrap`); `isUserCreated` rows are never reseeded or overwritten.
 
