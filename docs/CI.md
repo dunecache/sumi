@@ -4,6 +4,7 @@ Build, test, and lint **always run in GitHub Actions**. Do not rely on local bui
 
 - **Build** — `.github/workflows/build.yml` → `./gradlew assembleDebug --no-daemon --stacktrace`, uploads `app-debug.apk`.
 - **Test** — `.github/workflows/test.yml` → `:domain:test` + `:app:testDebugUnitTest`, uploads reports.
+  - `:app:testDebugUnitTest` runs the JVM **Robolectric** harness (sdk 34, `robolectric.properties`), which renders real Compose screens for onboarding and Today. No device or emulator is needed; `isIncludeAndroidResources = true` merges the debug manifest/resources for the run. Test-only dependencies: `robolectric`, `androidx.test:core`, `ui-test-junit4` / `ui-test-manifest` (BOM).
 - **Lint** — `.github/workflows/lint.yml` → `:app:lintDebug`, uploads lint reports.
   - ktlint/detekt Gradle plugins are not used anywhere. Both hook the Android/Kotlin Gradle extensions in ways incompatible with AGP 8.7.3 + Kotlin 2.1.0 (`CommonExtension` / `BaseExtension` / `KotlinProjectExtension` not found in CI), so style is covered by `lintDebug` + `.editorconfig`.
 
