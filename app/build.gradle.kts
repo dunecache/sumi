@@ -74,6 +74,14 @@ android {
 
     // Room schema export: schemas live under app/schemas/.
     sourceSets { getByName("androidTest").assets.srcDirs("$projectDir/schemas") }
+
+    // Robolectric needs the merged resources and the debug manifest to render Compose
+    // screens on the JVM. Without this the UI tests cannot run in CI (no device there).
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -117,6 +125,14 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
+    // JVM UI-test harness: Compose semantics assertions under Robolectric, so the
+    // onboarding / permission-missing / Today screens are actually rendered in CI.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.espresso)
     androidTestImplementation(libs.truth)
