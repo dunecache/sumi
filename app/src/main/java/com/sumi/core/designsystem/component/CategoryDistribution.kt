@@ -140,7 +140,7 @@ private fun CategoryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(MIN_ROW_HEIGHT)
+            .height(SumiSpacing.minTouchTarget)
             .let { row ->
                 if (onClick != null) {
                     row.clickable(onClickLabel = segment.name, onClick = onClick)
@@ -184,6 +184,5 @@ private val SEGMENT_BAR_HEIGHT = 12.dp
 private val SEGMENT_GAP = 2.dp
 private val SEGMENT_CORNER = 3.dp
 private val CATEGORY_DOT = 10.dp
-private val MIN_ROW_HEIGHT = 40.dp
 private val PERCENT_WIDTH = 36.dp
 private const val MIN_VISIBLE_SHARE = 0.03f
