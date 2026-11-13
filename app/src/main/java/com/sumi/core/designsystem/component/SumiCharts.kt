@@ -263,7 +263,8 @@ fun WeeklyBars(
 
 /** Short localized weekday label; index 6 is today. */
 private fun dayLabel(index: Int): String {
-    val day = java.time.LocalDate.now().dayOfWeek.minusDays((6 - index).toLong())
+    // DayOfWeek supports plus/minus (not minusDays).
+    val day = java.time.LocalDate.now().dayOfWeek.minus((6 - index).toLong())
     return day.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 }
 

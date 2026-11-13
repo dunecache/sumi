@@ -87,7 +87,7 @@ private fun MonogramIcon(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = displayName.firstOrNull()?.uppercase()?.takeIf { it.isLetterOrDigit() } ?: "·",
+            text = displayName.firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "·",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )

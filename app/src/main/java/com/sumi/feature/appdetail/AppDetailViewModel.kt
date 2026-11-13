@@ -61,7 +61,7 @@ class AppDetailViewModel @Inject constructor(
             todayMs = daily.firstOrNull { it.dateKey == today }?.durationMs ?: 0L,
             week = dailySeries(daily, today, 7),
             month = dailySeries(daily, today, 30),
-            sessionSummary = sessionSummary(todaySessions),
+            sessionSummary = sessionSummary(todaySessions, clock.nowUtcMs()),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppDetailUiState())
 
@@ -92,11 +92,12 @@ internal fun dailySeries(
 }
 
 /** Neutral, observed summary of today's sessions for one app (no guilt framing). */
-internal fun sessionSummary(sessions: List<UsageSession>): String? {
-    val complete = sessions.filter { it.durationMs > 0L }
-    if (complete.isEmpty()) return null
-    val longest = complete.maxBy { it.durationMs }.durationMs
-    val count = complete.size
+internal fun sessionSummary(sessions: List<UsageSession>, nowUtcMs: Long): String? {
+    // UsageSession.durationMs is a function (open sessions measure up to now).
+    val durations = sessions.map { it.durationMs(nowUtcMs) }.filter { it > 0L }
+    if (durations.isEmpty()) return null
+    val longest = durations.max()
+    val count = durations.size
     return if (count == 1) {
         "One session today, ${formatDuration(longest)} long."
     } else {
