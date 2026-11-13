@@ -1,81 +1,155 @@
 package com.sumi.core.designsystem.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// Kanso Matcha themes. No alarm red for ordinary usage; no default Material purple, no dynamic color.
-// See DESIGN.md §3.1.
+/**
+ * Kanso Matcha Material 3 themes over the canonical v1.2 tokens. No alarm red for ordinary
+ * usage (the `error` role exists for data-deletion confirmation only); no dynamic color —
+ * Sumi keeps one recognizable identity across devices. See DESIGN.md §2–§3.
+ */
 
 private val LightScheme = lightColorScheme(
-    background = SumiColorTokens.BackgroundLight,
-    surface = SumiColorTokens.SurfaceLight,
-    surfaceVariant = SumiColorTokens.SurfaceVariantLight,
-    onBackground = SumiColorTokens.OnBackgroundLight,
-    onSurface = SumiColorTokens.OnSurfaceLight,
-    onSurfaceVariant = SumiColorTokens.OnSurfaceMutedLight,
-    primary = SumiColorTokens.AccentLight,
-    onPrimary = SumiColorTokens.OnAccentLight,
-    primaryContainer = SumiColorTokens.AccentContainerLight,
+    primary = SumiColorTokens.AccentStrongLight,
+    onPrimary = SumiColorTokens.SurfaceElevatedLight,
+    primaryContainer = SumiColorTokens.SurfaceAccentLight,
     onPrimaryContainer = SumiColorTokens.OnBackgroundLight,
-    outline = SumiColorTokens.OutlineLight,
+    secondary = SumiColorTokens.AccentPrimaryLight,
+    onSecondary = SumiColorTokens.SurfaceElevatedLight,
+    secondaryContainer = SumiColorTokens.AccentSecondaryLight,
+    onSecondaryContainer = SumiColorTokens.OnBackgroundLight,
+    tertiary = SumiColorTokens.ClayLight,
+    onTertiary = SumiColorTokens.SurfaceElevatedLight,
+    tertiaryContainer = SumiColorTokens.SurfaceSunkenLight,
+    onTertiaryContainer = SumiColorTokens.OnBackgroundLight,
+    background = SumiColorTokens.BackgroundLight,
+    onBackground = SumiColorTokens.OnBackgroundLight,
+    surface = SumiColorTokens.BackgroundLight,
+    onSurface = SumiColorTokens.OnBackgroundLight,
+    surfaceVariant = SumiColorTokens.SurfaceLight,
+    onSurfaceVariant = SumiColorTokens.OnSurfaceMutedLight,
+    // Tonal ladder, lowest → highest (sunken → panel → elevated):
+    surfaceContainerLowest = SumiColorTokens.SurfaceSunkenLight,
+    surfaceContainerLow = SumiColorTokens.SurfaceLight,
+    surfaceContainer = SumiColorTokens.SurfaceLight,
+    surfaceContainerHigh = SumiColorTokens.SurfaceElevatedLight,
+    surfaceContainerHighest = SumiColorTokens.SurfaceElevatedLight,
+    outline = SumiColorTokens.BorderStrongLight,
+    outlineVariant = SumiColorTokens.BorderSubtleLight,
+    error = SumiColorTokens.DangerLight,
+    onError = SumiColorTokens.SurfaceElevatedLight,
+    errorContainer = SumiColorTokens.DiffRemovedBgLight,
+    onErrorContainer = SumiColorTokens.DiffRemovedFgLight,
+    inverseSurface = SumiColorTokens.OnBackgroundLight,
+    inverseOnSurface = SumiColorTokens.BackgroundLight,
+    inversePrimary = SumiColorTokens.AccentPrimaryDark,
 )
 
 private val DarkScheme = darkColorScheme(
-    background = SumiColorTokens.BackgroundDark,
-    surface = SumiColorTokens.SurfaceDark,
-    surfaceVariant = SumiColorTokens.SurfaceVariantDark,
-    onBackground = SumiColorTokens.OnBackgroundDark,
-    onSurface = SumiColorTokens.OnSurfaceDark,
-    onSurfaceVariant = SumiColorTokens.OnSurfaceMutedDark,
-    primary = SumiColorTokens.AccentDark,
-    onPrimary = SumiColorTokens.OnAccentDark,
-    primaryContainer = SumiColorTokens.AccentContainerDark,
+    primary = SumiColorTokens.AccentStrongDark,
+    onPrimary = SumiColorTokens.BackgroundDark,
+    primaryContainer = SumiColorTokens.SurfaceAccentDark,
     onPrimaryContainer = SumiColorTokens.OnBackgroundDark,
-    outline = SumiColorTokens.OutlineDark,
+    secondary = SumiColorTokens.AccentSecondaryDark,
+    onSecondary = SumiColorTokens.BackgroundDark,
+    secondaryContainer = SumiColorTokens.AccentSecondaryDark,
+    onSecondaryContainer = SumiColorTokens.BackgroundDark,
+    tertiary = SumiColorTokens.ClayDark,
+    onTertiary = SumiColorTokens.BackgroundDark,
+    tertiaryContainer = SumiColorTokens.SurfaceElevatedDark,
+    onTertiaryContainer = SumiColorTokens.OnBackgroundDark,
+    background = SumiColorTokens.BackgroundDark,
+    onBackground = SumiColorTokens.OnBackgroundDark,
+    surface = SumiColorTokens.BackgroundDark,
+    onSurface = SumiColorTokens.OnBackgroundDark,
+    surfaceVariant = SumiColorTokens.SurfaceDark,
+    onSurfaceVariant = SumiColorTokens.OnSurfaceMutedDark,
+    surfaceContainerLowest = SumiColorTokens.SurfaceSunkenDark,
+    surfaceContainerLow = SumiColorTokens.SurfaceDark,
+    surfaceContainer = SumiColorTokens.SurfaceDark,
+    surfaceContainerHigh = SumiColorTokens.SurfaceElevatedDark,
+    surfaceContainerHighest = SumiColorTokens.SurfaceElevatedDark,
+    outline = SumiColorTokens.BorderStrongDark,
+    outlineVariant = SumiColorTokens.BorderSubtleDark,
+    error = SumiColorTokens.DangerDark,
+    onError = SumiColorTokens.BackgroundDark,
+    errorContainer = SumiColorTokens.DiffRemovedBgDark,
+    onErrorContainer = SumiColorTokens.DiffRemovedFgDark,
+    inverseSurface = SumiColorTokens.OnBackgroundDark,
+    inverseOnSurface = SumiColorTokens.BackgroundDark,
+    inversePrimary = SumiColorTokens.AccentPrimaryLight,
 )
 
-/** Extra semantic colors exposed outside the Material scheme. */
+/** Extra semantic colors outside the Material scheme (status, focus, categories). */
 data class SumiExtendedColors(
     val onSurfaceMuted: Color,
-    val accent: Color,
+    val accent: Color, // decorative fills only — use colorScheme.primary for text-safe accents
     val onAccent: Color,
     val accentContainer: Color,
+    val selection: Color,
+    val focus: Color,
+    val success: Color,
+    val warning: Color,
     val info: Color,
+    val categories: List<Color>, // canonical charts palette; pair with labels, never color-alone
 )
 
+private val LightExtended = SumiExtendedColors(
+    onSurfaceMuted = SumiColorTokens.OnSurfaceMutedLight,
+    accent = SumiColorTokens.AccentPrimaryLight,
+    onAccent = SumiColorTokens.SurfaceElevatedLight,
+    accentContainer = SumiColorTokens.SurfaceAccentLight,
+    selection = SumiColorTokens.SelectionLight,
+    focus = SumiColorTokens.FocusLight,
+    success = SumiColorTokens.SuccessLight,
+    warning = SumiColorTokens.WarningLight,
+    info = SumiColorTokens.InfoLight,
+    categories = SumiColorTokens.CategoryColorsLight,
+)
+
+private val DarkExtended = SumiExtendedColors(
+    onSurfaceMuted = SumiColorTokens.OnSurfaceMutedDark,
+    accent = SumiColorTokens.AccentPrimaryDark,
+    onAccent = SumiColorTokens.BackgroundDark,
+    accentContainer = SumiColorTokens.SurfaceAccentDark,
+    selection = SumiColorTokens.SelectionDark,
+    focus = SumiColorTokens.FocusDark,
+    success = SumiColorTokens.SuccessDark,
+    warning = SumiColorTokens.WarningDark,
+    info = SumiColorTokens.InfoDark,
+    categories = SumiColorTokens.CategoryColorsDark,
+)
+
+val LocalSumiExtendedColors = staticCompositionLocalOf { LightExtended }
+
+/** Extended semantic colors for the current theme (provided by [SumiTheme]). */
 @Composable
-fun sumiExtendedColors(darkTheme: Boolean = isSystemInDarkTheme()): SumiExtendedColors =
-    if (darkTheme) {
-        SumiExtendedColors(
-            onSurfaceMuted = SumiColorTokens.OnSurfaceMutedDark,
-            accent = SumiColorTokens.AccentDark,
-            onAccent = SumiColorTokens.OnAccentDark,
-            accentContainer = SumiColorTokens.AccentContainerDark,
-            info = SumiColorTokens.InfoDark,
-        )
-    } else {
-        SumiExtendedColors(
-            onSurfaceMuted = SumiColorTokens.OnSurfaceMutedLight,
-            accent = SumiColorTokens.AccentLight,
-            onAccent = SumiColorTokens.OnAccentLight,
-            accentContainer = SumiColorTokens.AccentContainerLight,
-            info = SumiColorTokens.InfoLight,
-        )
-    }
+fun sumiExtendedColors(): SumiExtendedColors = LocalSumiExtendedColors.current
+
+/** Resolves a `categoryColor{n}` token name against the current theme's category palette. */
+@Composable
+fun categoryColor(colorToken: String): Color {
+    val extended = sumiExtendedColors()
+    return extended.categories.getOrElse(categoryColorIndex(colorToken)) { extended.categories.first() }
+}
 
 @Composable
 fun SumiTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkScheme else LightScheme,
-        typography = SumiTypography,
-        shapes = SumiShapes,
-        content = content,
-    )
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalSumiExtendedColors provides if (darkTheme) DarkExtended else LightExtended,
+    ) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkScheme else LightScheme,
+            typography = SumiTypography,
+            shapes = SumiShapes,
+            content = content,
+        )
+    }
 }
