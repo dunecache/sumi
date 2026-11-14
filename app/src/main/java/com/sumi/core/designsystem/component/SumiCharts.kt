@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.NumericBody
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.domain.insights.Averages
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.floor
@@ -194,8 +195,8 @@ fun WeeklyBars(
 ) {
     val totals = dailyTotals.take(7)
     val max = totals.maxOrNull()?.takeIf { it > 0 } ?: 1L
-    val positive = totals.filter { it > 0 }
-    val average = if (positive.size >= 2) positive.average() else null
+    // One honest rule: the average is the total divided by the window, quiet days included.
+    val average = if (totals.isNotEmpty()) Averages.dailyAverage(totals) else null
     val accent = MaterialTheme.colorScheme.primary
     val barColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val averageColor = MaterialTheme.colorScheme.outline
@@ -204,9 +205,10 @@ fun WeeklyBars(
     val busiestLabel = busiestIndex?.let { dayLabel(it) }
     val description = if (busiestLabel == null) {
         "$caption: no usage recorded yet"
+    } else if (average != null && average > 0L) {
+        "$caption: busiest on $busiestLabel, about ${formatDuration(average)} a day on average"
     } else {
-        "$caption: busiest on $busiestLabel" +
-            (average?.let { ", about ${formatDuration(it.toLong())} a day" } ?: "")
+        "$caption: busiest on $busiestLabel"
     }
 
     Column(modifier = modifier.fillMaxWidth()) {

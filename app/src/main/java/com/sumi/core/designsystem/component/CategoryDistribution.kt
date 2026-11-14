@@ -29,8 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.NumericBody
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.core.designsystem.theme.categoryColorOrNeutral
-import kotlin.math.max
-import kotlin.math.roundToInt
+import com.sumi.domain.insights.Averages
 
 /**
  * One pre-resolved segment of the distribution bar. `colorToken` is an app_categories
@@ -60,6 +59,8 @@ fun CategoryDistributionCard(
     title: String = "Where your time goes",
     onCategoryClick: ((String) -> Unit)? = null,
     onSeeAll: (() -> Unit)? = null,
+    /** Optional handler for the Uncategorized residual row (deep-link to assignment). */
+    onUncategorizedClick: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -96,10 +97,12 @@ fun CategoryDistributionCard(
                 val id = segment.categoryId
                 CategoryRow(
                     segment = segment,
-                    onClick = if (onCategoryClick != null && id != null) {
-                        { onCategoryClick(id) }
-                    } else {
-                        null
+                    onClick = when {
+                        onCategoryClick != null && id != null -> {
+                            { onCategoryClick(id) }
+                        }
+                        id == null && onUncategorizedClick != null -> onUncategorizedClick
+                        else -> null
                     },
                 )
             }
@@ -115,7 +118,7 @@ private fun SegmentedBar(segments: List<CategorySegment>) {
             .height(SEGMENT_BAR_HEIGHT)
             .semantics {
                 contentDescription = "Category distribution: " + segments.joinToString(", ") { segment ->
-                    "${segment.name}, ${percentLabel(segment.share)} percent"
+                    "${segment.name}, ${Averages.percentOfShare(segment.share)} percent"
                 }
             },
         horizontalArrangement = Arrangement.spacedBy(SEGMENT_GAP),
@@ -136,7 +139,7 @@ private fun CategoryRow(
     segment: CategorySegment,
     onClick: (() -> Unit)?,
 ) {
-    val spoken = "${segment.name}, ${formatDuration(segment.durationMs)}, ${percentLabel(segment.share)} percent of tracked time"
+    val spoken = "${segment.name}, ${formatDuration(segment.durationMs)}, ${Averages.percentOfShare(segment.share)} percent of tracked time"
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -168,7 +171,7 @@ private fun CategoryRow(
         )
         DurationText(durationMs = segment.durationMs)
         Text(
-            text = "${percentLabel(segment.share)}%",
+            text = "${Averages.percentOfShare(segment.share)}%",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(PERCENT_WIDTH),
@@ -176,9 +179,6 @@ private fun CategoryRow(
         )
     }
 }
-
-/** Whole-percent label with consistent rounding (display only). */
-internal fun percentLabel(share: Float): Int = max(0f, share * 100f).roundToInt()
 
 private val SEGMENT_BAR_HEIGHT = 12.dp
 private val SEGMENT_GAP = 2.dp

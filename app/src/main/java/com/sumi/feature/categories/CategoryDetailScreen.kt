@@ -28,6 +28,7 @@ import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.WeeklyBars
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.NumericLarge
+import com.sumi.domain.insights.Averages
 import com.sumi.core.designsystem.theme.SumiSpacing
 
 /**
@@ -93,7 +94,7 @@ internal fun CategoryDetailContent(
             Text(text = formatDuration(state.todayMs), style = NumericLarge)
             Spacer(Modifier.height(SumiSpacing.xs))
             Text(
-                text = "${(state.todayShare * 100).toInt()}% of tracked time today",
+                text = "${Averages.percentOfShare(state.todayShare)}% of tracked time today",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

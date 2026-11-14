@@ -6,6 +6,7 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.domain.insights.Averages
 
 /** Shared app-identity and usage-row components. No hardcoded colors, spacing, or type sizes. */
 
@@ -109,6 +111,7 @@ private fun Drawable.toImageBitmap(): ImageBitmap {
  * bar, duration, and optional share of the day. Whole row is one touch/semantic target
  * announcing the takeaway ("Instagram, 1h 12m, 34 percent of today").
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AppUsageRow(
     packageName: String,
@@ -118,10 +121,11 @@ fun AppUsageRow(
     iconLoader: (suspend (String) -> Drawable?)?,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val percent = shareOfTotal?.takeIf { it >= MIN_MEANINGFUL_SHARE }
-        ?.let { "${(it * 100).toInt()}%" }
+        ?.let { "${Averages.percentOfShare(it)}%" }
     val spoken = buildString {
         append(displayName)
         append(", ")
@@ -133,10 +137,23 @@ fun AppUsageRow(
             .fillMaxWidth()
             .heightIn(min = SumiSpacing.minTouchTarget)
             .let { base ->
-                if (onClick != null) {
-                    base.clickable(onClickLabel = displayName, onClick = onClick)
-                } else {
-                    base
+                when {
+                    onClick != null && onLongClick != null ->
+                        base.combinedClickable(
+                            onClickLabel = displayName,
+                            onLongClickLabel = "Select $displayName",
+                            onClick = onClick,
+                            onLongClick = onLongClick,
+                        )
+                    onLongClick != null ->
+                        base.combinedClickable(
+                            onClickLabel = displayName,
+                            onLongClickLabel = "Select $displayName",
+                            onClick = {},
+                            onLongClick = onLongClick,
+                        )
+                    onClick != null -> base.clickable(onClickLabel = displayName, onClick = onClick)
+                    else -> base
                 }
             }
             .semantics(mergeDescendants = true) { contentDescription = spoken }

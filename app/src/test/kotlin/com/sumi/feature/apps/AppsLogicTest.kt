@@ -88,4 +88,31 @@ class AppsLogicTest {
         val empty = filterAndSort(rows, "instagram", chips, AppsFilter.Category("education"), AppsSort.MOST_USED)
         assertTrue(empty.isEmpty())
     }
+
+    @Test
+    fun `deep-link token uncategorized pins the residual`() {
+        assertEquals(AppsFilter.Uncategorized, appsFilterToken("uncategorized"))
+    }
+
+    @Test
+    fun `deep-link token null or all is the unfiltered library`() {
+        assertEquals(AppsFilter.All, appsFilterToken(null))
+        assertEquals(AppsFilter.All, appsFilterToken(""))
+        assertEquals(AppsFilter.All, appsFilterToken("all"))
+    }
+
+    @Test
+    fun `deep-link token is a category id verbatim`() {
+        assertEquals(AppsFilter.Category("social"), appsFilterToken("social"))
+    }
+
+    @Test
+    fun `selection toggles a package in and out`() {
+        assertEquals(setOf("com.a"), toggleSelectionSet(emptySet(), "com.a"))
+        assertEquals(emptySet<String>(), toggleSelectionSet(setOf("com.a"), "com.a"))
+        assertEquals(
+            setOf("com.a", "com.b"),
+            toggleSelectionSet(setOf("com.a"), "com.b"),
+        )
+    }
 }

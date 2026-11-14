@@ -323,6 +323,11 @@ Sumi has a user-manageable category system. Design tenets:
   backfill that inserts only ids that never existed before — ids the user deleted are
   never resurrected, and a user-created category sharing a new id wins. Colors come from
   the existing palette (`wisteria`, `ochre`, `clay-2`).
+- **Uncategorized is actionable, never silent.** When the residual ≥ 15% of the week's
+  tracked time, Insights surfaces a quiet prompt (duration + a deep-link to Apps filtered
+  to Uncategorized). The residual row in the distribution card also taps through to that
+  same list. Apps supports multi-select bulk reassign ("Move N apps to…"); assignments land
+  as user-assigned rows and all views re-derive instantly (read-time derivation).
 
 ## 14. Goals versus restriction (implemented 2026-11)
 
