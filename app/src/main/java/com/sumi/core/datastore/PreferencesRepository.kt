@@ -33,6 +33,15 @@ data class DailyGoalConfig(
         get() = if (enabled) goalMinutes else null
 }
 
+/**
+ * Today's intention for the Focus tab (§16.2). Stored per local calendar day;
+ * "today" is resolved by the caller (same rule as the daily aggregation boundary).
+ */
+data class DailyIntentionConfig(
+    val text: String,
+    val dateKey: String,
+)
+
 @Singleton
 class PreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -43,6 +52,12 @@ class PreferencesRepository @Inject constructor(
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val DAILY_GOAL_MINUTES = intPreferencesKey("daily_goal_minutes")
         val DAILY_GOAL_ENABLED = booleanPreferencesKey("daily_goal_enabled")
+        val SHOW_SYSTEM_APPS = booleanPreferencesKey("show_system_apps")
+        val DAILY_INTENTION = stringPreferencesKey("daily_intention")
+        val DAILY_INTENTION_DATE = stringPreferencesKey("daily_intention_date")
+        val FOCUS_LAST_DURATION_MIN = intPreferencesKey("focus_last_duration_min")
+        val FOCUS_REMINDER_ENABLED = booleanPreferencesKey("focus_reminder_enabled")
+        val FOCUS_REMINDER_MINUTE_OF_DAY = intPreferencesKey("focus_reminder_minute_of_day")
     }
 
     val onboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[Keys.ONBOARDING_COMPLETED] ?: false }
@@ -56,6 +71,14 @@ class PreferencesRepository @Inject constructor(
 
     val notificationsEnabled: Flow<Boolean> =
         context.dataStore.data.map { it[Keys.NOTIFICATIONS_ENABLED] ?: false }
+
+    /**
+     * Apps library system-furniture policy: false (default) hides system apps from the
+     * Apps list (they still accrue usage and keep their assignments); true mixes them in.
+     * Never affects collection, exclusions, or percentages.
+     */
+    val showSystemApps: Flow<Boolean> =
+        context.dataStore.data.map { it[Keys.SHOW_SYSTEM_APPS] ?: false }
 
     /** Live goal configuration; the Today screen renders from this plus the same daily aggregate as the headline. */
     val dailyGoal: Flow<DailyGoalConfig> = context.dataStore.data.map { prefs ->
@@ -93,8 +116,62 @@ class PreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = value }
     }
 
+    suspend fun setShowSystemApps(value: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_SYSTEM_APPS] = value }
+    }
+
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
+    }
+
+    // ---- Daily intention (Focus; stored per local calendar day) ----
+
+    /** Intention set for [dateKey]; absent on every day the user did not set one. */
+    val dailyIntention: Flow<DailyIntentionConfig> = context.dataStore.data.map { prefs ->
+        DailyIntentionConfig(
+            text = prefs[Keys.DAILY_INTENTION].orEmpty(),
+            dateKey = prefs[Keys.DAILY_INTENTION_DATE].orEmpty(),
+        )
+    }
+
+    suspend fun setDailyIntention(dateKey: String, text: String) {
+        context.dataStore.edit { prefs ->
+            if (text.isBlank()) {
+                prefs.remove(Keys.DAILY_INTENTION)
+                prefs.remove(Keys.DAILY_INTENTION_DATE)
+            } else {
+                prefs[Keys.DAILY_INTENTION] = text.trim()
+                prefs[Keys.DAILY_INTENTION_DATE] = dateKey
+            }
+        }
+    }
+
+    /** Remembered duration for the next session (default: 25 minutes — §16.3). */
+    val focusLastDurationMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.FOCUS_LAST_DURATION_MIN] ?: 25
+    }
+
+    suspend fun rememberFocusDuration(minutes: Int) {
+        context.dataStore.edit { it[Keys.FOCUS_LAST_DURATION_MIN] = minutes }
+    }
+
+    // ---- Focus reminder (§16.9); default OFF; local time-of-day, minutes after midnight ----
+
+    val focusReminderEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.FOCUS_REMINDER_ENABLED] ?: false
+    }
+
+    /** When enabled, a one-shot nudging prayer time is scheduled ~15 min before it fires. */
+    val focusReminderMinuteOfDay: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.FOCUS_REMINDER_MINUTE_OF_DAY] ?: 540 // default: 09:00 (540 = 9*60)
+    }
+
+    suspend fun setFocusReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FOCUS_REMINDER_ENABLED] = enabled }
+    }
+
+    suspend fun setFocusReminderMinuteOfDay(minuteOfDay: Int) {
+        context.dataStore.edit { it[Keys.FOCUS_REMINDER_MINUTE_OF_DAY] = minuteOfDay.coerceIn(0, 23 * 60 + 59) }
     }
 
     suspend fun onboardingCompletedSnapshot(): Boolean =

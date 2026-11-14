@@ -7,6 +7,7 @@ import com.sumi.core.database.dao.ApplicationDao
 import com.sumi.core.database.dao.CollectionStateDao
 import com.sumi.core.database.dao.DailyAppUsageDao
 import com.sumi.core.database.dao.DailyUsageDao
+import com.sumi.core.database.dao.FocusSessionDao
 import com.sumi.core.database.dao.HourlyUsageDao
 import com.sumi.core.database.dao.UsageSessionDao
 import dagger.Module
@@ -30,4 +31,5 @@ object DatabaseModule {
     @Provides fun provideDailyAppUsageDao(db: SumiDatabase): DailyAppUsageDao = db.dailyAppUsageDao()
     @Provides fun provideHourlyUsageDao(db: SumiDatabase): HourlyUsageDao = db.hourlyUsageDao()
     @Provides fun provideCollectionStateDao(db: SumiDatabase): CollectionStateDao = db.collectionStateDao()
+    @Provides fun provideFocusSessionDao(db: SumiDatabase): FocusSessionDao = db.focusSessionDao()
 }

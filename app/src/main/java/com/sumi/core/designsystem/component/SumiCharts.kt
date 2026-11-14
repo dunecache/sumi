@@ -273,6 +273,68 @@ private fun dayLabel(index: Int): String {
     return day.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 }
 
+/**
+ * Daily trend across the available history (typically 30 days). Companion to [WeeklyBars]:
+ * same bar language and average rule, but for a longer window and without per-bar labels —
+ * the shape of the trend is the message, not the individual days. Today (the last bar) is
+ * in the accent; zero days render as a quiet baseline sliver so flat stretches read as
+ * "nothing", never as an error. Not a replacement for the 24h timeline; a different question.
+ */
+@Composable
+fun DailyTrendBars(
+    dailyTotals: List<Long>, // oldest → today
+    modifier: Modifier = Modifier,
+    caption: String = "Daily usage over the available history",
+) {
+    val totals = dailyTotals
+    if (totals.isEmpty()) return
+    val max = totals.maxOrNull()?.takeIf { it > 0 } ?: 1L
+    val accent = MaterialTheme.colorScheme.primary
+    val barColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val averageColor = MaterialTheme.colorScheme.outline
+    val average = Averages.dailyAverage(totals)
+    val activeDays = totals.count { it > 0L }
+    val description = if (activeDays == 0) {
+        "$caption: no usage recorded yet"
+    } else {
+        "$caption: $activeDays active days, about ${formatDuration(average)} a day on average"
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(TREND_HEIGHT)
+                .semantics { contentDescription = description },
+        ) {
+            val slot = size.width / totals.size.toFloat()
+            val barWidth = slot * 0.55f
+            totals.forEachIndexed { index, value ->
+                val fraction = (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                val barHeight = (size.height * fraction).coerceAtLeast(2f)
+                val left = index * slot + slot * 0.225f
+                drawRoundRect(
+                    color = if (index == totals.lastIndex) accent else barColor,
+                    topLeft = Offset(left, size.height - barHeight),
+                    size = Size(barWidth, barHeight),
+                    cornerRadius = CornerRadius(2f, 2f),
+                )
+            }
+            average?.let { avg ->
+                if (avg > 0L) {
+                    val y = size.height * (1f - (avg.toFloat() / max.toFloat())).coerceIn(0f, 1f)
+                    drawLine(
+                        color = averageColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 2.dp.toPx(),
+                    )
+                }
+            }
+        }
+    }
+}
+
 private const val HOURS_PER_DAY = 24
 private val HOUR_MARKERS = listOf(0, 6, 12, 18, 24)
 private val TIMELINE_HEIGHT = 64.dp
@@ -447,3 +509,5 @@ private fun labelStride(size: Int): Int = when {
 }
 
 private val RATIO_BAR_HEIGHT = 96.dp
+
+private val TREND_HEIGHT = 88.dp

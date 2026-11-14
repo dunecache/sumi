@@ -6,18 +6,23 @@ import androidx.lifecycle.viewModelScope
 import com.sumi.core.database.dao.ApplicationDao
 import com.sumi.data.categories.CategoryRepository
 import com.sumi.core.designsystem.component.formatDuration
+import com.sumi.domain.insights.ActiveWindow
+import com.sumi.domain.insights.HourlySummary
+import com.sumi.domain.insights.TypicalHours
 import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
 import com.sumi.domain.usage.DailyAppUsage
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.domain.usage.UsageSession
+import com.sumi.feature.categories.nextInlineCreateToken
 import com.sumi.platform.applications.AppIconLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -29,10 +34,16 @@ data class AppDetailUiState(
     /** Raw package id, presented as quiet metadata — never the headline. */
     val packageName: String = "",
     val todayMs: Long = 0L,
+    /** Sum of the trailing 7 daily totals (equals `week.sum()`). */
+    val weekMs: Long = 0L,
+    /** Sum of the trailing 30 daily totals (equals `month.sum()`). */
+    val monthMs: Long = 0L,
     /** Trailing 7 daily totals, oldest → today; 0 for days without data. */
     val week: List<Long> = List(7) { 0L },
     /** Trailing 30 daily totals, oldest → today. */
     val month: List<Long> = List(30) { 0L },
+    /** Busiest 3-hour contiguous window over the trailing 30 days, or null when history is thin. */
+    val typicalWindow: ActiveWindow? = null,
     /** One-line neutral session summary for today, or null when no sessions exist. */
     val sessionSummary: String? = null,
     /** Category assignment; null = uncategorized. */
@@ -73,16 +84,23 @@ class AppDetailViewModel @Inject constructor(
         repository.observeSessionsForPackageAndDate(packageName, todayKey()),
         applicationDao.observeByPackage(packageName),
         categoryRepository.observeCategories(),
-    ) { daily, todaySessions, app, categories ->
+        repository.observeHourlyUsageRange(monthKeys()),
+    ) { daily, todaySessions, app, categories, hourlyRows ->
         val today = todayKey()
         val current = categories.firstOrNull { it.id == app?.categoryId }
+        val week = dailySeries(daily, today, 7)
+        val month = dailySeries(daily, today, 30)
+        val summary = HourlySummary.from(hourlyRows.filter { it.packageName == packageName })
         AppDetailUiState(
             isLoading = false,
             displayName = displayNameFallback(),
             packageName = packageName,
             todayMs = daily.firstOrNull { it.dateKey == today }?.durationMs ?: 0L,
-            week = dailySeries(daily, today, 7),
-            month = dailySeries(daily, today, 30),
+            weekMs = week.sum(),
+            monthMs = month.sum(),
+            week = week,
+            month = month,
+            typicalWindow = TypicalHours.typicalWindow(summary),
             sessionSummary = sessionSummary(todaySessions, clock.nowUtcMs()),
             categoryId = app?.categoryId,
             categoryName = current?.name ?: "Uncategorized",
@@ -97,6 +115,19 @@ class AppDetailViewModel @Inject constructor(
         viewModelScope.launch { categoryRepository.setAppCategory(packageName, categoryId) }
     }
 
+    /** Inline create from the picker: create a user category and assign this app to it. */
+    fun createCategoryAndAssign(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            val existing = categoryRepository.observeCategories().firstOrNull()?.size ?: 0
+            val newId = categoryRepository.create(trimmed, nextInlineCreateToken(existing))
+            if (newId != null) {
+                categoryRepository.setAppCategory(packageName, newId)
+            }
+        }
+    }
+
     /** Fallback label; the friendly display name arrives via the app row once loaded. */
     private var cachedName: String? = null
 
@@ -106,6 +137,11 @@ class AppDetailViewModel @Inject constructor(
             ?: packageName.substringAfterLast('.')
 
     private fun todayKey(): String = DateKey.of(clock.nowUtcMs(), timeZone.currentZone())
+
+    private fun monthKeys(): List<String> {
+        val today = todayKey()
+        return (0 until 30).map { offset -> DateKey.shift(today, -offset.toLong()) }
+    }
 }
 
 /**
@@ -135,4 +171,11 @@ internal fun sessionSummary(sessions: List<UsageSession>, nowUtcMs: Long): Strin
     } else {
         "$count sessions today, longest ${formatDuration(longest)}."
     }
+}
+
+/** "21:00–00:00" — an end of 24 renders as midnight. */
+internal fun formatHourWindow(window: ActiveWindow): String {
+    val start = window.startHour.toString().padStart(2, '0')
+    val end = (window.endHourExclusive % 24).toString().padStart(2, '0')
+    return "$start:00–$end:00"
 }

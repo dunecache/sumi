@@ -26,6 +26,9 @@ interface UsageRepository {
     /** Observed hourly buckets for [dateKey]. */
     fun observeHourlyUsage(dateKey: String): Flow<List<HourlyUsage>>
 
+    /** Observed hourly buckets across [dateKeys] (e.g. the trailing 30 days). */
+    fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>>
+
     /** Sessions overlapping [dateKey] (stored once; aggregation splits at midnight). */
     fun observeSessionsForDate(dateKey: String): Flow<List<UsageSession>>
 
@@ -48,7 +51,9 @@ interface UsageRepository {
      * Creates Application rows for every installed app that doesn't have one yet
      * (discovered via the launcher query; see platform `InstalledAppsSource`).
      * Labels resolve and confident defaults are seeded, never overwriting existing rows.
-     * Discovery creates; it never deletes rows for uninstalled apps.
+     * Rows whose package vanished from the launcher query are marked `isInstalled = 0`
+     * (never deleted — the assignment and the history stay; a reinstall flips the flag
+     * back). Discovery never touches user assignments.
      */
     suspend fun backfillInstalledApps()
 

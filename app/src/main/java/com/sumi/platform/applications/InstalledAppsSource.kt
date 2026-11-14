@@ -21,9 +21,16 @@ import kotlinx.coroutines.withContext
  * usage. Resolution never throws — an empty result on failure.
  */
 interface InstalledAppsSource {
-    /** All launchable package names installed on this device, once, resolved at call time. */
-    suspend fun launchablePackages(): List<String>
+    /** All launchable apps installed on this device, once, resolved at call time. */
+    suspend fun launchableApps(): List<InstalledApp>
 }
+
+/** One discovered launcher application. */
+data class InstalledApp(
+    val packageName: String,
+    /** True for preinstalled/privileged system apps (eligible to hide in the library). */
+    val isSystemApp: Boolean,
+)
 
 @Singleton
 class PackageManagerInstalledAppsSource @Inject constructor(
@@ -31,7 +38,7 @@ class PackageManagerInstalledAppsSource @Inject constructor(
     private val dispatchers: AppDispatchers,
 ) : InstalledAppsSource {
 
-    override suspend fun launchablePackages(): List<String> = withContext(dispatchers.io) {
+    override suspend fun launchableApps(): List<InstalledApp> = withContext(dispatchers.io) {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         try {
             val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -43,10 +50,36 @@ class PackageManagerInstalledAppsSource @Inject constructor(
                 @Suppress("DEPRECATION")
                 context.packageManager.queryIntentActivities(intent, 0)
             }
-            result.mapNotNull { it.activityInfo?.packageName?.takeIf { name -> name.isNotBlank() } }
-                .distinct()
+            result.mapNotNull { resolveInfo ->
+                val packageName = resolveInfo.activityInfo?.packageName?.takeIf { it.isNotBlank() }
+                    ?: return@mapNotNull null
+                InstalledApp(packageName, isSystemApp = isSystemPackage(resolveInfo, packageName))
+            }.distinctBy { it.packageName }
         } catch (_: Exception) {
             emptyList()
         }
     }
+
+    /**
+     * System-app detection: the activity-declared `applicationInfo` flags when present,
+     * falling back to a direct `getApplicationInfo` lookup. `FLAG_UPDATED_SYSTEM_APP`
+     * counts as system (the app shipped with the device, the user updated it later).
+     * Any failure resolves to non-system — a wrong "user app" classification is safer
+     * than wrongly hiding something the user installed.
+     */
+    private fun isSystemPackage(info: android.content.pm.ResolveInfo, packageName: String): Boolean {
+        val fromResolve = info.activityInfo?.applicationInfo?.flags ?: 0
+        if (fromResolve != 0) {
+            return flaggedSystem(fromResolve)
+        }
+        return try {
+            flaggedSystem(context.packageManager.getApplicationInfo(packageName, 0).flags)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun flaggedSystem(flags: Int): Boolean =
+        (flags and (android.content.pm.ApplicationInfo.FLAG_SYSTEM or
+            android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
 }

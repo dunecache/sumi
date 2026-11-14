@@ -315,8 +315,10 @@ Sumi has a user-manageable category system. Design tenets:
   Apps search.
 - **Install-library autodetection** runs at app start (`CategoryBootstrap`) and after
   the first-sync import: every launchable installed app gets an `applications` row, even
-  with no usage history. Add-only — discovery never deletes rows and never overwrites
-  user edits. `InstalledAppsSource` uses the launcher query (`<queries>` MAIN/LAUNCHER,
+  with no usage history. Discovery never overwrites user edits; rows whose package left
+  the launcher catalog are flipped to `isInstalled = 0` (hidden from the library, never
+  deleted — the stored assignment and history survive a reinstall, which flips the flag
+  back). `InstalledAppsSource` uses the launcher query (`<queries>` MAIN/LAUNCHER,
   the same visibility the app already declares; no `QUERY_ALL_PACKAGES`).
 - **New taxonomy (2026-11):** seeds gained `ai` (AI assistants), `finance` and `browser`;
   fresh installs get the full taxonomy, existing installs receive them at bootstrap via a
@@ -384,7 +386,154 @@ a correctness issue, not a cosmetic one: the numbers have to describe the user's
 **Still open (R13).** Whether *hidden* apps (a user-facing "hide this app" switch)
 count toward totals is a separate decision and is unchanged: hidden apps are still
 counted today.
-## 16. Insights ranges and comparison rules (implemented 2026-11)
+
+## 16. Focus sessions (implemented 2026-11)
+
+Focus is a practice, not a restriction surface. Starting, completing, or abandoning a
+session **never** touches the daily goal and never counts as "usage" anywhere else; the
+goal's instrument lives on Today (§14). A session ends with a fact, never a judgment:
+`completed`, `ended_early`, `away_limit`, `interrupted`, or `reboot` — there is no
+"failed" outcome and no score.
+
+### 16.1 Intention (per local day)
+
+The Focus tab holds today's intention, stored as `daily_intention` +
+`daily_intention_date` (`YYYY-MM-DD`, zone resolved at save time — same boundary rule as
+aggregation). A new day starts blank; the intention renders only on its own date; saving
+a blank clears it. The editor prefills only when the stored date is today.
+
+### 16.2 Sessions: storage and lifecycle
+
+Room `focus_sessions` (schema v3, migration 2→3). UTC timestamps throughout. The
+**open-session invariant** — at most one row with `outcome = 'open'` and a NULL
+`endedAtUtcMs` — is enforced in `FocusSessionRepository.startSession()`, which closes
+any existing open row as `ended_early` before inserting the new one. Table writes are
+indexed on `startedAtUtcMs`; the history feed (newest, limit 50) and the trailing-7-day
+roll-up (`weekStart` from `:domain` `FocusHistory`, same boundary rule as Insights)
+both read from it. The open/close state machine rules live in `:domain`
+(`FocusMath` — remaining time, completion, exits, progress) and are JVM-tested.
+
+### 16.3 The reliability layer — foreground service
+
+The session runs in `platform/focus/FocusSessionService`, a user-chosen foreground
+service with `SPECIAL_USE` type (countdown for a task the user explicitly started; not
+data sync, not media, not location). Two deliberate choices:
+
+- **Manifest** declares `foregroundServiceType="specialUse"` with the
+  `PROPERTY_SPECIAL_USE_FGS_SUBTYPE="focus_session_timer"` and the matching
+  `FOREGROUND_SERVICE_SPECIAL_USE` permission on Android 14+; the app also calls the
+  API-34 3-argument `startForeground` with the literal `0x10` on API 34+ only and the
+  deprecated 2-argument call below, so `minSdk = 26` devices are unaffected.
+- **Database is the source of truth, not the service.** The service reads the open row,
+  mounts an ongoing low-importance (silent, `onlyAlertOnce`) notification with the
+  remaining time — tappable, returns to Focus via the `open_focus` extra through
+  `MainActivity.onNewIntent` — and re-reads the row each tick. If the service or the
+  process is killed, the row outlives it: the app seals any open session whose start
+  precedes the newest recorded boot instant as `reboot` at that instant on the next cold
+  start (`CategoryBootstrap` → `FocusSessionRepository.finalizeOpenAfterReboot`). The
+  boot receiver itself records instants only. If no recorded boot follows the session's
+  start (OEM kill, archive), the row is sealed as `interrupted` with **no end
+  timestamp** — the actual end instant is unknowable and is never fabricated. The
+  history list labels these honestly ("Ended when the phone restarted", "Couldn't
+  confirm how it ended"), and interrupted rows are excluded from the weekly roll-up
+  rather than counted with a guessed end.
+
+### 16.4 Drift awareness — gentle exits
+
+While a session is open the service polls `UsageEvents` every **60 seconds** (coarse,
+battery-conscious — not a live tracker) and counts **gentle exits**: a transition from
+Sumi to any other app. An `ExitState` machine (`:domain` `FocusMath.ExitState`)
+guarantees staying away does not inflate the count, and returning to Sumi resets for the
+next leave. Screen events (no package) never count. After **2 cumulative minutes away**
+(`AUTO_END_AWAY_MS`, a named constant in `:domain`) the session ends with outcome
+`away_limit`. Drift data is **counts and timestamps only** — never package names,
+never windows. If usage access is revoked mid-session (or was never granted), exits
+simply aren't observed: the session still runs, the UI says so honestly. `UsageAccess`
+is re-checked at ~10 s cadence while on screen; drift awareness pauses silently on
+failure rather than guessing.
+
+### 16.5 The reminder (opt-in, bounded)
+
+One optional once-a-day reminder at a user-chosen local time (default 09:00, **off by
+default**), scheduled with WorkManager (`sumi_focus_reminder_daily`, periodic 24 h with
+initial delay to the next occurrence of the time); the worker re-checks the preference
+before posting and is a no-op otherwise. `POST_NOTIFICATIONS` is asked for **only when
+the user flips the reminder on** (Android 13+); denial leaves the reminder off with an
+explanation and a deep link to system notification settings. Copy invites ("Time for a
+session?"), never chases; the whole block hides itself when notifications are denied.
+
+### 16.6 Weekly "time in focus"
+
+`SUM of actual elapsed in sessions ended inside the trailing 7 local days`, computed at
+read time (`FocusHistory` in `:domain`, unit-tested; trailing window start via
+`LocalDate.minusDays`, start-of-day in the current zone) — same boundaries and
+formatting as Insights. No targets, no comparisons, no streaks. The history list shows
+up to 4 recent sessions: date, `aim` vs `actual`, exits, honest outcome labels for
+interrupted/reboot rows. Empty state: "No sessions yet — that's fine."
+
+### 16.7 Known limitations — focus, stated honestly
+
+- **Polling, not push.** Foreground-notification and drift updates ride a 1 s/60 s
+  cadence; exact wall-clock drift after process death is bounded by next-open healing,
+  not by surviving process death (Android does not keep FGS guaranteed either).
+- **WorkManager drift.** The reminder is minute-of-day at schedule time and drifts
+  slowly across DST and OEM batching; it is not an alarm and must not be treated as one.
+- **Device-specific.** OEMs with aggressive battery policies may kill the FGS; the
+  session then reads as `reboot`/`interrupted` honestly rather than silently.
+- **2-minute away threshold** is a named constant (`FocusMath.AUTO_END_AWAY_MS`), not a
+  user-tunable — changing it changes the product's promise, not just a preference.
+- **Manual verification pending.** None of this has run on a device or emulator in this
+  environment; see ROADMAP.md.
+
+## 17. Apps library policy (implemented 2026-11, "Apps redesign")
+
+The Apps destination is the categorization funnel: it answers "which applications account
+for my usage" and "is my library organized the way I want it", nothing else.
+
+**System-app policy.** Launchable system apps are **hidden from the Apps library by
+default**; Settings → Apps → *Show system apps* mixes them back in (no separate section —
+the row list stays one list). Detection flags `FLAG_SYSTEM | FLAG_UPDATED_SYSTEM_APP` at
+discovery time and refreshes the flag on every refresh (`isSystemApp`, schema v4). The
+policy only affects *visibility*: system apps that are not Sumi/launcher/IME/SystemUI are
+still collected and counted exactly like user apps, and hiding them changes no total and
+no percentage. Collection and the §15 exclusion set are untouched; percentages on the
+screen stay denominated on Σ per-app usage of the same window — exactly what Today
+counts, so the two screens reconcile. The denominator is stated on-screen ("Totals
+exclude your launcher, keyboard and Sumi itself.").
+
+**Denominator.** Percentages shown in usage sorts are the share of the matching window's
+total tracked usage (today for Most used today, the trailing 7 days for Most used this
+week), including the uncategorized residual — never only the visible rows, and never
+against "all usage including Sumi". Alphabetical and By-category sorts show no
+percentages (near-zero shares there read as noise, not information).
+
+**Zero-usage divider.** In usage sorts, apps with zero usage sit below a quiet
+`NOT USED YET` divider, ordered alphabetically; ties elsewhere break by name
+(deterministic). In alphabetical/category sorts there is no divider.
+
+**Install lifecycle.** Discovery reconciles the library every refresh: rows for packages
+that left the catalog are marked `isInstalled = 0` (rows are never deleted, so category
+assignments and usage history survive an uninstall); a reinstall marks them installed
+again without re-stamping `firstSeenAt`, so the quiet *New* marker never re-fires.
+`firstSeenAt` also feeds the inline "New · Categorize" affordance on fresh apps. An
+*empty* discovery result is treated as "we know nothing", not as "everything was
+uninstalled" — no rows are flipped in that case.
+
+**User assignments always win.** The refresh path only ever updates `isInstalled` /
+`isSystemApp`; `categoryId`, `isCategoryUserSet`, and user-created categories are never
+touched by discovery. Bulk reassignment ("Move N apps to…") writes one assignment per
+selected row with `isCategoryUserSet = 1`; category history re-derives at read time
+(§13), so the fix is retroactively visible in Today, Insights and category detail. The
+confirmation snackbar offers Undo (restores the previous per-row assignment, including
+the user-set flag) for as long as the app lives.
+
+**Search** matches display name, package id, current category name, and the word
+"uncategorized" (the residual bucket answers to its name).
+
+**Apps are not specific events.** Nothing here reaches the network; the screen reads
+only the local database and `PackageManager`.
+
+## 18. Insights ranges and comparison rules (implemented 2026-11)
 
 The Insights destination is range-aware. Ranges are canonical in `:domain`
 (`InsightsRange`); every caller uses the same window definitions.
@@ -428,5 +577,5 @@ comparison.
 
 **Known limitation.** The "See all" action in Insights' top-five block links to the Apps
 destination unfiltered (`apps?filter=all`); a matching-window sort cannot be expressed
-until the Apps screen's scope/sort support lands. The Apps and Focus destinations are
-being redesigned separately (2026-11).
+until that destination's sort model can pin a window (the Apps and Focus destinations
+have since shipped — see §16 and §17).

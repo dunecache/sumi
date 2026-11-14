@@ -32,6 +32,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -98,11 +99,20 @@ fun SumiApp(
     themeMode: ThemeMode,
     onboardingViewModel: OnboardingViewModel,
     onThemeSelected: (ThemeMode) -> Unit,
+    /** Monotonic counter of "open Focus" requests (see MainActivity); navigates once per increment. */
+    openFocusRequest: Int = 0,
 ) {
     val navController = rememberNavController()
     // Caller composes this graph only after the flag has loaded, so the
     // start destination is correct on frame one — no re-routing band-aid.
     val startDestination = if (isOnboardingCompleted) Routes.TODAY else Routes.ONBOARDING_WELCOME
+
+    // A notification tap (ongoing session or reminder) lands here to route into Focus.
+    LaunchedEffect(openFocusRequest) {
+        if (openFocusRequest > 0 && isOnboardingCompleted) {
+            navController.navigateTab(Routes.FOCUS)
+        }
+    }
 
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -308,10 +318,13 @@ fun SumiApp(
                     val settingsViewModel: com.sumi.feature.settings.SettingsViewModel =
                         androidx.hilt.navigation.compose.hiltViewModel()
                     val diagnostics by settingsViewModel.diagnosticsLines.collectAsState()
+                    val showSystemApps by settingsViewModel.showSystemApps.collectAsState(initial = false)
                     SettingsScreen(
                         themeMode = themeMode,
                         onThemeSelected = onThemeSelected,
                         diagnosticsLines = diagnostics,
+                        showSystemApps = showSystemApps,
+                        onShowSystemAppsChange = settingsViewModel::setShowSystemApps,
                     )
                 }
                 composable(

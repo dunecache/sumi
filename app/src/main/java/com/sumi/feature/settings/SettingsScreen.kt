@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,7 +23,7 @@ import com.sumi.core.datastore.ThemeMode
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.theme.SumiSpacing
 
-/** Settings (M2/M5): privacy, theme, data management (export/delete), diagnostics. */
+/** Settings (M2/M5): privacy, theme, apps library, data management (export/delete), diagnostics. */
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
@@ -30,6 +31,8 @@ fun SettingsScreen(
     onDeleteAllData: () -> Unit = {},
     onExportData: () -> Unit = {},
     diagnosticsLines: List<String> = emptyList(),
+    showSystemApps: Boolean = false,
+    onShowSystemAppsChange: (Boolean) -> Unit = {},
 ) {
     Column(
         Modifier
@@ -60,6 +63,27 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = SumiSpacing.sm),
                 )
             }
+        }
+        Spacer(Modifier.height(SumiSpacing.xl))
+        SumiSectionHeader("APPS")
+        Spacer(Modifier.height(SumiSpacing.sm))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = SumiSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f).padding(end = SumiSpacing.md)) {
+                Text("Show system apps", style = MaterialTheme.typography.bodyLarge)
+                Spacer(Modifier.height(SumiSpacing.xs))
+                Text(
+                    text = "Hidden from the Apps library by default. Totals and exclusions stay the same either way.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = showSystemApps,
+                onCheckedChange = onShowSystemAppsChange,
+            )
         }
         Spacer(Modifier.height(SumiSpacing.xl))
         SumiSectionHeader("DATA")

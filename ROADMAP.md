@@ -93,6 +93,25 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 > (`UsageExclusions`, unit-tested), device set resolved per collection run in the
 > platform layer (`DeviceExcludedPackagesResolver`) because the launcher/IME can
 > change. R13 (hidden apps counting toward totals) stays open and unchanged.
+>
+> **Apps redesign pass (2026-11):** Apps rebuilt as the categorization funnel —
+> live category chips (All · user categories in manager order · Uncategorized · Manage…),
+> search that matches labels, packages, category names and "uncategorized", four sorts
+> (today / this week / alphabetical / category) with the matching window's share as the
+> row percentage, `NOT USED YET` zero-usage divider in usage sorts, category identity per
+> row (dot + name, letter-mark-on-category-color icon fallback), long-press and explicit
+> Select entry to multi-select, bottom-bar "Move N apps to…", shared category picker sheet
+> with inline create-new-category (used by bulk, single reassign and app detail),
+> confirmation snackbar with Undo (restores prior per-row assignment incl. the user-set
+> flag), schema v4 (`isSystemApp`, `firstSeenAt`) for the system-apps policy (hidden by
+> default; Settings → Apps → Show system apps) and the quiet New marker with an inline
+> categorize affordance, `isInstalled` now flips to 0 on uninstall (assignment/history
+> kept; reinstall restores), app detail gains week/30-day totals, a 30-day trend and a
+> "usually active" window derived from the hourly buckets (honest below three days of
+> history). Migration 3→4 in code (Focus claimed 2→3 upstream in the same window); schema
+> JSONs 2.json/3.json/4.json committed (reconstructed to match the applied migrations;
+> `identityHash` placeholders). NOT yet run: migration tests on a device/emulator — see
+> acceptance note below.
 
 - [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
 - [x] **Apps**: searchable library with icon, name, today and weekly usage, category
@@ -143,15 +162,15 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## M4 — Gentle interventions (V1.5)
 *Goal: help users change habits, optionally and without force.*
 
-- [ ] Daily intentions: define what to prioritize today
+- [x] Daily intentions: define what to prioritize today (Focus: per-day intention card, ahead of any session; also the Today goal from M2)
 - [ ] App reminders: optional notifications after a chosen duration
 - [ ] Soft limits: notify when an app or category reaches a threshold
-- [ ] Focus sessions: encourage staying away from selected apps (no blocking)
+- [ ] Focus sessions: gentle sessions with drift awareness (away-from-Sumi counts exits; 2-minute away auto-ends; no blocking, no per-app selection — by design)
 - [ ] Quiet periods: suppress reminders
 - [ ] Gentle suggestions based on usage patterns
-- [ ] Notification permission requested only when the user enables a reminder (Android 13+)
+- [x] Notification permission requested only when the user enables a reminder (Android 13+)
 - [ ] Notification channels with sensible defaults and a global off switch
-- [ ] Focus tab: intentions, sessions, limits, quiet periods, active reminders
+- [ ] Focus tab: intentions, sessions, limits, quiet periods, active reminders (intentions, sessions, one optional reminder — limits/quiet periods pending)
 
 **Acceptance criteria**
 - Nothing in the Focus tab is on by default.
@@ -223,9 +242,11 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 | 2026-11-13 | Observations render in the reflection role (Literata); category rows use the 48dp touch-target token (was 40dp). |
 | 2026-11-13 | Category colors synced to named primitives: seeded taxonomy stores `matcha-4`/`clay-2`/`ochre`/`mist`/`wisteria`/`method` (Utilities = `matcha-2`, residual = `stone-1`); bootstrap `syncSeededColors` recolors rows still on the 2026-11 positional tokens (user recolors/reorders untouched, `sortOrder` preserved); intention ring track = `matcha-1`, over-goal switches only the ring to terracotta; `constant` reserved and never assigned. |
 | 2026-11-13 | Library self-heal: the 90-day `UsageStats` import now creates Application rows, and every collection run backfills rows that exist only in imported history — apps used before events retention (days) no longer vanish from the Apps library and Apps search. |
+| 2026-11-14 | Focus sessions land (schema v3, migration 2→3): intention card per local day (DataStore, zone-boundary rule shared with aggregation); session launcher (15/25/45 chips + 5–120 min slider, last duration remembered) with a full-screen calm active state; foreground service (`SPECIAL_USE`, 60 s drift poll via UsageEvents — gentle exits only, package names never stored; 2 minutes away auto-ends honestly as `away_limit`); low-importance ongoing notification; sessions sealed by bootstrap after reboot (`reboot` at the recorded boot instant, or `interrupted` with **no end timestamp** when unknowable); history + trailing-7-day roll-up reusing the Insights boundaries in `:domain` (`FocusMath`, `FocusHistory` — JVM tests); one optional once-a-day reminder (WorkManager, default off, POST_NOTIFICATIONS requested only on opt-in). Goal/sessions fully decoupled (§14; never coupled in code or copy). Repo test added: `data/focus/FocusSessionStoreTest` (Robolectric + Room in-memory, 7 lifecycle cases); `Migration23Test` written but never executed (no device; `app/schemas` is missing `2.json`/`3.json` — must be generated on a dev machine with an Android SDK). NOT verified on any device or emulator: foreground-service persistence, drift accuracy, notification tap routing, reboot seal. |
 | 2026-11-14 | Insights honesty pass: average is stated with its window (zeros included, `Averages` in `:domain`), percent rendering unified (whole percents, one rounding rule across Today/Insights/detail/rows), uncategorized residual is actionable on Insights (deep-link to Apps → Uncategorized), and Apps has multi-select bulk reassign ("Move N apps to…"). Apps is deep-linkable as `apps?filter=uncategorized`. |
 | 2026-11-13 | Previews added for the redesign-pass screens/components (TodayContent loading/permission-missing/empty/populated, daily-intention states, goal sheet, distribution card, category detail/manager); `CategoryDetailContent`/`CategoryManagerContent` extracted as stateless internal composables to make the screens previewable. |
 | 2026-11-13 | Evening Zen synced to canonical v1.3.0 ("revised dark palette"): primitives/semantic/charts/diff tokens replaced; Morning Matcha untouched; dark chart palette = matcha-3/mist/clay-2/wisteria/ochre/matcha-2/terracotta; `constant` reserved; previews backgrounds updated. |
+| 2026-11-14 | Apps redesign pass (schema v4, migration 3→4; Focus claimed v3 / 2→3 upstream in the same window): categorization funnel — live chips, category-name search, four sorts with window share, NOT USED YET divider, multi-select bottom-bar move with inline create-category, Undo confirmation; system-apps policy (hidden by default, Settings toggle; visibility only); uninstall→`isInstalled = 0` with reinstall restore; New marker; app detail gains week/30-day totals, 30-day trend and an honest usually-active window. Schemas 2/3/4.json reconstructed (v2→3→4 chain) and committed; migration tests written but never run here. NOT verified on device/emulator. |
 | 2026-11-14 | Insights redesigned range-aware (Today · Yesterday · Last 7 days · Last 30 days): range switcher, overview with labeled average and time-aware comparison, tap-a-bar daily chart (DailyBars) with day inspector, range-aware category distribution, shared range-aware category detail screens, "Time in social apps" lens on the Social category, range top-five with deep-link to Apps, coverage-aware patterns (hour-of-day strip, morning/evening, weekday/weekend) and rebuilt observations. Domain: `InsightsRange`, `NeutralComparison`, `IntervalMath`; shared derivation in `core.usage.UsageDerivation`; range survives navigation/process death (`SavedStateHandle`). Not yet verified on device/emulator (no local aapt2 on this host); CI is the gate. |
 | 2026-11-14 | Taxonomy extended: new seeds `ai`, `finance`, `browser` (fresh installs get all 11; existing installs backfilled once at bootstrap without resurrecting user-deleted seeds). Install-library autodetection (launchable apps → rows with default categories) wired into bootstrap. Owner's library mapped into `DefaultPackageCategories` (~90 exact rules: Kimi/Perplexity/ChatGPT/Grok/Claude/DeepSeek/Tongyi/Labs, TradingView/Binance/RedotPay/BPC, Brave/Firefox/DuckDuckGo, manga readers, music/video clients, carrier/dev tools, reading/newsletter apps). |
 
