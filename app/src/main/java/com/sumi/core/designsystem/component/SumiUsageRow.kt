@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.core.designsystem.theme.categoryColorOrNeutral
 import com.sumi.domain.insights.Averages
 
 /** Shared app-identity and usage-row components. No hardcoded colors, spacing, or type sizes. */
@@ -44,6 +45,11 @@ import com.sumi.domain.insights.Averages
  * Launcher icon for a package, resolved via [loader] (the platform icon loader, passed as
  * a lambda so the design system stays platform-free). Renders a quiet monogram fallback
  * when no icon resolves — uninstalled or hidden packages never break the layout.
+ *
+ * [fallbackColorToken], when set, colors the monogram with that category color token
+ * (a letter mark on the category color) instead of the neutral container — the Apps
+ * library uses it so an iconless app still carries its category identity. Today renders
+ * the default neutral monogram.
  */
 @Composable
 fun AppIcon(
@@ -52,6 +58,7 @@ fun AppIcon(
     loader: (suspend (String) -> Drawable?)?,
     modifier: Modifier = Modifier,
     size: Dp = DEFAULT_ICON_SIZE,
+    fallbackColorToken: String? = null,
 ) {
     var bitmap by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(packageName, loader) {
@@ -72,6 +79,7 @@ fun AppIcon(
     } else {
         MonogramIcon(
             displayName = displayName,
+            fallbackColorToken = fallbackColorToken,
             modifier = modifier.size(size),
         )
     }
@@ -80,18 +88,29 @@ fun AppIcon(
 @Composable
 private fun MonogramIcon(
     displayName: String,
+    fallbackColorToken: String?,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.secondaryContainer),
+            .background(
+                if (fallbackColorToken != null) {
+                    categoryColorOrNeutral(fallbackColorToken)
+                } else {
+                    MaterialTheme.colorScheme.secondaryContainer
+                },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = displayName.firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "·",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = if (fallbackColorToken != null) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            },
         )
     }
 }
@@ -174,22 +193,10 @@ fun AppUsageRow(
                 maxLines = 1,
             )
             if (shareOfTotal != null) {
-                Box(
-                    Modifier
-                        .padding(top = SumiSpacing.xs)
-                        .fillMaxWidth()
-                        .height(USAGE_BAR_HEIGHT)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth(shareOfTotal.coerceIn(0f, 1f))
-                            .height(USAGE_BAR_HEIGHT)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.primary),
-                    )
-                }
+                ProportionalUsageBar(
+                    share = shareOfTotal,
+                    modifier = Modifier.padding(top = SumiSpacing.xs),
+                )
             }
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -206,6 +213,30 @@ fun AppUsageRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * Thin proportional usage bar ("what the share looks like at a glance"). Track uses the
+ * tonal ladder, fill the accessible accent — same recipe for Today's most-used rows and
+ * the Apps library rows. Zero-width shares render as an empty track, never a hairline fill.
+ */
+@Composable
+fun ProportionalUsageBar(share: Float, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(USAGE_BAR_HEIGHT)
+            .clip(RoundedCornerShape(2.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(share.coerceIn(0f, 1f))
+                .height(USAGE_BAR_HEIGHT)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary),
+        )
     }
 }
 

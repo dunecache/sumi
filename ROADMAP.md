@@ -93,6 +93,25 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 > (`UsageExclusions`, unit-tested), device set resolved per collection run in the
 > platform layer (`DeviceExcludedPackagesResolver`) because the launcher/IME can
 > change. R13 (hidden apps counting toward totals) stays open and unchanged.
+>
+> **Apps redesign pass (2026-11):** Apps rebuilt as the categorization funnel —
+> live category chips (All · user categories in manager order · Uncategorized · Manage…),
+> search that matches labels, packages, category names and "uncategorized", four sorts
+> (today / this week / alphabetical / category) with the matching window's share as the
+> row percentage, `NOT USED YET` zero-usage divider in usage sorts, category identity per
+> row (dot + name, letter-mark-on-category-color icon fallback), long-press and explicit
+> Select entry to multi-select, bottom-bar "Move N apps to…", shared category picker sheet
+> with inline create-new-category (used by bulk, single reassign and app detail),
+> confirmation snackbar with Undo (restores prior per-row assignment incl. the user-set
+> flag), schema v4 (`isSystemApp`, `firstSeenAt`) for the system-apps policy (hidden by
+> default; Settings → Apps → Show system apps) and the quiet New marker with an inline
+> categorize affordance, `isInstalled` now flips to 0 on uninstall (assignment/history
+> kept; reinstall restores), app detail gains week/30-day totals, a 30-day trend and a
+> "usually active" window derived from the hourly buckets (honest below three days of
+> history). Migration 3→4 in code (Focus claimed 2→3 upstream in the same window); schema
+> JSONs 2.json/3.json/4.json committed (reconstructed to match the applied migrations;
+> `identityHash` placeholders). NOT yet run: migration tests on a device/emulator — see
+> acceptance note below.
 
 - [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
 - [x] **Apps**: searchable library with icon, name, today and weekly usage, category
@@ -227,5 +246,6 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 | 2026-11-14 | Insights honesty pass: average is stated with its window (zeros included, `Averages` in `:domain`), percent rendering unified (whole percents, one rounding rule across Today/Insights/detail/rows), uncategorized residual is actionable on Insights (deep-link to Apps → Uncategorized), and Apps has multi-select bulk reassign ("Move N apps to…"). Apps is deep-linkable as `apps?filter=uncategorized`. |
 | 2026-11-13 | Previews added for the redesign-pass screens/components (TodayContent loading/permission-missing/empty/populated, daily-intention states, goal sheet, distribution card, category detail/manager); `CategoryDetailContent`/`CategoryManagerContent` extracted as stateless internal composables to make the screens previewable. |
 | 2026-11-13 | Evening Zen synced to canonical v1.3.0 ("revised dark palette"): primitives/semantic/charts/diff tokens replaced; Morning Matcha untouched; dark chart palette = matcha-3/mist/clay-2/wisteria/ochre/matcha-2/terracotta; `constant` reserved; previews backgrounds updated. |
+| 2026-11-14 | Apps redesign pass (schema v4, migration 3→4; Focus claimed v3 / 2→3 upstream in the same window): categorization funnel — live chips, category-name search, four sorts with window share, NOT USED YET divider, multi-select bottom-bar move with inline create-category, Undo confirmation; system-apps policy (hidden by default, Settings toggle; visibility only); uninstall→`isInstalled = 0` with reinstall restore; New marker; app detail gains week/30-day totals, 30-day trend and an honest usually-active window. Schemas 2/3/4.json reconstructed (v2→3→4 chain) and committed; migration tests written but never run here. NOT verified on device/emulator.
 | 2026-11-14 | Taxonomy extended: new seeds `ai`, `finance`, `browser` (fresh installs get all 11; existing installs backfilled once at bootstrap without resurrecting user-deleted seeds). Install-library autodetection (launchable apps → rows with default categories) wired into bootstrap. Owner's library mapped into `DefaultPackageCategories` (~90 exact rules: Kimi/Perplexity/ChatGPT/Grok/Claude/DeepSeek/Tongyi/Labs, TradingView/Binance/RedotPay/BPC, Brave/Firefox/DuckDuckGo, manga readers, music/video clients, carrier/dev tools, reading/newsletter apps). |
 

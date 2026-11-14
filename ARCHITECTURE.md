@@ -315,8 +315,10 @@ Sumi has a user-manageable category system. Design tenets:
   Apps search.
 - **Install-library autodetection** runs at app start (`CategoryBootstrap`) and after
   the first-sync import: every launchable installed app gets an `applications` row, even
-  with no usage history. Add-only — discovery never deletes rows and never overwrites
-  user edits. `InstalledAppsSource` uses the launcher query (`<queries>` MAIN/LAUNCHER,
+  with no usage history. Discovery never overwrites user edits; rows whose package left
+  the launcher catalog are flipped to `isInstalled = 0` (hidden from the library, never
+  deleted — the stored assignment and history survive a reinstall, which flips the flag
+  back). `InstalledAppsSource` uses the launcher query (`<queries>` MAIN/LAUNCHER,
   the same visibility the app already declares; no `QUERY_ALL_PACKAGES`).
 - **New taxonomy (2026-11):** seeds gained `ai` (AI assistants), `finance` and `browser`;
   fresh installs get the full taxonomy, existing installs receive them at bootstrap via a
@@ -482,3 +484,51 @@ interrupted/reboot rows. Empty state: "No sessions yet — that's fine."
   user-tunable — changing it changes the product's promise, not just a preference.
 - **Manual verification pending.** None of this has run on a device or emulator in this
   environment; see ROADMAP.md.
+
+## 17. Apps library policy (implemented 2026-11, "Apps redesign")
+
+The Apps destination is the categorization funnel: it answers "which applications account
+for my usage" and "is my library organized the way I want it", nothing else.
+
+**System-app policy.** Launchable system apps are **hidden from the Apps library by
+default**; Settings → Apps → *Show system apps* mixes them back in (no separate section —
+the row list stays one list). Detection flags `FLAG_SYSTEM | FLAG_UPDATED_SYSTEM_APP` at
+discovery time and refreshes the flag on every refresh (`isSystemApp`, schema v4). The
+policy only affects *visibility*: system apps that are not Sumi/launcher/IME/SystemUI are
+still collected and counted exactly like user apps, and hiding them changes no total and
+no percentage. Collection and the §15 exclusion set are untouched; percentages on the
+screen stay denominated on Σ per-app usage of the same window — exactly what Today
+counts, so the two screens reconcile. The denominator is stated on-screen ("Totals
+exclude your launcher, keyboard and Sumi itself.").
+
+**Denominator.** Percentages shown in usage sorts are the share of the matching window's
+total tracked usage (today for Most used today, the trailing 7 days for Most used this
+week), including the uncategorized residual — never only the visible rows, and never
+against "all usage including Sumi". Alphabetical and By-category sorts show no
+percentages (near-zero shares there read as noise, not information).
+
+**Zero-usage divider.** In usage sorts, apps with zero usage sit below a quiet
+`NOT USED YET` divider, ordered alphabetically; ties elsewhere break by name
+(deterministic). In alphabetical/category sorts there is no divider.
+
+**Install lifecycle.** Discovery reconciles the library every refresh: rows for packages
+that left the catalog are marked `isInstalled = 0` (rows are never deleted, so category
+assignments and usage history survive an uninstall); a reinstall marks them installed
+again without re-stamping `firstSeenAt`, so the quiet *New* marker never re-fires.
+`firstSeenAt` also feeds the inline "New · Categorize" affordance on fresh apps. An
+*empty* discovery result is treated as "we know nothing", not as "everything was
+uninstalled" — no rows are flipped in that case.
+
+**User assignments always win.** The refresh path only ever updates `isInstalled` /
+`isSystemApp`; `categoryId`, `isCategoryUserSet`, and user-created categories are never
+touched by discovery. Bulk reassignment ("Move N apps to…") writes one assignment per
+selected row with `isCategoryUserSet = 1`; category history re-derives at read time
+(§13), so the fix is retroactively visible in Today, Insights and category detail. The
+confirmation snackbar offers Undo (restores the previous per-row assignment, including
+the user-set flag) for as long as the app lives.
+
+**Search** matches display name, package id, current category name, and the word
+"uncategorized" (the residual bucket answers to its name).
+
+**Apps are not specific events.** Nothing here reaches the network; the screen reads
+only the local database and `PackageManager`.

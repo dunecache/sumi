@@ -28,6 +28,8 @@ Entities marked **(added)** extend the original concept to cover cases the conce
 | `isHidden` | Boolean | User-hidden app |
 | `isCategoryUserSet` | Boolean **(added)** | Prevents default mapping from overwriting a user choice |
 | `isInstalled` | Boolean **(added)** | Keep history for uninstalled apps |
+| `isSystemApp` | Boolean **(schema v4)** | Launcher-visible system app; hidden from the Apps library by default (Settings → Apps → Show system apps). Collection and exclusions are unaffected |
+| `firstSeenAt` | Long **(schema v4)** | UTC ms the row was first created; drives the quiet "New" marker. 0 = unknown (pre-v4 rows never read as new) |
 
 Icons are loaded from `PackageManager` at display time and are not stored.
 
@@ -212,10 +214,11 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 
 ## 8. Migrations and testing
 
-- `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets). **Known gap:** only `1.json` is committed; the 1→2 migration shipped without committing `2.json`, and this change does not hand-write hashes it cannot compute. `2.json`/`3.json` must be generated with a local Android-SDK build (`./gradlew :app:kspDebugKotlin`) and committed by the next person with one. Both migration tests depend on them.
-- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` for 1→2 and `Migration23Test.kt` for 2→3 — **not yet executed anywhere**, no device/emulator available; `Migration23Test` also verifies the `index_focus_sessions_startedAtUtcMs` index and that existing rows survive — see ROADMAP.md).
+- `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets). `1.json` (v1), `2.json` (category system), `3.json` (Focus sessions) and `4.json` (Apps columns) are all committed. `2.json`/`3.json`/`4.json` were reconstructed to match the applied migrations (column lists, `DEFAULT 0`, index DDL), since only `1.json` had ever been committed; `identityHash` values in the JSONs are placeholders and carry no validation semantics — Room builds the reference database from `createSql`. `kspDebugKotlin` on any machine with the SDK will overwrite them with the compiler's own exports.
+- `MigrationTestHelper` test for every version bump (`Migration12Test.kt` 1→2, `Migration23Test.kt` 2→3 Focus, `Migration34Test.kt` 3→4 Apps — **not yet executed anywhere**, no device/emulator available; `Migration23Test` also verifies the `index_focus_sessions_startedAtUtcMs` index and that existing rows survive; `Migration34Test` verifies the Apps columns land with `DEFAULT 0` — see ROADMAP.md).
 - DAO/repository tests with an in-memory database (`:app:testDebugUnitTest` → `data/focus/FocusSessionStoreTest`): open/close invariant, stale-close-on-restart, exit counting, double-close no-op, boot finalization at the recorded instant, trailing-7-day roll-up boundaries.
 - Migration 2→3 creates `focus_sessions` (+ index on `startedAtUtcMs`) and touches no other table; `outcome = 'open'` with NULL `endedAtUtcMs` is the single-open-session invariant, sealed by `FocusSessionRepository.startSession()` closing any existing open row first.
+- Migration 3→4 adds `isSystemApp` and `firstSeenAt` to `applications` (`INTEGER NOT NULL DEFAULT 0`) and touches nothing else; the Apps refresh also marks vanished packages `isInstalled = 0` (a behavioral change, not a schema change).
 - Seed data (categories) is inserted at bootstrap (`CategoryBootstrap`): fresh installs get the full taxonomy; existing installs get only the seeds that are new in their version (`ai`, `finance`, `browser`) — ids the user deleted are never re-added; user-created rows with a colliding id win. `INSERT … IGNORE` keeps it idempotent; `isUserCreated` rows are never reseeded or overwritten. Focus bootstrap: any open session whose start precedes the newest recorded boot instant is sealed as `reboot` at that instant (`CategoryBootstrap` → `FocusSessionRepository.finalizeOpenAfterReboot`); the boot receiver itself stays read-only.
 
 ## 9. Export format (M5)

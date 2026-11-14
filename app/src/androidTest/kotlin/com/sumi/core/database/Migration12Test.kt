@@ -12,8 +12,10 @@ import org.junit.runner.RunWith
 /**
  * Migration 1 → 2: `app_categories` gains `sortOrder` and `isUserCreated`.
  *
- * **Status: written, never executed.** No device/emulator was available in the
- * build environment; CI runs unit tests only. Run with:
+ * **Status: written, never executed in CI.** CI runs the JVM unit-test workflow only;
+ * no device/emulator was available. Schemas 1.json and 2.json are committed under
+ * app/schemas (2.json was added with the 2 → 3 migration work), so the reference
+ * database is available; run with:
  * `./gradlew :app:connectedDebugAndroidTest` on an emulator or device.
  */
 @RunWith(AndroidJUnit4::class)

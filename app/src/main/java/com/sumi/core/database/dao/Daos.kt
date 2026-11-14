@@ -62,6 +62,14 @@ interface ApplicationDao {
     @Query("SELECT * FROM applications WHERE packageName = :packageName")
     fun observeByPackage(packageName: String): Flow<Application?>
 
+    /**
+     * Flip the installed flag without touching any other field (an app that left the
+     * launcher catalog is not deleted — its assignment and history stay; a reinstall
+     * flips the flag back via discovery).
+     */
+    @Query("UPDATE applications SET isInstalled = :installed WHERE packageName IN (:packages)")
+    suspend fun setInstalled(packages: List<String>, installed: Boolean)
+
     @Query("UPDATE applications SET categoryId = :categoryId, isCategoryUserSet = :userSet WHERE packageName = :packageName")
     suspend fun setCategory(packageName: String, categoryId: String?, userSet: Boolean)
 
@@ -191,6 +199,9 @@ interface HourlyUsageDao {
 
     @Query("SELECT * FROM hourly_usage WHERE dateKey = :dateKey")
     suspend fun getByDateKey(dateKey: String): List<HourlyUsage>
+
+    @Query("SELECT * FROM hourly_usage WHERE dateKey IN (:dateKeys)")
+    fun observeByDateKeys(dateKeys: List<String>): Flow<List<HourlyUsage>>
 
     @Query("DELETE FROM hourly_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)

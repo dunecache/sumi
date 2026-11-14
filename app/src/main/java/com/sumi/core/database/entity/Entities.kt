@@ -29,6 +29,10 @@ data class Application(
     val isHidden: Boolean = false,
     val isCategoryUserSet: Boolean = false,
     val isInstalled: Boolean = true,
+    // Migration 3→4: system-app policy (device furniture, hidden by default) and the
+    // quiet "New" marker. 0 / default rows keep pre-v4 behavior (not new, not system).
+    @ColumnInfo(defaultValue = "0") val isSystemApp: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val firstSeenAt: Long = 0L,
 )
 
 @Entity(
