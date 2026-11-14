@@ -20,6 +20,7 @@ import com.sumi.domain.usage.UsageRepository
 import com.sumi.domain.usage.UsageSession
 import com.sumi.core.usage.dayBars
 import com.sumi.core.usage.rangeCaption
+import com.sumi.core.usage.trackedMs
 import com.sumi.platform.usage.UsageAccessChecker
 import com.sumi.platform.applications.AppIconLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -118,14 +119,17 @@ class InsightsViewModel @Inject constructor(
         val keys = range.dateKeys(zone, now)
         val cmpKeys = range.comparisonKeys(zone, now)
         val todayKey = DateKey.of(now, zone)
-        val base = combine(
+        val usage = combine(
             repository.observeDailyTotalsRange(keys),
             repository.observeDailyAppUsageRange(keys),
             repository.observeHourlyUsageRange(keys),
+        ) { totals, perApp, hourly -> Triple(totals, perApp, hourly) }
+        val annotations = combine(
             repository.observeSessionsForDateKeys(keys + cmpKeys),
             categoryRepository.observeCategories(),
             applicationDao.observeInstalled(),
-        ) { totals, perApp, hourly, sessions, categories, applications ->
+        ) { sessions, categories, applications -> Triple(sessions, categories, applications) }
+        val base = combine(usage, annotations) { (totals, perApp, hourly), (sessions, categories, applications) ->
             RangeBase(totals, perApp, hourly, sessions, categories, applications)
         }
         val cmp = combine(
@@ -150,8 +154,11 @@ class InsightsViewModel @Inject constructor(
         val totalsByKey = b.totals.associate { it.dateKey to it.totalDurationMs }
         val totalMs = windowTotalMs(keys, totalsByKey)
         val tracked = trackedMs(b.perApp)
-        val rangeSessions = b.sessions.filter { it.dateKey in keys }
-        val cmpSessions = b.sessions.filter { it.dateKey in cmpKeys }
+        // Sessions carry no dateKey; derive their day from the UTC start instant.
+        val sessionsByDay = b.sessions.groupBy { DateKey.of(it.startTimeUtcMs, zone) }
+        val rangeSessions = keys.flatMap { sessionsByDay[it].orEmpty() }
+        val cmpSessions = cmpKeys.flatMap { sessionsByDay[it].orEmpty() }
+        val sessionDays = sessionsByDay.keys
 
         // Previous equivalent window; zeros included when any day was recorded, else omitted.
         val previousWindowRecorded = c.totals.isNotEmpty() || c.perApp.isNotEmpty()
@@ -209,7 +216,7 @@ class InsightsViewModel @Inject constructor(
             ).insights
         }
 
-        val coverage = coverageDays(keys, b.totals, b.perApp, b.hourly, rangeSessions)
+        val coverage = coverageDays(keys, b.totals, b.perApp, b.hourly, sessionDays)
         return InsightsUiState(
             isLoading = false,
             hasUsageAccess = checker.hasUsageAccess(),

@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -528,8 +527,6 @@ private fun TrendStrip(
         }
     }
 }
-
-private fun windowPercent(valueMs: Long, totalMs: Long): Int = Averages.percentOf(valueMs, totalMs)
 
 /**
  * Uncategorized residual prompt (ARCHITECTURE.md §13). Calm, actionable, always available

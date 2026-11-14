@@ -66,7 +66,7 @@ class InsightsLogicTest {
         val daily = listOf(DailyUsage("2026-11-10", 1L, 0L))
         val perApp = listOf(usage("2026-11-12", "com.a", 1L))
         val hourly = listOf(HourlyUsage("2026-11-09", 10, "com.a", 1L))
-        val coverage = coverageDays(weekKeys, daily, perApp, hourly, emptyList())
+        val coverage = coverageDays(weekKeys, daily, perApp, hourly, emptySet())
         assertEquals(3, coverage)
     }
 

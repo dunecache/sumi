@@ -304,7 +304,7 @@ fun DailyBars(
     val stride = labelStride(days.size)
 
     val description = run {
-        val busiest = days.withIndex().maxByOrNull { it.value }?.takeIf { it.value.valueMs > 0 }
+        val busiest = days.withIndex().maxByOrNull { it.value.valueMs }?.takeIf { it.value.valueMs > 0 }
         when (busiest) {
             null -> "Daily screen time: no usage recorded"
             else -> "Daily screen time: busiest on ${days[busiest.index].contentDescription.substringBefore(',')}"

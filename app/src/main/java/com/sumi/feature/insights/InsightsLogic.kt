@@ -1,6 +1,7 @@
 package com.sumi.feature.insights
 
 import com.sumi.core.designsystem.component.CategorySegment
+import com.sumi.core.designsystem.component.DayBar
 import com.sumi.core.usage.TopUsedApp
 import com.sumi.core.usage.topApps
 import com.sumi.core.usage.categorySegments
@@ -13,7 +14,6 @@ import com.sumi.domain.insights.NeutralComparison
 import com.sumi.domain.usage.DailyAppUsage
 import com.sumi.domain.usage.DailyUsage
 import com.sumi.domain.usage.HourlyUsage
-import com.sumi.domain.usage.UsageSession
 import com.sumi.core.database.entity.AppCategory
 import com.sumi.core.database.entity.Application
 import java.time.LocalDate
@@ -188,13 +188,13 @@ fun coverageDays(
     dailyTotals: List<DailyUsage>,
     perApp: List<DailyAppUsage>,
     hourly: List<HourlyUsage>,
-    sessions: List<UsageSession>,
+    sessionDays: Set<String>,
 ): Int {
     val present = HashSet<String>()
     dailyTotals.forEach { present += it.dateKey }
     perApp.forEach { present += it.dateKey }
     hourly.forEach { present += it.dateKey }
-    sessions.forEach { present += it.dateKey }
+    present += sessionDays
     return coverageCount(keys, present)
 }
 
