@@ -42,9 +42,8 @@ class FocusReminderScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     fun scheduleDaily(minuteOfDay: Int) {
-        val initialDelayMs = computeDelayMs(minuteOfDay)
         val request = PeriodicWorkRequestBuilder<FocusReminderWorker>(24, TimeUnit.HOURS)
-            .setInitialDelay(initialDelayMs, TimeUnit.MILLISECONDS)
+            .setInitialDelay(initialDelayToNext(minuteOfDay), TimeUnit.MILLISECONDS)
             .build()
         WorkManager.getInstance(context)
             .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
@@ -54,15 +53,22 @@ class FocusReminderScheduler @Inject constructor(
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
 
-    private fun computeDelayMs(minuteOfDay: Int): Long {
-        val zone = ZoneId.systemDefault()
-        val now = ZonedDateTime.now(zone)
-        val todayTarget = now.toLocalDate().atTime(minuteOfDay / 60, minuteOfDay % 60).atZone(zone)
-        val target = if (todayTarget.isAfter(now)) todayTarget else todayTarget.plusDays(1)
-        return target.toInstant().toEpochMilli() - System.currentTimeMillis()
-    }
-
     private companion object {
         const val WORK_NAME = "sumi_focus_reminder_daily"
     }
+}
+
+/**
+ * Initial delay until the next occurrence of [minuteOfDay] (local minutes after midnight).
+ * Wall-clock based; assumes the caller recomputes on every (re)schedule — a periodic
+ * worker enqueued today drifts slowly across DST, which is the accepted trade of
+ * WorkManager-over-AlarmManager for a gentle, non-urgent nudge.
+ *
+ * Extracted as a pure function so the day-boundary rule is unit-tested.
+ */
+internal fun initialDelayToNext(minuteOfDay: Int, now: ZonedDateTime = ZonedDateTime.now(ZoneId.systemDefault())): Long {
+    val safe = minuteOfDay.coerceIn(0, 23 * 60 + 59)
+    val today = now.toLocalDate().atTime(safe / 60, safe % 60).atZone(now.zone)
+    val effective = if (today.isAfter(now)) today else today.plusDays(1)
+    return java.time.Duration.between(now, effective).toMillis()
 }
