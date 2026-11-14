@@ -163,10 +163,14 @@ class FocusSessionService : Service() {
     }
 
     private fun startForegroundCompat(notification: android.app.Notification) {
-        if (Build.VERSION.SDK_INT >= SDK_34) {
-            // SPECIAL_USE numeric value from ServiceInfo (API 34); literal so the NewApi
-            // lint doesn't flag a constant from beyond minSdk on API 26–33 devices.
-            startForeground(NOTIFICATION_ID, notification, FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        if (Build.VERSION.SDK_INT >= 34) {
+            // API 34+: declare the user-chosen countdown type. Guarded so the NewApi
+            // check is satisfied; the value is a known constant for WrongConstant.
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
         } else {
             @Suppress("DEPRECATION")
             startForeground(NOTIFICATION_ID, notification)
@@ -208,12 +212,6 @@ class FocusSessionService : Service() {
 
         /** Low importance, ongoing. */
         private const val NOTIFICATION_ID = 4001
-
-        /** API 34 — the release carrying SPECIAL_USE support; int literal to satisfy the NewApi lint. */
-        private const val SDK_34 = 34
-
-        /** android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE (1 shl 4). */
-        private const val FOREGROUND_SERVICE_TYPE_SPECIAL_USE = 0x10
 
         /** Start (or resume onto) an existing notification+service pair for this session. */
         fun start(context: android.content.Context) {
