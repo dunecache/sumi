@@ -1,13 +1,12 @@
 package com.sumi.feature.today
 
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sumi.core.designsystem.component.CategorySegment
@@ -95,9 +94,9 @@ class TodayScreenUiTest {
         composeRule.onNode(
             hasContentDescription("Messages, 40m, 57% of today"),
         ).assertIsDisplayed()
-        composeRule.onNode(
+        composeRule.onAllNodes(
             hasContentDescription("Browser", substring = true),
-        ).assertDoesNotExist()
+        ).assertCountEquals(0)
 
         composeRule.onNodeWithText("All").performClick()
         composeRule.onNode(
