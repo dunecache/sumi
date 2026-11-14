@@ -391,14 +391,6 @@ private fun CategoryFilterRow(
     onFilterChange: (AppsFilter) -> Unit,
     onManageCategories: () -> Unit,
 ) {
-    state: AppsUiState,
-    onFilterChange: (AppsFilter) -> Unit,
-    onManageCategories: () -> Unit,
-) {
-    state: AppsUiState,
-    onFilterChange: (AppsFilter) -> Unit,
-    onManageCategories: () -> Unit,
-) {
     LazyRow(
         modifier = Modifier.testTag(CHIPS_ROW_TEST_TAG),
         horizontalArrangement = Arrangement.spacedBy(SumiSpacing.xs),
