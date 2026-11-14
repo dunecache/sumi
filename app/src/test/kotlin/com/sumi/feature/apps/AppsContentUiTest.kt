@@ -74,7 +74,8 @@ class AppsContentUiTest {
 
     private val sampleApps = listOf(
         row("com.instagram.android", "Instagram", "social", "Social", 60_000L, 23_400_000L),
-        row("com.mpv", "mpvRx", null, null, 0L, 0L),
+        // Kept categorized so the "Uncategorized" chip is the only such text on screen.
+        row("com.mpv", "mpvRx", "social", "Social", 0L, 0L),
     )
 
     @Test
