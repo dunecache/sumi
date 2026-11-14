@@ -34,6 +34,9 @@ object InsightsEngine {
         hourly: List<HourlyUsage>,
         zone: ZoneId,
         nowUtcMs: Long,
+        /** Trailing-week total for the average figure (zeros included) and its window. */
+        windowTotalMs: Long,
+        windowDays: Int,
     ): InsightsSummary {
         val insights = mutableListOf<Insight>()
         val durations = sessions.map { it.durationMs(nowUtcMs) }
@@ -53,11 +56,12 @@ object InsightsEngine {
                 "Your longest uninterrupted session was ${format(longest)}.",
             )
         }
-        if (dailyTotals.size >= 2) {
-            val avg = dailyTotals.map { it.totalDurationMs }.average().toLong()
+        if (windowDays > 0) {
+            // Window is stated in the copy; zeros are included — a quiet day is still a day.
+            val avg = Averages.dailyAverage(windowTotalMs, windowDays)
             insights += Insight(
                 InsightKind.FACT,
-                "Your average daily usage was ${format(avg)} over ${dailyTotals.size} days.",
+                "Your average day was ${format(avg)}, across the last $windowDays days.",
             )
         }
         // Time-of-day rhythm: peak hour from hourly buckets.

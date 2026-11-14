@@ -79,7 +79,9 @@ private val BottomDestinations = listOf(
     BottomDestination(Routes.APPS, "Apps", Icons.Outlined.GridView, Icons.Filled.GridView),
 )
 
-private val MainRoutes = BottomDestinations.map { it.route } + Routes.SETTINGS
+/** Bottom bar stays visible for every apps route, including the filtered deep-link variant. */
+private val appsDeepLink = Routes.appsWithFilter("{filter}")
+private val MainRoutes = BottomDestinations.map { it.route } + Routes.SETTINGS + appsDeepLink
 
 // Detail/management routes render below the top bar with a back arrow; the bottom bar stays hidden.
 private val SubRoutes = setOf(
@@ -272,11 +274,16 @@ fun SumiApp(
                 composable(Routes.INSIGHTS) {
                     InsightsScreen(
                         onOpenCategoryDetail = { id -> navController.navigate(Routes.categoryDetail(id)) },
+                        onReviewUncategorized = { navController.navigate(Routes.appsWithFilter("uncategorized")) },
                     )
                 }
                 composable(Routes.FOCUS) { FocusScreen() }
-                composable(Routes.APPS) {
+                composable(
+                    route = Routes.appsWithFilter("{filter}"),
+                    arguments = listOf(navArgument("filter") { nullable = true; defaultValue = null }),
+                ) { backStackEntry ->
                     AppsScreen(
+                        initialFilter = backStackEntry.arguments?.getString("filter"),
                         onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
                         onManageCategories = { navController.navigate(Routes.CATEGORY_MANAGER) },
                     )

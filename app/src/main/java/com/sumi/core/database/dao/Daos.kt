@@ -64,6 +64,10 @@ interface ApplicationDao {
     @Query("UPDATE applications SET categoryId = :categoryId, isCategoryUserSet = :userSet WHERE packageName = :packageName")
     suspend fun setCategory(packageName: String, categoryId: String?, userSet: Boolean)
 
+    /** Bulk category assignment (Apps multi-select → "Move to…"). Always user-assigned. */
+    @Query("UPDATE applications SET categoryId = :categoryId, isCategoryUserSet = 1 WHERE packageName IN (:packages)")
+    suspend fun setCategoryAll(packages: List<String>, categoryId: String?)
+
     @Query("SELECT * FROM applications WHERE categoryId = :categoryId ORDER BY displayName COLLATE NOCASE")
     fun observeByCategory(categoryId: String): Flow<List<Application>>
 

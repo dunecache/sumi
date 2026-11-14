@@ -34,6 +34,9 @@ data class InsightsUiState(
     /** Time in the Social category this week, with its share of week tracked usage; null when absent. */
     val socialWeekMs: Long? = null,
     val socialWeekShare: Float = 0f,
+    /** Uncategorized is the biggest residual when untrained; share of the week's tracked time. */
+    val uncategorizedMs: Long = 0L,
+    val uncategorizedShare: Float = 0f,
 )
 
 @HiltViewModel
@@ -95,6 +98,8 @@ class InsightsViewModel @Inject constructor(
                 hourly = hourly,
                 zone = timeZone.currentZone(),
                 nowUtcMs = clock.nowUtcMs(),
+                windowTotalMs = weekly.sum(),
+                windowDays = WEEK_WINDOW_DAYS,
             )
         }
 
@@ -120,6 +125,7 @@ class InsightsViewModel @Inject constructor(
             )
         }
         val social = breakdown.categories.firstOrNull { it.categoryId == DefaultPackageCategories.SOCIAL }
+        val uncategorized = breakdown.categories.firstOrNull { it.categoryId == null }
 
         return InsightsUiState(
             isLoading = false,
@@ -129,6 +135,12 @@ class InsightsViewModel @Inject constructor(
             weekTrackedMs = total,
             socialWeekMs = social?.durationMs,
             socialWeekShare = social?.let { usage -> if (total > 0L) usage.durationMs.toFloat() / total else 0f } ?: 0f,
+            uncategorizedMs = uncategorized?.durationMs ?: 0L,
+            uncategorizedShare = uncategorized?.let { usage -> if (total > 0L) usage.durationMs.toFloat() / total else 0f } ?: 0f,
         )
+    }
+
+    private companion object {
+        const val WEEK_WINDOW_DAYS = 7
     }
 }

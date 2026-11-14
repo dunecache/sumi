@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** One apps-library row: friendly name, today's and the trailing week's usage. */
 data class AppRow(
@@ -76,6 +77,10 @@ class AppsViewModel @Inject constructor(
     private val _filter = MutableStateFlow<AppsFilter>(AppsFilter.All)
     val filter: StateFlow<AppsFilter> = _filter
 
+    /** Apps selected for bulk reassign (long-press or Select mode); cleared on Done. */
+    private val _selection = MutableStateFlow<Set<String>>(emptySet())
+    val selection: StateFlow<Set<String>> = _selection.asStateFlow()
+
     private val _sort = MutableStateFlow(AppsSort.MOST_USED)
     val sort: StateFlow<AppsSort> = _sort
 
@@ -89,6 +94,34 @@ class AppsViewModel @Inject constructor(
 
     fun onSortChange(sort: AppsSort) {
         _sort.value = sort
+    }
+
+    /** Long-press or Select mode toggle. */
+    fun toggleSelection(packageName: String) {
+        _selection.value = toggleSelectionSet(_selection.value, packageName)
+    }
+
+    fun clearSelection() {
+        _selection.value = emptySet()
+    }
+
+    /** Deep-link entry: apply `uncategorized` (or `{categoryId}`) once; see AppsScreen. */
+    fun applyInitialFilter(token: String?) {
+        onFilterChange(appsFilterToken(token))
+    }
+
+    /**
+     * Bulk assign: every row keeps `isCategoryUserSet = 1` (explicit user choice), the
+     * library re-renders from the Flow, and category history re-derives at read time
+     * (ARCHITECTURE §13) — the fix is retroactively visible everywhere.
+     */
+    fun assignCategory(categoryId: String?) {
+        val packages = _selection.value
+        if (packages.isEmpty()) return
+        _selection.value = emptySet()
+        viewModelScope.launch {
+            applicationDao.setCategoryAll(packages.toList(), categoryId)
+        }
     }
 
     private val base = combine(
@@ -162,6 +195,21 @@ internal fun appRows(
         todayMs = todayByApp[app.packageName] ?: 0L,
         weekMs = weekByApp[app.packageName] ?: 0L,
     )
+}
+
+/** Pure and tested (AppsLogicTest): toggle a package in the selection set. */
+internal fun toggleSelectionSet(selection: Set<String>, packageName: String): Set<String> =
+    if (packageName in selection) selection - packageName else selection + packageName
+
+/**
+ * Deep-link token → filter. Pure and tested (AppsLogicTest).
+ * `uncategorized` pins the residual; a category id pins that category; anything
+ * else (including `all`/`null`) is the unfiltered library.
+ */
+internal fun appsFilterToken(token: String?): AppsFilter = when (token) {
+    null, "", "all" -> AppsFilter.All
+    "uncategorized" -> AppsFilter.Uncategorized
+    else -> AppsFilter.Category(token)
 }
 
 /** Pure and tested (AppsLogicTest): search + category filter + sort, deterministic. */

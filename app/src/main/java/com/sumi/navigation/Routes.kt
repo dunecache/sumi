@@ -15,6 +15,9 @@ object Routes {
     const val SETTINGS = "settings"
     const val CATEGORY_MANAGER = "categories"
 
+    /** Deep-link: `apps?filter=uncategorized` (or a category id). */
+    fun appsWithFilter(filter: String) = "$APPS?filter=$filter"
+
     fun appDetail(packageName: String) = "app-detail/$packageName"
     fun appDetailPattern() = "app-detail/{packageName}"
 
