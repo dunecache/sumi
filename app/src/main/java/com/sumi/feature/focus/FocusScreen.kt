@@ -21,8 +21,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -660,7 +660,7 @@ private fun TimePickerCompose(
     onDismiss: () -> Unit,
     onConfirm: (minuteOfDay: Int) -> Unit,
 ) {
-    TimePickerDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = { onConfirm(state.hour * 60 + state.minute) }) { Text("Set time") }
@@ -668,9 +668,8 @@ private fun TimePickerCompose(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
-    ) {
-        TimePicker(state = state)
-    }
+        text = { TimePicker(state = state) },
+    )
 }
 
 private fun formatMinuteOfDay(minuteOfDay: Int): String =
