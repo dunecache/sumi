@@ -307,13 +307,15 @@
       "fieldPath": "sortOrder",
       "columnName": "sortOrder",
       "affinity": "INTEGER",
-      "notNull": true
+      "notNull": true,
+      "defaultValue": "0"
      },
      {
       "fieldPath": "isUserCreated",
       "columnName": "isUserCreated",
       "affinity": "INTEGER",
-      "notNull": true
+      "notNull": true,
+      "defaultValue": "0"
      }
     ],
     "primaryKey": {
@@ -424,7 +426,7 @@
        "startedAtUtcMs"
       ],
       "orders": [],
-      "createSql": "CREATE INDEX `index_focus_sessions_startedAtUtcMs` ON `${TABLE_NAME}` (`startedAtUtcMs`)"
+      "createSql": "CREATE INDEX IF NOT EXISTS `index_focus_sessions_startedAtUtcMs` ON `${TABLE_NAME}` (`startedAtUtcMs`)"
      }
     ],
     "foreignKeys": []
