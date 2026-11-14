@@ -48,7 +48,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.hierarchy
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.feature.appdetail.AppDetailScreen
 import com.sumi.feature.apps.AppsScreen

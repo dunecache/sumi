@@ -384,6 +384,7 @@ class UsageRepositoryImpl @Inject constructor(
         // Session-backed days, computed from the rows' time spans — not from dateKey,
         // which is the start day only.
         val sessionDays = sessionDao.getByPackages(packages)
+            .map { it.toDomain() }
             .flatMap { session ->
                 DateKey.daysBetween(
                     session.startTimeUtcMs,

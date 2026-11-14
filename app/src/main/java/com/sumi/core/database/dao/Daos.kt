@@ -196,6 +196,10 @@ interface DailyAppUsageDao {
     @Query("SELECT DISTINCT dateKey FROM daily_app_usage WHERE packageName IN (:packages)")
     suspend fun getDateKeysByPackages(packages: List<String>): List<String>
 
+    /** Rows for one day — used by the coverage-boundary check in aggregate replacement. */
+    @Query("SELECT * FROM daily_app_usage WHERE dateKey = :dateKey")
+    suspend fun getByDateKey(dateKey: String): List<DailyAppUsage>
+
     /** Packages present in imported history with no Application row yet (library self-heal). */
     @Query("SELECT DISTINCT packageName FROM daily_app_usage WHERE packageName NOT IN (SELECT packageName FROM applications)")
     suspend fun getPackagesMissingApplicationRows(): List<String>
