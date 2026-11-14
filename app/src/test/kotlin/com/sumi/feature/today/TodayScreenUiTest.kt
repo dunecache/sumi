@@ -3,6 +3,7 @@ package com.sumi.feature.today
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -85,11 +86,15 @@ class TodayScreenUiTest {
         ).performScrollTo().assertIsDisplayed()
     }
 
+    /** The chips are the only rows with a stateDescription — the distribution row's "Social" label doesn't. */
+    private fun filterChip(label: String) =
+        hasText(label).and(hasStateDescription("not selected"))
+
     @Test
     fun `social filter shows only social apps and is switchable back`() {
         setContent(populatedState())
 
-        composeRule.onNodeWithText("Social").performScrollTo().performClick()
+        composeRule.onNode(filterChip("Social")).performScrollTo().performClick()
         composeRule.onNode(
             hasContentDescription("Messages, 40m, 57% of today"),
         ).performScrollTo().assertIsDisplayed()
@@ -97,7 +102,7 @@ class TodayScreenUiTest {
             hasContentDescription("Browser", substring = true),
         ).assertCountEquals(0)
 
-        composeRule.onNodeWithText("All").performScrollTo().performClick()
+        composeRule.onNode(filterChip("All")).performScrollTo().performClick()
         composeRule.onNode(
             hasContentDescription("Browser", substring = true),
         ).performScrollTo().assertIsDisplayed()
@@ -107,7 +112,7 @@ class TodayScreenUiTest {
     fun `social filter with nothing social shows a calm empty line`() {
         setContent(populatedState().copy(socialMostUsed = emptyList()))
 
-        composeRule.onNodeWithText("Social").performScrollTo().performClick()
+        composeRule.onNode(filterChip("Social")).performScrollTo().performClick()
         composeRule.onNodeWithText("No social apps used today.").performScrollTo().assertIsDisplayed()
     }
 
