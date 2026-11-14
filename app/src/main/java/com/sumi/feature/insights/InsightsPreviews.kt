@@ -102,7 +102,7 @@ private fun samplePopulatedState(): InsightsUiState {
         ),
         coverageDays = 7,
         observations = listOf(
-            Insight(InsightKind.FACT, "You had 29 sessions in this period."),
+            Insight(InsightKind.FACT, "You had 29 sessions in this period (any length — a glance counts)."),
             Insight(InsightKind.FACT, "Your longest uninterrupted session was 48m."),
         ),
         dailyDetails = sampleDetails(totals),
