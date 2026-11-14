@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.Composable
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -190,6 +191,7 @@ private fun palette(dark: Boolean): Palette = if (dark) {
 private fun ColorProvider(color: androidx.compose.ui.graphics.Color): ColorProvider =
     ColorProvider(color.value)
 
+@Composable
 @GlanceComposable
 private fun WidgetContent(snapshot: WidgetSnapshot) {
     val palette = palette(snapshot.darkTheme)
@@ -214,6 +216,7 @@ private fun WidgetContent(snapshot: WidgetSnapshot) {
     }
 }
 
+@Composable
 @GlanceComposable
 private fun WordMark(muted: ColorProvider) {
     Text(
@@ -222,6 +225,7 @@ private fun WordMark(muted: ColorProvider) {
     )
 }
 
+@Composable
 @GlanceComposable
 private fun TotalLayout(
     view: WidgetView.Total,
@@ -281,6 +285,7 @@ private fun TotalLayout(
     }
 }
 
+@Composable
 @GlanceComposable
 private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
     val onSurface = ColorProvider(palette.onSurface)
@@ -302,6 +307,7 @@ private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
     }
 }
 
+@Composable
 @GlanceComposable
 private fun PermissionLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
     val onSurface = ColorProvider(palette.onSurface)
