@@ -57,7 +57,8 @@ allotments, not fixed pixels, select the layout:
 | **Large** | 330 dp | 148 dp | `SUMI`, total (36 sp), 3 dp progress rule, full `62% of daily goal` line + status line. |
 
 - `resizeMode="horizontal|vertical"`; `minWidth`/`minHeight` = 140/110 dp; initial
-  footprint 2×2 cells.
+  footprint **4×2** (canonical medium landscape, §3.1 of the reference). Content is centered
+  on both axes; totals scale with the breakpoint (30/40/44 sp).
 - At minimum size: wordmark + total stay readable; the secondary line is removed before
   the total shrinks; labels never clip; no icon-only actions are substituted.
 - Compact omits the bar (and the percent) when legibility demands; the status line

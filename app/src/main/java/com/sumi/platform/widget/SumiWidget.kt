@@ -32,6 +32,7 @@ import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.sumi.MainActivity
@@ -205,7 +206,7 @@ private fun WidgetContent(snapshot: WidgetSnapshot) {
             .cornerRadius(WIDGET_CORNER_RADIUS.dp)
             .clickable(actionStartActivity<MainActivity>())
             .semantics { contentDescription = accessibilitySummary(view) },
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.Center,
     ) {
         when (view) {
             is WidgetView.Total -> TotalLayout(view, palette, breakpoint)
@@ -250,13 +251,14 @@ private fun TotalLayout(
     }
     val supportingLine = listOfNotNull(percentPart, supporting).joinToString(" · ")
     val totalSp = when (breakpoint) {
-        WidgetBreakpoint.COMPACT -> 28.sp
-        WidgetBreakpoint.MEDIUM -> 32.sp
-        WidgetBreakpoint.LARGE -> 36.sp
+        WidgetBreakpoint.COMPACT -> 30.sp
+        WidgetBreakpoint.MEDIUM -> 40.sp
+        WidgetBreakpoint.LARGE -> 44.sp
     }
 
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WordMark(muted)
@@ -276,10 +278,13 @@ private fun TotalLayout(
         }
         if (breakpoint == WidgetBreakpoint.LARGE && view.goal != null && !zero) {
             // Large breakpoints get the full reference copy in two calm lines.
-            Text(view.goal.percentText, style = TextStyle(color = muted, fontSize = 12.sp))
-            Text(supporting, style = TextStyle(color = muted, fontSize = 12.sp))
+            Text(view.goal.percentText, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
+            Text(supporting, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
         } else {
-            Text(supportingLine, style = TextStyle(color = muted, fontSize = 12.sp))
+            Text(
+            supportingLine,
+            style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center),
+        )
         }
     }
 }
@@ -290,7 +295,8 @@ private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
     val onSurface = cp(palette.onSurface)
     val muted = cp(palette.muted)
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WordMark(muted)
@@ -302,7 +308,7 @@ private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
                 fontWeight = FontWeight.Bold,
             ),
         )
-        Text(PENDING_LINE, style = TextStyle(color = muted, fontSize = 12.sp))
+        Text(PENDING_LINE, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
     }
 }
 
@@ -312,15 +318,16 @@ private fun PermissionLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
     val onSurface = cp(palette.onSurface)
     val muted = cp(palette.muted)
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WordMark(muted)
         Text(
             PERMISSION_TITLE,
-            style = TextStyle(color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
+            style = TextStyle(color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
         )
         Spacer(GlanceModifier.height(4.dp))
-        Text(PERMISSION_ACTION, style = TextStyle(color = muted, fontSize = 11.sp))
+        Text(PERMISSION_ACTION, style = TextStyle(color = muted, fontSize = 11.sp, textAlign = TextAlign.Center))
     }
 }
