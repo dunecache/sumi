@@ -54,6 +54,33 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Collection triggers: app open, return to foreground, periodic WorkManager safety net
 - [~] Debug screen: raw events vs. reconstructed sessions (deferred; CI-verified fixture tests are the primary debug surface in M1)
 
+> **Pipeline correctness pass (2026-11-14):** a static review of the whole collection
+> pipeline found wrong-number bugs in everyday use. Fixed: the 30-minute gap rule that
+> cut long sessions to ~0 ms; daily aggregates derived from the 6h window slice (today's
+> numbers dropped after each collection); the foreground window that could never reach
+> back more than 6h and never re-read retained events; rebuild/zone-change paths that
+> erased imported `UsageStats` history. Also: merge prefers real > estimated > open
+> closes (a stored estimated close is replaced when the real BACKGROUND is seen later);
+> still-open rows are always loaded and pre-retention rows close at a bounded plausible
+> end; session date-key queries are time-overlap queries (midnight-crossing sessions
+> count on both days); session-level merge prefers per-package resume counters and
+> coalesces same-package hand-offs (multi-activity); per-app day totals union rather
+> than sum intervals; the import writes approximate `daily_usage` rows
+> (`source = USAGE_STATS_AGGREGATE`), filters per-day buckets and merges per-(day,
+> package) duplicates; the first day Sumi ever sees acts as a coverage boundary and
+> keeps its imported upper bound; API 29+ `DEVICE_SHUTDOWN`/`DEVICE_STARTUP` and a
+> monotonic-clock regression detector feed R5 (reboot) alongside `BOOT_COMPLETED`; the
+> collection mutex moved into the repository and label resolution happens before the
+> write transaction; prune covers `android`/System UI and is memoized per process; the
+> usage-access check tolerates `MODE_DEFAULT` via the permission fallback; the launcher
+> exclusion covers every HOME handler; Insights/App-detail annotations clip to the
+> window/day; today re-collects every 60 s while visible. Schema v5
+> (`daily_usage.source`, `collection_state.pipelineVersion`, migration 4→5 +
+> `Migration45Test`); the first collection on a migrated install runs a one-time repair
+> that wipes retained-range session-derived rows and rebuilds them with the corrected
+> rules (imported history is kept). Details in `ARCHITECTURE.md` §9. Not yet measured
+> against Digital Wellbeing on a physical device; migration test not yet run.
+
 **Acceptance criteria**
 - Fixture-based unit tests cover every case listed above and pass on the JVM.
 - Running collection twice over the same window yields identical database content.

@@ -10,6 +10,10 @@ enum class UsageEventType {
     BACKGROUND,
     SCREEN_INTERACTIVE,
     SCREEN_NON_INTERACTIVE,
+    /** API 29+: the runtime shut down — activities/services are gone (mapped from `DEVICE_SHUTDOWN`). */
+    DEVICE_SHUTDOWN,
+    /** API 29+: the runtime started — events between shutdown and startup are lost (mapped from `DEVICE_STARTUP`). */
+    DEVICE_STARTUP,
 }
 
 /** Normalized internal event. Platform adapters map Android `UsageEvents` constants to this. */

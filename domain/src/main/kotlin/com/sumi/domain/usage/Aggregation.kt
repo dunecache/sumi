@@ -13,26 +13,26 @@ import java.time.ZoneId
 object Aggregation {
 
     /**
-     * Per-app per-day totals: sum of session overlap with each day in [zone].
+     * Per-app per-day totals: union of session intervals per (day, package).
      * Open sessions ([UsageSession.endTimeUtcMs] null) are measured up to [nowUtcMs].
+     * Overlapping rows for the same package (e.g. fragments re-reconstructed across
+     * windows) never inflate the app's total or the ranked lists derived from it.
      */
     fun dailyAppUsage(
         sessions: List<UsageSession>,
         zone: ZoneId,
         nowUtcMs: Long,
     ): List<DailyAppUsage> {
-        val totals = mutableMapOf<Pair<String, String>, Long>()
+        val ranges = mutableMapOf<Pair<String, String>, MutableList<LongRange>>()
         for (session in sessions) {
             val end = session.endTimeUtcMs ?: nowUtcMs
             if (end <= session.startTimeUtcMs) continue
-            splitByDay(session.startTimeUtcMs, end, zone).forEach { (dateKey, ms) ->
-                val key = dateKey to session.packageName
-                totals[key] = (totals[key] ?: 0L) + ms
+            splitRangesByDay(session.startTimeUtcMs, end, zone).forEach { (dateKey, range) ->
+                ranges.getOrPut(dateKey to session.packageName) { mutableListOf() } += range
             }
         }
-        return totals.map { entry ->
-            val (dateKey, pkg) = entry.key
-            DailyAppUsage(dateKey, pkg, entry.value)
+        return ranges.map { (key, dayRanges) ->
+            DailyAppUsage(key.first, key.second, unionMs(dayRanges))
         }
             .filter { it.durationMs > 0 }
             .sortedWith(compareBy<DailyAppUsage> { it.dateKey }.thenBy { it.packageName })
@@ -62,7 +62,12 @@ object Aggregation {
         }.sortedBy { it.dateKey }
     }
 
-    /** Per-app per-hour buckets. DST days naturally yield 23/25 hours via zone rules. */
+    /**
+     * Per-app per-hour buckets. DST semantics: on a fall-back day the local hour 01:00
+     * occurs twice; both passes fold into one bucket, which can therefore hold up to
+     * 120 minutes. On a spring-forward day, hour 02:00 has no bucket. 24 keys, DST-safe
+     * iteration via zone rules; consumers scale buckets by value (never assume 60 min).
+     */
     fun hourlyUsage(
         sessions: List<UsageSession>,
         zone: ZoneId,
@@ -80,8 +85,10 @@ object Aggregation {
                 val nextHourMs = instant.truncatedTo(java.time.temporal.ChronoUnit.HOURS)
                     .plusHours(1).toInstant().toEpochMilli()
                 // truncatedTo + plusHours is safe at 23:00 and across DST boundaries:
-                // fall-back yields a 25-hour day, spring-forward a 23-hour day, with no
-                // invalid-hour crashes and no skipped/missing buckets.
+                // fall-back yields a 25-hour day, spring-forward a 23-hour day. On a
+                // fall-back day the duplicated local hour 01:00 folds into one bucket
+                // (it can hold up to 120 minutes); on spring-forward hour 02:00 gets no
+                // bucket. Keyed (dateKey, hour 0–23, package), same as before.
                 val segEnd = minOf(end, nextHourMs).coerceAtLeast(cursor + 1)
                 val segMs = (segEnd - cursor).coerceAtLeast(0L)
                 if (segMs > 0) {
@@ -98,9 +105,6 @@ object Aggregation {
             .filter { it.durationMs > 0 }
             .sortedWith(compareBy<HourlyUsage> { it.dateKey }.thenBy { it.hour }.thenBy { it.packageName })
     }
-
-    private fun splitByDay(startMs: Long, endMs: Long, zone: ZoneId): List<Pair<String, Long>> =
-        splitRangesByDay(startMs, endMs, zone).map { (dateKey, range) -> dateKey to (range.last - range.first) }
 
     private fun splitRangesByDay(startMs: Long, endMs: Long, zone: ZoneId): List<Pair<String, LongRange>> {
         val out = mutableListOf<Pair<String, LongRange>>()

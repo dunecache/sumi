@@ -17,6 +17,8 @@ object Normalization {
                     -> event.packageName.isNotBlank()
                     UsageEventType.SCREEN_INTERACTIVE,
                     UsageEventType.SCREEN_NON_INTERACTIVE,
+                    UsageEventType.DEVICE_SHUTDOWN,
+                    UsageEventType.DEVICE_STARTUP,
                     -> true
                 }
             }

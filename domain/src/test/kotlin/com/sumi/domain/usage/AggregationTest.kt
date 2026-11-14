@@ -24,6 +24,18 @@ class AggregationTest {
     }
 
     @Test
+    fun `dailyAppUsage unions overlapping same-package fragments`() {
+        val start = java.time.Instant.parse("2026-11-06T08:00:00Z").toEpochMilli()
+        val sessions = listOf(
+            UsageSession("com.a", start, start + 2 * 60 * 60_000L, isEstimated = false),
+            UsageSession("com.a", start + 60 * 60_000L, start + 3 * 60 * 60_000L, isEstimated = false),
+        )
+        val daily = Aggregation.dailyAppUsage(sessions, zone, nowUtcMs = start + 10 * 60 * 60_000L)
+        // Union is 3 h, not the 4 h a raw sum would give.
+        assertThat(daily.single().durationMs).isEqualTo(3 * 60 * 60_000L)
+    }
+
+    @Test
     fun `dailyTotals union avoids double count in split-screen`() {
         val start = java.time.Instant.parse("2026-11-06T08:00:00Z").toEpochMilli()
         val sessions = listOf(

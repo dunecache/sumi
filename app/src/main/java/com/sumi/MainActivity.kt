@@ -27,6 +27,7 @@ import com.sumi.navigation.SumiApp
 import com.sumi.platform.notifications.SumiNotifications
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -45,6 +46,11 @@ class MainActivity : ComponentActivity() {
      */
     private var openFocusRequest by mutableStateOf(0)
 
+    private companion object {
+        /** Visible-session refresh cadence for today's live tail. */
+        const val OPEN_TAIL_REFRESH_MS = 60_000L
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Edge-to-edge: Sumi draws behind the system bars; Scaffold + M3 components
@@ -58,6 +64,18 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 onboardingViewModel.refreshUsageAccess()
                 usageCollector.collectOnForeground()
+            }
+        }
+        // While the app is visible, refresh on a slow timer so the figures for today
+        // advance with the open session (aggregation measures open sessions up to
+        // collection time; nothing else ticks while the screen is static). Cheap:
+        // one short events query per minute, scoped to visibility.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    delay(OPEN_TAIL_REFRESH_MS)
+                    usageCollector.collectOnForeground()
+                }
             }
         }
 

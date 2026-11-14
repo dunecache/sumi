@@ -3,6 +3,8 @@ package com.sumi.platform.usage
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.util.Log
+import android.annotation.SuppressLint
 import com.sumi.domain.usage.DailyAppAggregate
 import com.sumi.domain.usage.RawUsageEvent
 import com.sumi.domain.usage.UsageEventSource
@@ -44,7 +46,9 @@ class PlatformUsageSources @Inject constructor(
                     -> event.packageName ?: ""
                     UsageEventType.SCREEN_INTERACTIVE,
                     UsageEventType.SCREEN_NON_INTERACTIVE,
-                    -> ""
+                    UsageEventType.DEVICE_SHUTDOWN,
+                    UsageEventType.DEVICE_STARTUP,
+                    -> "" // not app-scoped events
                 }
                 out += RawUsageEvent(pkg, type, event.timeStamp)
             }
@@ -59,7 +63,12 @@ class PlatformUsageSources @Inject constructor(
         // Per-day queries: INTERVAL_BEST/DAILY over a multi-day range returns one row
         // per package spanning the whole range, which would misattribute totals to a
         // single day. Query one calendar day at a time and stamp each with its dateKey.
+        // Some builds return buckets overlapping the queried range (neighbouring days,
+        // duplicated rows): keep only buckets whose `firstTimeStamp` lies inside the
+        // day — queried-day attribution is then exact, and the repository merges
+        // duplicate rows per (day, package) with a sum.
         val out = mutableListOf<DailyAppAggregate>()
+        var oldestWithData: String? = null
         var dayStart = com.sumi.domain.common.DateKey.startOfDayUtcMs(
             com.sumi.domain.common.DateKey.of(fromUtcMs, zone), zone)
         while (dayStart < toUtcMs) {
@@ -68,23 +77,42 @@ class PlatformUsageSources @Inject constructor(
                 com.sumi.domain.common.DateKey.endOfDayUtcMsExclusive(dateKey, zone),
                 toUtcMs,
             )
+            val before = out.size
             val stats = manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd)
             stats
-                .filter { it.packageName.isNotBlank() && it.totalTimeInForeground > 0 }
+                .filter {
+                    it.packageName.isNotBlank() && it.totalTimeInForeground > 0 &&
+                        it.firstTimeStamp >= dayStart && it.firstTimeStamp < dayEnd
+                }
                 .mapTo(out) { stat ->
                     DailyAppAggregate(dateKey, stat.packageName, stat.totalTimeInForeground)
                 }
+            if (out.size > before && oldestWithData == null) {
+                oldestWithData = dateKey
+                Log.d(TAG, "UsageStats import: oldest retained day $dateKey")
+            }
             if (dayEnd <= dayStart) break // defensive: never loop forever on zero-length day
             dayStart = dayEnd
         }
         out
     }
 
+    // NewApi: the API 29 constants are compile-time inlined, so they are safe to
+    // reference below API 29 (the events are simply absent before API 29).
+    @SuppressLint("NewApi")
     private fun mapType(androidType: Int): UsageEventType? = when (androidType) {
         UsageEvents.Event.MOVE_TO_FOREGROUND -> UsageEventType.FOREGROUND
         UsageEvents.Event.MOVE_TO_BACKGROUND -> UsageEventType.BACKGROUND
         UsageEvents.Event.SCREEN_INTERACTIVE -> UsageEventType.SCREEN_INTERACTIVE
         UsageEvents.Event.SCREEN_NON_INTERACTIVE -> UsageEventType.SCREEN_NON_INTERACTIVE
+        // API 29+: constants are compile-time inlined, so referencing them is safe on
+        // older devices (the events are simply absent before API 29).
+        UsageEvents.Event.DEVICE_SHUTDOWN -> UsageEventType.DEVICE_SHUTDOWN
+        UsageEvents.Event.DEVICE_STARTUP -> UsageEventType.DEVICE_STARTUP
         else -> null // ignore standby, config change, etc.
+    }
+
+    private companion object {
+        const val TAG = "SumiUsage"
     }
 }

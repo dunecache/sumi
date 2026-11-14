@@ -107,39 +107,44 @@ interface UsageSessionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(sessions: List<UsageSession>)
 
-    @Query("SELECT * FROM usage_sessions WHERE dateKey = :dateKey ORDER BY startTime")
-    suspend fun getByDateKey(dateKey: String): List<UsageSession>
+    /**
+     * Sessions overlapping the half-open range [[from], [toExclusive]). Open rows
+     * (`endTime` NULL) are always included regardless of start — a stale open row must
+     * never leak out of view. Aggregation and session views split rows at day/hour
+     * boundaries themselves.
+     */
+    @Query("SELECT * FROM usage_sessions WHERE startTime < :toExclusive AND (endTime IS NULL OR endTime > :from) ORDER BY startTime")
+    fun observeOverlapping(from: Long, toExclusive: Long): Flow<List<UsageSession>>
 
-    @Query("SELECT * FROM usage_sessions WHERE dateKey = :dateKey ORDER BY startTime")
-    fun observeByDateKey(dateKey: String): Flow<List<UsageSession>>
+    /** [observeOverlapping] restricted to one package. */
+    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName AND startTime < :toExclusive AND (endTime IS NULL OR endTime > :from) ORDER BY startTime")
+    fun observeOverlappingForPackage(packageName: String, from: Long, toExclusive: Long): Flow<List<UsageSession>>
 
-    @Query("SELECT * FROM usage_sessions WHERE dateKey IN (:dateKeys) ORDER BY startTime")
-    fun observeByDateKeys(dateKeys: List<String>): Flow<List<UsageSession>>
+    /** [observeOverlapping] as a one-shot read. */
+    @Query("SELECT * FROM usage_sessions WHERE startTime < :toExclusive AND (endTime IS NULL OR endTime > :from) ORDER BY startTime")
+    suspend fun getOverlapping(from: Long, toExclusive: Long): List<UsageSession>
 
-    @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName AND dateKey = :dateKey")
-    suspend fun getByPackageAndDateKey(packageName: String, dateKey: String): List<UsageSession>
+    /** Rows whose package matches and that overlap the range (exclusion pruning). */
+    @Query("SELECT * FROM usage_sessions WHERE packageName IN (:packages) ORDER BY startTime")
+    suspend fun getByPackages(packages: List<String>): List<UsageSession>
 
-    @Query("SELECT COUNT(*) FROM usage_sessions")
-    suspend fun count(): Long
+    /** Repair: delete rows overlapping [[from], [toExclusive]). */
+    @Query("DELETE FROM usage_sessions WHERE startTime < :toExclusive AND (endTime IS NULL OR endTime > :from)")
+    suspend fun deleteOverlapping(from: Long, toExclusive: Long)
 
-    @Query("SELECT * FROM usage_sessions WHERE startTime BETWEEN :from AND :to ORDER BY startTime")
-    suspend fun getAllInRange(from: Long, to: Long): List<UsageSession>
+    /** Rows still open. */
+    @Query("SELECT * FROM usage_sessions WHERE endTime IS NULL ORDER BY startTime")
+    suspend fun getOpen(): List<UsageSession>
+
+    /** Oldest stored session start, for the "history begins on …" marker. */
+    @Query("SELECT MIN(startTime) FROM usage_sessions")
+    suspend fun earliestStart(): Long?
 
     @Query("SELECT * FROM usage_sessions ORDER BY startTime")
     suspend fun getAll(): List<UsageSession>
 
-    @Query("SELECT DISTINCT dateKey FROM usage_sessions")
-    suspend fun getAllDateKeys(): List<String>
-
-    /** Days that hold sessions of the given packages (exclusion pruning). */
-    @Query("SELECT DISTINCT dateKey FROM usage_sessions WHERE packageName IN (:packages)")
-    suspend fun getDateKeysByPackages(packages: List<String>): List<String>
-
     @Query("DELETE FROM usage_sessions WHERE packageName IN (:packages)")
     suspend fun deleteByPackages(packages: List<String>)
-
-    @Query("DELETE FROM usage_sessions")
-    suspend fun deleteAll()
 }
 
 @Dao
@@ -147,20 +152,19 @@ interface DailyUsageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(values: List<DailyUsage>)
 
-    @Query("SELECT * FROM daily_usage WHERE dateKey = :dateKey")
-    suspend fun get(dateKey: String): DailyUsage?
-
-    @Query("SELECT * FROM daily_usage ORDER BY dateKey DESC")
-    fun observeAll(): Flow<List<DailyUsage>>
-
-    @Query("SELECT * FROM daily_usage WHERE dateKey IN (:dateKeys)")
+    @Query("SELECT * FROM daily_usage WHERE dateKey IN (:dateKeys) ORDER BY dateKey ASC")
     fun observeByDateKeys(dateKeys: List<String>): Flow<List<DailyUsage>>
+
+    /** Delete rows of one source (e.g. SESSIONS) — used by repair and full rebuilds. */
+    @Query("DELETE FROM daily_usage WHERE source = :source")
+    suspend fun deleteWhereSource(source: String)
+
+    /** Delete rows of one source among [dateKeys] — used by repair and prune. */
+    @Query("DELETE FROM daily_usage WHERE source = :source AND dateKey IN (:dateKeys)")
+    suspend fun deleteByDateKeysAndSource(dateKeys: List<String>, source: String)
 
     @Query("DELETE FROM daily_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)
-
-    @Query("DELETE FROM daily_usage")
-    suspend fun deleteAll()
 }
 
 @Dao
@@ -169,12 +173,9 @@ interface DailyAppUsageDao {
     suspend fun upsertAll(values: List<DailyAppUsage>)
 
     @Query("SELECT * FROM daily_app_usage WHERE dateKey = :dateKey")
-    suspend fun getByDateKey(dateKey: String): List<DailyAppUsage>
-
-    @Query("SELECT * FROM daily_app_usage WHERE dateKey = :dateKey")
     fun observeByDateKey(dateKey: String): Flow<List<DailyAppUsage>>
 
-    @Query("SELECT * FROM daily_app_usage WHERE dateKey IN (:dateKeys)")
+    @Query("SELECT * FROM daily_app_usage WHERE dateKey IN (:dateKeys) ORDER BY dateKey ASC")
     fun observeByDateKeys(dateKeys: List<String>): Flow<List<DailyAppUsage>>
 
     @Query("SELECT * FROM daily_app_usage WHERE packageName = :packageName ORDER BY dateKey DESC")
@@ -182,6 +183,14 @@ interface DailyAppUsageDao {
 
     @Query("DELETE FROM daily_app_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)
+
+    /** Delete rows of one source (e.g. SESSIONS) — used by repair and full rebuilds. */
+    @Query("DELETE FROM daily_app_usage WHERE source = :source")
+    suspend fun deleteWhereSource(source: String)
+
+    /** Delete rows of one source among [dateKeys] — used by repair and prune. */
+    @Query("DELETE FROM daily_app_usage WHERE source = :source AND dateKey IN (:dateKeys)")
+    suspend fun deleteByDateKeysAndSource(dateKeys: List<String>, source: String)
 
     /** Days that hold per-app rows of the given packages (exclusion pruning). */
     @Query("SELECT DISTINCT dateKey FROM daily_app_usage WHERE packageName IN (:packages)")
@@ -193,9 +202,6 @@ interface DailyAppUsageDao {
 
     @Query("DELETE FROM daily_app_usage WHERE packageName IN (:packages)")
     suspend fun deleteByPackages(packages: List<String>)
-
-    @Query("DELETE FROM daily_app_usage")
-    suspend fun deleteAll()
 }
 
 @Dao
@@ -203,10 +209,7 @@ interface HourlyUsageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(values: List<HourlyUsage>)
 
-    @Query("SELECT * FROM hourly_usage WHERE dateKey = :dateKey")
-    suspend fun getByDateKey(dateKey: String): List<HourlyUsage>
-
-    @Query("SELECT * FROM hourly_usage WHERE dateKey IN (:dateKeys)")
+    @Query("SELECT * FROM hourly_usage WHERE dateKey IN (:dateKeys) ORDER BY dateKey ASC, hour ASC")
     fun observeByDateKeys(dateKeys: List<String>): Flow<List<HourlyUsage>>
 
     @Query("DELETE FROM hourly_usage WHERE dateKey IN (:dateKeys)")
@@ -219,6 +222,7 @@ interface HourlyUsageDao {
     @Query("DELETE FROM hourly_usage WHERE packageName IN (:packages)")
     suspend fun deleteByPackages(packages: List<String>)
 
+    /** Session-derived hourly rows — wiped and re-derived by full rebuilds. */
     @Query("DELETE FROM hourly_usage")
     suspend fun deleteAll()
 }
@@ -253,8 +257,22 @@ interface FocusSessionDao {
     fun observeHistory(): Flow<List<FocusSession>>
 
     /** Sessions ended inside a caller-supplied window (history roll-up uses trailing 7 days). */
-    @Query("SELECT * FROM focus_sessions WHERE outcome != 'open' AND endedAtUtcMs >= :windowStart ORDER BY startedAtUtcMs ASC")
+    @Query("SELECT * FROM focus_sessions WHERE outcome != 'open' AND COALESCE(endedAtUtcMs, startedAtUtcMs) >= :windowStart ORDER BY startedAtUtcMs ASC")
     suspend fun since(windowStart: Long): List<FocusSession>
+
+    /** Seal every open row as ended-early at [endedAtUtcMs]; part of [insertSealingOpen]. */
+    @Query("UPDATE focus_sessions SET outcome = 'ended_early', endedAtUtcMs = :endedAtUtcMs WHERE outcome = 'open'")
+    suspend fun closeAllOpen(endedAtUtcMs: Long): Int
+
+    /**
+     * Atomic insert: seals any open rows and inserts the new one inside a single
+     * transaction — the at-most-one-open invariant holds even under a race.
+     */
+    @androidx.room.Transaction
+    suspend fun insertSealingOpen(session: FocusSession): Long {
+        closeAllOpen(session.startedAtUtcMs)
+        return insert(session)
+    }
 
     @Query("DELETE FROM focus_sessions")
     suspend fun deleteAll()

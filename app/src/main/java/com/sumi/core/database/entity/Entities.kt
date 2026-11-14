@@ -54,11 +54,21 @@ data class UsageSession(
     val isEstimated: Boolean = false,
 )
 
+/** Current version of the collection pipeline (see [CollectionState.pipelineVersion]). */
+const val CURRENT_PIPELINE_VERSION = 2
+
 @Entity(tableName = "daily_usage")
 data class DailyUsage(
     @PrimaryKey val dateKey: String,
     val totalDurationMs: Long, // union of intervals (avoids multi-window double count)
     val lastCollectedAt: Long,
+    /**
+     * `SESSIONS` — derived from stored sessions; `USAGE_STATS_AGGREGATE` — imported
+     * upper bound from `UsageStats` for days without sessions (sum of per-app time;
+     * the per-day union is unknowable from aggregates). Session-derived rows replace
+     * aggregate rows for the same day once collected. Migration 4→5 default.
+     */
+    @ColumnInfo(defaultValue = "'SESSIONS'") val source: String = "SESSIONS",
 )
 
 @Entity(
@@ -80,7 +90,7 @@ data class DailyAppUsage(
 )
 data class HourlyUsage(
     val dateKey: String,
-    val hour: Int, // 0-23 in zone used for dateKey (23/25 on DST days)
+    val hour: Int, // 0-23 in zone used for dateKey (fall-back 01:00 bucket can hold up to 120 min; spring-forward 02:00 absent)
     val packageName: String,
     val durationMs: Long,
 )
@@ -92,6 +102,13 @@ data class CollectionState(
     val earliestSessionTime: Long? = null,
     val lastTimeZoneId: String = "",
     val initialSyncCompleted: Boolean = false,
+    /**
+     * Version of the collection pipeline that produced the stored rows. Below
+     * [CURRENT_PIPELINE_VERSION] triggers the one-time repair: retained-range
+     * session-derived rows are wiped and the cursor is reset so the next run
+     * rebuilds them with the corrected rules. Migrated (v4) databases read 0.
+     */
+    @ColumnInfo(defaultValue = "0") val pipelineVersion: Int = CURRENT_PIPELINE_VERSION,
 )
 
 /** Outcomes a Focus session can end with. The OPEN marker means "still running". */
