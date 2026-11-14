@@ -74,6 +74,7 @@ private fun samplePopulatedState(): InsightsUiState {
                 TopUsedApp("com.sample.feed", "Fieldnotes", 5_400_000L),
                 TopUsedApp("com.sample.chat", "Chat", 3_600_000L),
             ),
+            moreApps = 1,
             comparison = "About 40m more than the previous 7 days.",
         ),
         topApps = listOf(
