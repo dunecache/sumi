@@ -97,22 +97,20 @@ class FocusViewModel @Inject constructor(
     // Usage access changes only via a trip to Settings; it needs no 1 Hz cadence.
     private val _hasUsageAccess = MutableStateFlow(checker.hasUsageAccess())
 
-    private val timerFlow = kotlinx.coroutines.flow.flow {
-        var tick = 0
-        while (kotlinx.coroutines.currentCoroutineContext().isActive) {
-            _nowUtcMs.value = clock.nowUtcMs()
-            if (tick++ % PERMISSION_REFRESH_EVERY_TICKS == 0) {
-                _hasUsageAccess.value = checker.hasUsageAccess()
-            }
-            delay(FocusMath.POLL_INTERVAL_MS)
-        }
-    }
-
     private val sessionStream = focusSessions.observeOpen()
     private val historyStream = focusSessions.observeHistory()
 
     init {
-        viewModelScope.launch { timerFlow.collect { } }
+        viewModelScope.launch {
+            var tick = 0
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                _nowUtcMs.value = clock.nowUtcMs()
+                if (tick++ % PERMISSION_REFRESH_EVERY_TICKS == 0) {
+                    _hasUsageAccess.value = checker.hasUsageAccess()
+                }
+                delay(FocusMath.POLL_INTERVAL_MS)
+            }
+        }
         viewModelScope.launch {
             preferences.focusLastDurationMinutes.collect { _selectedMinutes.value = it }
         }
