@@ -91,7 +91,10 @@ class AppsContentUiTest {
         setContent(state(sampleApps))
 
         composeRule.onNodeWithText("All").assertIsDisplayed()
-        composeRule.onNodeWithText("Social").assertIsDisplayed()
+        // Category chips are asserted with names unique to the row ("Social" also
+        // appears as the row's category-identity line — that one is expected twice).
+        composeRule.onNodeWithText("Education").assertIsDisplayed()
+        composeRule.onNodeWithText("AI").assertIsDisplayed()
         // The chip row scrolls; offscreen chips must be scrolled into view first.
         composeRule.onNodeWithText("Uncategorized").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Manage…").performScrollTo().assertIsDisplayed()

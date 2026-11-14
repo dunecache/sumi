@@ -601,7 +601,7 @@ private fun AppRowSlot(
     )
 }
 
-/** In usage sorts, selection of the Select action enters selection mode with all visible rows selected. */
+/** Selection-mode toolbar row: close button, count, and Select-all for the filtered view. */
 @Composable
 private fun SelectionHeader(
     count: Int,
