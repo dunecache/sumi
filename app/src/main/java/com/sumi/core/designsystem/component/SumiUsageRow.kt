@@ -123,6 +123,8 @@ fun AppUsageRow(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    /** Spoken window for the share ("today", "the last 7 days"); screen text is window-free. */
+    sharePeriod: String = "today",
 ) {
     val percent = shareOfTotal?.takeIf { it >= MIN_MEANINGFUL_SHARE }
         ?.let { "${Averages.percentOfShare(it)}%" }
@@ -130,7 +132,7 @@ fun AppUsageRow(
         append(displayName)
         append(", ")
         append(formatDuration(durationMs))
-        if (percent != null) append(", $percent of today")
+        if (percent != null) append(", $percent of $sharePeriod")
     }
     Row(
         modifier = modifier

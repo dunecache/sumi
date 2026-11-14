@@ -86,6 +86,13 @@ class UsageRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeDailyTotalsRange(dateKeys: List<String>): Flow<List<DailyUsage>> {
+        if (dateKeys.isEmpty()) return flowOf(emptyList())
+        return dailyDao.observeByDateKeys(dateKeys).map { list ->
+            list.map { DailyUsage(it.dateKey, it.totalDurationMs, it.lastCollectedAt) }
+        }
+    }
+
     override fun observeAppDailyUsage(packageName: String): Flow<List<DailyAppUsage>> =
         db.dailyAppUsageDao().observeByPackage(packageName).map { list ->
             list.map { DailyAppUsage(it.dateKey, it.packageName, it.durationMs, parseSource(it.source)) }
@@ -102,8 +109,20 @@ class UsageRepositoryImpl @Inject constructor(
         emit(rows.map { HourlyUsage(it.dateKey, it.hour, it.packageName, it.durationMs) })
     }
 
+    override fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>> {
+        if (dateKeys.isEmpty()) return flowOf(emptyList())
+        return hourlyDao.observeByDateKeys(dateKeys).map { rows ->
+            rows.map { HourlyUsage(it.dateKey, it.hour, it.packageName, it.durationMs) }
+        }
+    }
+
     override fun observeSessionsForDate(dateKey: String): Flow<List<UsageSession>> =
         sessionDao.observeByDateKey(dateKey).map { list -> list.map { it.toDomain() } }
+
+    override fun observeSessionsForDateKeys(dateKeys: List<String>): Flow<List<UsageSession>> {
+        if (dateKeys.isEmpty()) return flowOf(emptyList())
+        return sessionDao.observeByDateKeys(dateKeys).map { list -> list.map { it.toDomain() } }
+    }
 
     override fun observeSessionsForPackageAndDate(packageName: String, dateKey: String): Flow<List<UsageSession>> =
         sessionDao.observeByDateKey(dateKey).map { list ->
