@@ -15,6 +15,7 @@ import com.sumi.core.database.entity.DailyUsage as EntityDailyUsage
 import com.sumi.core.database.entity.HourlyUsage as EntityHourlyUsage
 import com.sumi.core.database.entity.UsageSession as EntitySession
 import com.sumi.platform.applications.AppLabelResolver
+import com.sumi.platform.applications.InstalledApp
 import com.sumi.platform.applications.InstalledAppsSource
 import com.sumi.platform.usage.ExcludedPackagesResolver
 import com.sumi.domain.common.Clock
@@ -90,6 +91,13 @@ class UsageRepositoryImpl @Inject constructor(
         db.dailyAppUsageDao().observeByPackage(packageName).map { list ->
             list.map { DailyAppUsage(it.dateKey, it.packageName, it.durationMs, parseSource(it.source)) }
         }
+
+    override fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>> {
+        if (dateKeys.isEmpty()) return flowOf(emptyList())
+        return db.hourlyUsageDao().observeByDateKeys(dateKeys).map { list ->
+            list.map { HourlyUsage(it.dateKey, it.hour, it.packageName, it.durationMs) }
+        }
+    }
 
     private fun observeDailyAppUsageEntities(dateKey: String): Flow<List<EntityDailyAppUsage>> =
         db.dailyAppUsageDao().observeByDateKey(dateKey)
@@ -242,28 +250,39 @@ class UsageRepositoryImpl @Inject constructor(
      * placeholder rows when their real label becomes resolvable. Keeps user fields
      * intact (categoryId, isHidden, isCategoryUserSet are never overwritten; a fresh
      * row gets a confident default from the bundled mapping or stays uncategorized).
+     * Fresh rows stamp `firstSeenAt` (the quiet "New" marker) and `isSystemApp` from
+     * [metadata] when discovery provides it; the usage path leaves them unknown (0/false).
      * Callers must run this inside their own transaction when atomicity matters.
      */
-    private suspend fun ensureApplicationRows(packages: List<String>) {
+    private suspend fun ensureApplicationRows(
+        packages: List<String>,
+        metadata: Map<String, InstalledApp> = emptyMap(),
+    ) {
         val distinct = packages.distinct()
         if (distinct.isEmpty()) return
         val existingByPackage = distinct.mapNotNull { pkg ->
             applicationDao.getByPackage(pkg)?.let { pkg to it }
         }.toMap()
-        val rows = distinct.map { pkg ->
+        val now = clock.nowUtcMs()
+        val rows = distinct.mapNotNull { pkg ->
             val existing = existingByPackage[pkg]
             val label = labelResolver.labelFor(pkg)?.takeIf { it != pkg }
             when {
                 // Fresh rows: seed a confident default when one exists; unknown
                 // packages stay uncategorized (never silently classified).
-                existing == null ->
-                    Application(pkg, label ?: pkg, categoryId = DefaultPackageCategories.forPackage(pkg))
+                existing == null -> Application(
+                    pkg,
+                    label ?: pkg,
+                    categoryId = DefaultPackageCategories.forPackage(pkg),
+                    isSystemApp = metadata[pkg]?.isSystemApp ?: false,
+                    firstSeenAt = now,
+                )
                 // displayName == packageName marks the unresolved placeholder.
                 label != null && existing.displayName == existing.packageName ->
                     existing.copy(displayName = label)
                 else -> null
             }
-        }.filterNotNull()
+        }
         if (rows.isNotEmpty()) applicationDao.upsertAll(rows)
     }
 
@@ -315,26 +334,40 @@ class UsageRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Auto-detect the installed apps (launcher query) and create Application rows for
-     * any that are missing. Founds the Apps library on *installed* apps, not only apps
-     * that have generated usage events — so apps the user never opened are also visible
-     * (with 0m usage) and can be categorized early.
+     * Auto-detect the installed apps (launcher query) and reconcile the `applications`
+     * table with the live catalog:
+     *  - missing launchable packages get fresh rows (usage-seen or not);
+     *  - rows whose package vanished from the catalog are marked `isInstalled = 0`
+     *    — never deleted, so the assignment and the history survive a reinstall;
+     *  - reappearing packages flip back to `isInstalled = 1` (system flag refreshed).
      *
      * Excluded device furniture (Sumi itself, the launcher, the IME) is never added.
-     * Existing rows are never overwritten; discovery creates only what is missing.
+     * Existing rows are never overwritten beyond those flag flips — categoryId,
+     * isCategoryUserSet and displayName of user-touched rows are safe.
      * Called at app start (bootstrap) and again on onboarding completion.
+     *
+     * An *empty* discovery result is treated as "the package manager told us nothing"
+     * (failure, or no launcher apps resolvable), not as "the user uninstalled
+     * everything" — no rows are marked uninstalled in that case.
      */
     override suspend fun backfillInstalledApps() =
         withContext(dispatchers.io) {
-            val discovered = installedApps.launchablePackages()
+            val discovered = installedApps.launchableApps()
             if (discovered.isEmpty()) return@withContext
             val excluded = excludedPackages.resolve()
-            val candidates = discovered.filterNot { UsageExclusions.isExcluded(it, excluded) }
-            if (candidates.isEmpty()) return@withContext
-            val existing = applicationDao.getByPackages(candidates).map { it.packageName }.toSet()
-            val missing = candidates.filterNot { it in existing }
-            if (missing.isEmpty()) return@withContext
-            ensureApplicationRows(missing)
+            val existing = applicationDao.getAll()
+            val plan = LibraryMerge.plan(existing, discovered, excluded)
+            db.withTransaction {
+                // Reinstall restore + system-flag drift correction. User fields kept.
+                if (plan.restoreRows.isNotEmpty()) applicationDao.upsertAll(plan.restoreRows)
+                // Left the catalog: hide from the library, keep everything else.
+                if (plan.markUninstalled.isNotEmpty()) {
+                    applicationDao.setInstalled(plan.markUninstalled, installed = false)
+                }
+            }
+            // Fresh rows (labels and first-seen stamps). Excluded packages and existing
+            // rows are untouched — ensureApplicationRows creates only what is missing.
+            ensureApplicationRows(plan.insertPackages, discovered.associateBy { it.packageName })
         }
 
     override suspend fun initialSyncFromUsageStats(fromUtcMs: Long, toUtcMs: Long) =
