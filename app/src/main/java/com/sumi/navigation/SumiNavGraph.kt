@@ -7,28 +7,33 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material.icons.outlined.CenterFocusWeak
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -48,6 +53,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sumi.core.designsystem.theme.SumiWordmark
+import com.sumi.core.designsystem.theme.sumiExtendedColors
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.feature.appdetail.AppDetailScreen
 import com.sumi.feature.apps.AppsScreen
@@ -56,7 +63,7 @@ import com.sumi.feature.categories.CategoryManagerScreen
 import com.sumi.feature.focus.FocusScreen
 import com.sumi.feature.insights.InsightsScreen
 import com.sumi.feature.onboarding.OnboardingViewModel
-import com.sumi.feature.onboarding.sections.FirstOverviewScreen
+import com.sumi.feature.onboarding.sections.ReadyScreen
 import com.sumi.feature.onboarding.sections.FocusReminderScreen
 import com.sumi.feature.onboarding.sections.InitialSyncScreen
 import com.sumi.feature.onboarding.sections.PrivacyScreen
@@ -79,11 +86,12 @@ private data class BottomDestination(
 )
 
 // One coherent icon family: outlined when at rest, filled when selected. Consistent
-// metaphors — a day for Today, a chart for Insights, a calm ring for Focus, a grid for Apps.
+// metaphors — a day for Today, a chart for Insights, a concentric target for Focus (F-13;
+// the viewfinder glyph read as "scan/camera"), a grid for Apps.
 private val BottomDestinations = listOf(
     BottomDestination(Routes.TODAY, "Today", Icons.Outlined.WbSunny, Icons.Filled.WbSunny),
     BottomDestination(Routes.INSIGHTS, "Insights", Icons.Outlined.Insights, Icons.Filled.Insights),
-    BottomDestination(Routes.FOCUS, "Focus", Icons.Outlined.CenterFocusWeak, Icons.Filled.CenterFocusStrong),
+    BottomDestination(Routes.FOCUS, "Focus", Icons.Outlined.TrackChanges, Icons.Filled.TrackChanges),
     BottomDestination(
         Routes.APPS,
         "Apps",
@@ -133,11 +141,21 @@ fun SumiApp(
     // Selection compares the destination and its ancestors — an argumented destination
     // (Apps, `apps?filter={filter}`) never matches its plain route string, and walking
     // parents keeps this correct if it ever becomes a nested graph.
+    // The tab the user came from — tracked so stacked destinations (Settings) can keep
+    // the origin tab marked (reference standard §9.4). Defaults to Today.
+    val originTabRoute = remember { androidx.compose.runtime.mutableStateOf(Routes.TODAY) }
+    LaunchedEffect(currentRoute) {
+        val route = currentRoute
+        if (route != null && route in MainRoutes) originTabRoute.value = route
+    }
+    val isOriginStacked = currentRoute == Routes.SETTINGS
     val isTabSelected: (BottomDestination) -> Boolean = { dest ->
         generateSequence(currentBackStackEntry?.destination) { it.parent }
-            .any { it.route == dest.selectionPattern }
+            .any { it.route == dest.selectionPattern } ||
+            (isOriginStacked && dest.route == originTabRoute.value)
     }
-    val showBottomBar = currentRoute in MainRoutes
+    // Settings stacks from a tab; the bottom bar stays visible with the origin tab marked.
+    val showBottomBar = currentRoute in MainRoutes || currentRoute == Routes.SETTINGS
     val isSubRoute = currentRoute in SubRoutes
     val showTopBar = showBottomBar || isSubRoute
 
@@ -169,10 +187,20 @@ fun SumiApp(
         Scaffold(
             topBar = {
                 if (showTopBar) {
+                    // Reference standard §9.3: root destinations carry the serif wordmark on
+                    // the left plus at most one trailing action; subscreens carry a left back
+                    // arrow and no wordmark. Navigation never sits on the right.
                     TopAppBar(
-                        title = { Text("Sumi") },
-                        actions = {
-                            // Sub-routes get a back arrow; the tabbed destinations keep the gear.
+                        title = {
+                            if (!isSubRoute) {
+                                Text(
+                                    text = "Sumi",
+                                    style = com.sumi.core.designsystem.theme.SumiWordmark,
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            // Sub-routes: back arrow on the left, always (F-04).
                             if (isSubRoute) {
                                 IconButton(onClick = { navController.popBackStack() }) {
                                     Icon(
@@ -180,7 +208,11 @@ fun SumiApp(
                                         contentDescription = "Back",
                                     )
                                 }
-                            } else {
+                            }
+                        },
+                        actions = {
+                            // Root destinations: gear on the right (48 dp target); never a back arrow.
+                            if (!isSubRoute) {
                                 IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
                                     Icon(
                                         imageVector = Icons.Filled.Settings,
@@ -194,16 +226,27 @@ fun SumiApp(
             },
             bottomBar = {
                 if (showBottomBar && !expanded) {
-                    // M3 NavigationBar, customized to stay understated: tonal bar surface,
-                    // default-size indicator, consistent icon pair per destination.
-                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                    // M3 NavigationBar customized per the reference standard §9.4: surface-bar
+                    // strip + hairline edge, pill + filled icon + medium label = triple-coded
+                    // selected state (F-08/F-20).
+                    val navPill = sumiExtendedColors().navPill
+                    Column {
+                        HorizontalDivider(
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                        NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 0.dp,
+                    ) {
                         BottomDestinations.forEach { dest ->
+                            val selected = isTabSelected(dest)
                             NavigationBarItem(
-                                selected = isTabSelected(dest),
+                                selected = selected,
                                 onClick = { navController.navigateTab(dest.route) },
                                 icon = {
                                     Icon(
-                                        imageVector = if (isTabSelected(dest)) {
+                                        imageVector = if (selected) {
                                             dest.iconSelected
                                         } else {
                                             dest.iconUnselected
@@ -211,9 +254,22 @@ fun SumiApp(
                                         contentDescription = dest.label,
                                     )
                                 },
-                                label = { Text(dest.label) },
+                                label = {
+                                    Text(
+                                        dest.label,
+                                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    indicatorColor = navPill,
+                                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
                             )
                         }
+                    }
                     }
                 }
             },
@@ -224,14 +280,16 @@ fun SumiApp(
                     .fillMaxSize(),
             ) {
                 if (showBottomBar && expanded) {
+                    val navPill = sumiExtendedColors().navPill
                     NavigationRail(containerColor = Color.Transparent) {
                         BottomDestinations.forEach { dest ->
+                            val selected = isTabSelected(dest)
                             NavigationRailItem(
-                                selected = isTabSelected(dest),
+                                selected = selected,
                                 onClick = { navController.navigateTab(dest.route) },
                                 icon = {
                                     Icon(
-                                        imageVector = if (isTabSelected(dest)) {
+                                        imageVector = if (selected) {
                                             dest.iconSelected
                                         } else {
                                             dest.iconUnselected
@@ -239,7 +297,19 @@ fun SumiApp(
                                         contentDescription = dest.label,
                                     )
                                 },
-                                label = { Text(dest.label) },
+                                label = {
+                                    Text(
+                                        dest.label,
+                                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                                    )
+                                },
+                                colors = NavigationRailItemDefaults.colors(
+                                    indicatorColor = navPill,
+                                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
                             )
                         }
                     }
@@ -283,20 +353,23 @@ fun SumiApp(
                     )
                 }
                 composable(Routes.ONBOARDING_INITIAL_SYNC) {
+                    val importState by onboardingViewModel.initialSyncState.collectAsState()
                     InitialSyncScreen(
-                        uiState = usageAccessState,
+                        permissionState = usageAccessState,
+                        importState = importState,
+                        onOpenSettings = { onboardingViewModel.openUsageAccessSettings() },
+                        onRetry = onboardingViewModel::retryInitialSync,
+                        onStartImport = onboardingViewModel::startInitialSync,
                         // Sync completion itself finishes onboarding: the flag is written
-                        // here, so an app kill before the preview screen cannot replay setup.
-                        onFinish = {
-                            onboardingViewModel.runInitialSync {
-                                onboardingViewModel.completeOnboarding()
-                                navController.navigate(Routes.ONBOARDING_FIRST_OVERVIEW)
-                            }
+                        // here, so an app kill before the "Ready." screen cannot replay setup.
+                        onContinue = {
+                            onboardingViewModel.completeOnboarding()
+                            navController.navigate(Routes.ONBOARDING_FIRST_OVERVIEW)
                         },
                     )
                 }
                 composable(Routes.ONBOARDING_FIRST_OVERVIEW) {
-                    FirstOverviewScreen(
+                    ReadyScreen(
                         onOpenApp = {
                             navController.navigate(Routes.TODAY) {
                                 popUpTo(Routes.ONBOARDING_WELCOME) { inclusive = true }
@@ -347,14 +420,19 @@ fun SumiApp(
                 composable(Routes.SETTINGS) {
                     val settingsViewModel: com.sumi.feature.settings.SettingsViewModel =
                         androidx.hilt.navigation.compose.hiltViewModel()
-                    val diagnostics by settingsViewModel.diagnosticsLines.collectAsState()
+                    val diagnostics by settingsViewModel.diagnostics.collectAsState()
                     val showSystemApps by settingsViewModel.showSystemApps.collectAsState(initial = false)
+                    val exportState by settingsViewModel.exportState.collectAsState()
                     SettingsScreen(
                         themeMode = themeMode,
                         onThemeSelected = onThemeSelected,
-                        diagnosticsLines = diagnostics,
+                        diagnostics = diagnostics,
                         showSystemApps = showSystemApps,
                         onShowSystemAppsChange = settingsViewModel::setShowSystemApps,
+                        onDeleteAllData = settingsViewModel::deleteAllData,
+                        exportState = exportState,
+                        onExportConfirmed = settingsViewModel::exportData,
+                        onExportDismissed = settingsViewModel::resetExportState,
                     )
                 }
                 composable(
