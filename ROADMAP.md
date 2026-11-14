@@ -27,7 +27,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Configure Hilt, Room, DataStore
 - [x] Set up ktlint, detekt, CI build + unit tests (separate GitHub Actions workflows; CI is the gate, see `docs/CI.md`)
 - [x] Navigation architecture: 4 destinations (Today, Insights, Focus, Apps) + onboarding graph
-- [x] Onboarding: Welcome → Privacy → Usage Access → Initial sync → First overview
+- [x] Onboarding: Welcome → Privacy → Focus (optional reminder) → Usage Access → Initial sync → First overview
 - [x] Settings skeleton (privacy statement, theme)
 
 **Acceptance criteria**
@@ -250,3 +250,4 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 | 2026-11-14 | Insights redesigned range-aware (Today · Yesterday · Last 7 days · Last 30 days): range switcher, overview with labeled average and time-aware comparison, tap-a-bar daily chart (DailyBars) with day inspector, range-aware category distribution, shared range-aware category detail screens, "Time in social apps" lens on the Social category, range top-five with deep-link to Apps, coverage-aware patterns (hour-of-day strip, morning/evening, weekday/weekend) and rebuilt observations. Domain: `InsightsRange`, `NeutralComparison`, `IntervalMath`; shared derivation in `core.usage.UsageDerivation`; range survives navigation/process death (`SavedStateHandle`). Not yet verified on device/emulator (no local aapt2 on this host); CI is the gate. |
 | 2026-11-14 | Taxonomy extended: new seeds `ai`, `finance`, `browser` (fresh installs get all 11; existing installs backfilled once at bootstrap without resurrecting user-deleted seeds). Install-library autodetection (launchable apps → rows with default categories) wired into bootstrap. Owner's library mapped into `DefaultPackageCategories` (~90 exact rules: Kimi/Perplexity/ChatGPT/Grok/Claude/DeepSeek/Tongyi/Labs, TradingView/Binance/RedotPay/BPC, Brave/Firefox/DuckDuckGo, manga readers, music/video clients, carrier/dev tools, reading/newsletter apps). |
 
+| 2026-11-14 | Onboarding gains an optional "Focus, gently" step (3 of 5) between Privacy and Usage Access: one once-a-day reminder toggle (default off). It is the only new ask moment — flipping it launches POST_NOTIFICATIONS (API 33+), denying leaves it off with a quiet explanation; the rest of onboarding never prompts. Owner requested (notification ask was undiscoverable); rule 9 kept — no launch-time or bare onboarding prompt exists. |

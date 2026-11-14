@@ -1,26 +1,38 @@
 package com.sumi.feature.onboarding.sections
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.feature.onboarding.UsageAccessUiState
 
-// Onboarding: Welcome → Privacy → Usage Access → Initial sync → First overview (preview).
+// Onboarding: Welcome → Privacy → Focus (optional) → Usage Access → Initial sync →
+// First overview (preview).
 // Setup completes when the initial sync finishes; the preview only opens the app.
-// No notification permission is requested here (PRINCIPLES.md, AGENTS.md §9).
+// The only permission ask in onboarding is the Focus reminder opt-in, and it fires only
+// when the user flips the switch — never on its own (PRINCIPLES.md, AGENTS.md §9).
 
 @Composable
 private fun StepLabel(step: Int) {
@@ -73,6 +85,91 @@ fun PrivacyScreen(onNext: () -> Unit) {
     }
 }
 
+/**
+ * Optional step: one quiet once-a-day nudge. The toggle IS the ask moment — flipping it
+ * on launches the runtime permission prompt on API 33+; denying leaves the switch off
+ * with a quiet explanation and a pointer to system settings. Everything about this step
+ * is skippable by simply pressing Continue.
+ */
+@Composable
+fun FocusReminderScreen(
+    reminderEnabled: Boolean,
+    canPostNotifications: Boolean,
+    onToggleReminder: (Boolean) -> Unit,
+    onContinue: () -> Unit,
+) {
+    // Denial is kept visible but quiet; never re-prompts, never persists guilt.
+    var showDenied by remember { mutableStateOf(false) }
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) onToggleReminder(true) else showDenied = true
+    }
+    val handleToggle: (Boolean) -> Unit = { enable ->
+        when {
+            !enable -> {
+                showDenied = false
+                onToggleReminder(false)
+            }
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                !canPostNotifications -> {
+                notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+            else -> onToggleReminder(true)
+        }
+    }
+    Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
+        StepLabel(3)
+        Spacer(Modifier.height(SumiSpacing.section))
+        Text(text = "Focus, gently", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(SumiSpacing.md))
+        Text(
+            text = "Sumi can nudge you once a day with a quiet question about taking a focused " +
+                "break. That is the only notification it will ever send you, and only if you " +
+                "ask for it. Skip it, or turn it on any time — in the Focus tab.",
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(Modifier.height(SumiSpacing.lg))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = SumiSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(SumiSpacing.md),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Once-a-day Focus reminder",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(SumiSpacing.xs))
+                Text(
+                    text = if (reminderEnabled) {
+                        "On · 09:00 — change it any time in the Focus tab."
+                    } else {
+                        "Off. You can turn it on any time in the Focus tab."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = reminderEnabled, onCheckedChange = handleToggle)
+        }
+        if (showDenied) {
+            Spacer(Modifier.height(SumiSpacing.xs))
+            Text(
+                text = "Notifications are off for Sumi, so the reminder stays off. " +
+                    "You can allow them any time in system settings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+        Spacer(Modifier.height(SumiSpacing.xl))
+    }
+}
+
 @Composable
 fun UsageAccessScreen(
     uiState: UsageAccessUiState,
@@ -80,7 +177,7 @@ fun UsageAccessScreen(
     onContinue: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
-        StepLabel(3)
+        StepLabel(4)
         Spacer(Modifier.height(SumiSpacing.section))
         Text(text = "Usage Access", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(SumiSpacing.md))
@@ -116,7 +213,7 @@ fun InitialSyncScreen(
         UsageAccessUiState.Granted -> Column(
             Modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal),
         ) {
-            StepLabel(4)
+            StepLabel(5)
             Spacer(Modifier.height(SumiSpacing.section))
             Text(text = "Preparing your history", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(SumiSpacing.md))

@@ -176,7 +176,7 @@ Suggested overlap window: long enough to include any open session at the previou
 | App usage statistics | `PACKAGE_USAGE_STATS` (special permission, "Usage Access") |
 | Usage event history | Same Usage Access grant |
 | Installed app discovery | Package visibility rules; `<queries>` for launcher intent; avoid `QUERY_ALL_PACKAGES` |
-| Reminders / focus notifications | `POST_NOTIFICATIONS` on Android 13+, requested only when the user enables a reminder |
+| Reminders / focus notifications | `POST_NOTIFICATIONS` on Android 13+; requested in exactly two places — the Focus tab once the user flips the reminder on, or the same flip during onboarding's Focus step. Never on its own, never at launch |
 | App blocking | Out of scope |
 
 Usage Access:
@@ -458,8 +458,9 @@ One optional once-a-day reminder at a user-chosen local time (default 09:00, **o
 default**), scheduled with WorkManager (`sumi_focus_reminder_daily`, periodic 24 h with
 initial delay to the next occurrence of the time); the worker re-checks the preference
 before posting and is a no-op otherwise. `POST_NOTIFICATIONS` is asked for **only when
-the user flips the reminder on** (Android 13+); denial leaves the reminder off with an
-explanation and a deep link to system notification settings. Copy invites ("Time for a
+the user flips the reminder on** — either in the Focus tab or in the onboarding Focus
+step; both are user-initiated (Android 13+). Denial leaves the reminder off with a quiet
+explanation and a pointer to system notification settings. Copy invites ("Time for a
 session?"), never chases; the whole block hides itself when notifications are denied.
 
 ### 16.6 Weekly "time in focus"
