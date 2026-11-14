@@ -38,6 +38,7 @@ import androidx.room.withTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -67,11 +68,39 @@ class UsageRepositoryImpl @Inject constructor(
     private val installedApps: InstalledAppsSource,
 ) : UsageRepository {
 
-    override fun observeDailyTotal(dateKey: String): Flow<DailyUsage?> =
-        dailyDao.observeAll().map { all ->
-            all.firstOrNull { it.dateKey == dateKey }?.let {
-                DailyUsage(it.dateKey, it.totalDurationMs, it.lastCollectedAt)
+    /**
+     * Day totals, merged at read time with the imported per-app history.
+     *
+     * The 90-day `UsageStatsManager` import writes only `daily_app_usage` rows, never
+     * `daily_usage`; the session-backed collection writes both from the same source.
+     * Stored rows therefore always win (identical by construction), and days without a
+     * stored row derive from the per-app sum for the same day — so every total-driven
+     * surface (overview, bars, comparisons, coverage) agrees with the category and
+     * most-used surfaces instead of reading an empty table for imported days.
+     * Derived rows carry a now-valued [DailyUsage.lastCollectedAtUtcMs]; it is never
+     * rendered anywhere, so an import-time stamp is not fabricated.
+     */
+    private fun observeMergedDailyTotals(dateKeys: List<String>): Flow<List<DailyUsage>> {
+        if (dateKeys.isEmpty()) return flowOf(emptyList())
+        return combine(
+            dailyDao.observeByDateKeys(dateKeys),
+            dailyAppDao.observeByDateKeys(dateKeys),
+        ) { stored, perApp ->
+            val storedByKey = stored.associateBy { it.dateKey }
+            val perAppByKey = perApp.groupBy { it.dateKey }
+            dateKeys.mapNotNull { key ->
+                storedByKey[key]?.let {
+                    DailyUsage(it.dateKey, it.totalDurationMs, it.lastCollectedAt)
+                } ?: perAppByKey[key]?.takeIf { it.isNotEmpty() }?.let { rows ->
+                    DailyUsage(key, rows.sumOf { it.durationMs }, clock.nowUtcMs())
+                }
             }
+        }
+    }
+
+    override fun observeDailyTotal(dateKey: String): Flow<DailyUsage?> =
+        observeMergedDailyTotals(listOf(dateKey)).map { totals ->
+            totals.firstOrNull { it.dateKey == dateKey }
         }
 
     override fun observeDailyAppUsage(dateKey: String): Flow<List<DailyAppUsage>> =
@@ -87,12 +116,8 @@ class UsageRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun observeDailyTotalsRange(dateKeys: List<String>): Flow<List<DailyUsage>> {
-        if (dateKeys.isEmpty()) return flowOf(emptyList())
-        return dailyDao.observeByDateKeys(dateKeys).map { list ->
-            list.map { DailyUsage(it.dateKey, it.totalDurationMs, it.lastCollectedAt) }
-        }
-    }
+    override fun observeDailyTotalsRange(dateKeys: List<String>): Flow<List<DailyUsage>> =
+        observeMergedDailyTotals(dateKeys)
 
     override fun observeAppDailyUsage(packageName: String): Flow<List<DailyAppUsage>> =
         db.dailyAppUsageDao().observeByPackage(packageName).map { list ->

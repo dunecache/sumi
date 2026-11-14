@@ -14,7 +14,9 @@ import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
 import com.sumi.domain.usage.DailyAppUsage
 import com.sumi.domain.usage.HourlyUsage
+import com.sumi.domain.usage.IntervalMath
 import com.sumi.domain.usage.UsageRepository
+import com.sumi.domain.insights.InsightsRange
 import com.sumi.platform.usage.UsageAccessChecker
 import com.sumi.platform.applications.AppIconLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +31,7 @@ data class TodayUiState(
     val isLoading: Boolean = true,
     val hasUsageAccess: Boolean = false,
     val totalDurationMs: Long = 0L,
-    /** Null = no data was collected for yesterday; renderers omit the line instead of printing "0m". */
+    /** Null = no sessions recorded for yesterday; renderers omit the line instead of printing "0m". */
     val previousDayDurationMs: Long? = null,
     /** Neutral comparison wording, or null when yesterday has no data (line omitted). */
     val comparison: String? = null,
@@ -85,12 +87,24 @@ class TodayViewModel @Inject constructor(
             val yesterday = DateKey.shift(today, -1L)
             val base = combine(
                 repository.observeDailyTotal(today),
-                repository.observeDailyTotal(yesterday),
+                // Yesterday is compared only up to the same wall-clock time as now, never
+                // as a full day vs today-so-far (which flatters/penalizes the delta by
+                // however much usage happens later in the day). Aggregates can't answer
+                // a partial day — sessions are the only resolution that can. When
+                // yesterday holds no sessions (pre-installation history import), the line
+                // is omitted rather than quoted against an unclippable window.
+                repository.observeSessionsForDateKeys(listOf(yesterday)),
                 repository.observeDailyAppUsage(today),
                 repository.observeHourlyUsage(today),
                 applicationDao.observeInstalled(),
-            ) { todayTotal, yesterdayTotal, perApp, hourly, applications ->
-                BaseData(todayTotal?.totalDurationMs ?: 0L, yesterdayTotal?.totalDurationMs, perApp, hourly, applications)
+            ) { todayTotal, yesterdaySessions, perApp, hourly, applications ->
+                val yesterdayAtThisTime = if (yesterdaySessions.isEmpty()) {
+                    null
+                } else {
+                    val (from, to) = InsightsRange.TODAY.comparisonWindow(timeZone.currentZone(), clock.nowUtcMs())
+                    IntervalMath.unionMsInWindow(yesterdaySessions, from, to, clock.nowUtcMs())
+                }
+                BaseData(todayTotal?.totalDurationMs ?: 0L, yesterdayAtThisTime, perApp, hourly, applications)
             }
             combine(
                 base,
@@ -150,10 +164,11 @@ private const val MILLIS_PER_MINUTE = 60_000L
 
 /**
  * Neutral previous-day comparison (DESIGN.md §5.1-4: no up/down arrows in red/green):
- * delegates to the shared [NeutralComparison] rule with "yesterday" as the window label.
+ * delegates to the shared [NeutralComparison] rule with a same-wall-clock-time window
+ * label — the caller supplies yesterday clipped to now's time of day, never a full day.
  */
 internal fun yesterdayComparison(todayMs: Long, yesterdayMs: Long): String =
-    com.sumi.domain.insights.NeutralComparison.neutralComparison(todayMs, yesterdayMs, "yesterday")
+    com.sumi.domain.insights.NeutralComparison.neutralComparison(todayMs, yesterdayMs, "yesterday at this time")
 
 /**
  * Sums per-app hourly buckets into 24 wall-clock totals for the timeline strip.

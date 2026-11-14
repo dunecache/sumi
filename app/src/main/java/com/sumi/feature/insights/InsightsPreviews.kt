@@ -74,6 +74,7 @@ private fun samplePopulatedState(): InsightsUiState {
                 TopUsedApp("com.sample.feed", "Fieldnotes", 5_400_000L),
                 TopUsedApp("com.sample.chat", "Chat", 3_600_000L),
             ),
+            moreApps = 1,
             comparison = "About 40m more than the previous 7 days.",
         ),
         topApps = listOf(
@@ -101,7 +102,7 @@ private fun samplePopulatedState(): InsightsUiState {
         ),
         coverageDays = 7,
         observations = listOf(
-            Insight(InsightKind.FACT, "You had 29 sessions in this period."),
+            Insight(InsightKind.FACT, "You had 29 sessions in this period (any length — a glance counts)."),
             Insight(InsightKind.FACT, "Your longest uninterrupted session was 48m."),
         ),
         dailyDetails = sampleDetails(totals),
