@@ -89,27 +89,26 @@ class TodayScreenUiTest {
     fun `social filter shows only social apps and is switchable back`() {
         setContent(populatedState())
 
-        composeRule.onNodeWithText("All").performClick().assertIsDisplayed()
-        composeRule.onNodeWithText("Social").performClick()
+        composeRule.onNodeWithText("Social").performScrollTo().performClick()
         composeRule.onNode(
             hasContentDescription("Messages, 40m, 57% of today"),
-        ).assertIsDisplayed()
+        ).performScrollTo().assertIsDisplayed()
         composeRule.onAllNodes(
             hasContentDescription("Browser", substring = true),
         ).assertCountEquals(0)
 
-        composeRule.onNodeWithText("All").performClick()
+        composeRule.onNodeWithText("All").performScrollTo().performClick()
         composeRule.onNode(
             hasContentDescription("Browser", substring = true),
-        ).assertIsDisplayed()
+        ).performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun `social filter with nothing social shows a calm empty line`() {
         setContent(populatedState().copy(socialMostUsed = emptyList()))
 
-        composeRule.onNodeWithText("Social").performClick()
-        composeRule.onNodeWithText("No social apps used today.").assertIsDisplayed()
+        composeRule.onNodeWithText("Social").performScrollTo().performClick()
+        composeRule.onNodeWithText("No social apps used today.").performScrollTo().assertIsDisplayed()
     }
 
     @Test
