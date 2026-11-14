@@ -111,6 +111,7 @@ private fun Drawable.toImageBitmap(): ImageBitmap {
  * bar, duration, and optional share of the day. Whole row is one touch/semantic target
  * announcing the takeaway ("Instagram, 1h 12m, 34 percent of today").
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AppUsageRow(
     packageName: String,
