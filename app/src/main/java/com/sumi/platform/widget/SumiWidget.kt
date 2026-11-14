@@ -23,7 +23,9 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.width
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -75,6 +77,9 @@ class SumiWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
+            DpSize(WIDTH_COMPACT.dp, HEIGHT_SLIM.dp),
+            DpSize(WIDTH_MEDIUM.dp, HEIGHT_SLIM.dp),
+            DpSize(WIDTH_LARGE.dp, HEIGHT_SLIM.dp),
             DpSize(WIDTH_COMPACT.dp, HEIGHT_BASELINE.dp),
             DpSize(WIDTH_MEDIUM.dp, HEIGHT_BASELINE.dp),
             DpSize(WIDTH_LARGE.dp, HEIGHT_LARGE.dp),
@@ -90,6 +95,7 @@ class SumiWidget : GlanceAppWidget() {
         const val WIDTH_COMPACT = 140
         const val WIDTH_MEDIUM = 250
         const val WIDTH_LARGE = 330
+        const val HEIGHT_SLIM = 54
         const val HEIGHT_BASELINE = 110
         const val HEIGHT_LARGE = 148
     }
@@ -208,10 +214,11 @@ private fun WidgetContent(snapshot: WidgetSnapshot) {
             .semantics { contentDescription = accessibilitySummary(view) },
         contentAlignment = Alignment.Center,
     ) {
+        val narrow = size.width.value < 210f
         when (view) {
-            is WidgetView.Total -> TotalLayout(view, palette, breakpoint)
-            WidgetView.Pending -> PendingLayout(palette, breakpoint)
-            WidgetView.PermissionMissing -> PermissionLayout(palette, breakpoint)
+            is WidgetView.Total -> TotalLayout(view, palette, breakpoint, narrow)
+            WidgetView.Pending -> PendingLayout(palette, breakpoint, narrow)
+            WidgetView.PermissionMissing -> PermissionLayout(palette, breakpoint, narrow)
         }
     }
 }
@@ -231,6 +238,7 @@ private fun TotalLayout(
     view: WidgetView.Total,
     palette: Palette,
     breakpoint: WidgetBreakpoint,
+    narrow: Boolean = false,
 ) {
     val onSurface = cp(palette.onSurface)
     val muted = cp(palette.muted)
@@ -254,6 +262,35 @@ private fun TotalLayout(
         WidgetBreakpoint.COMPACT -> 30.sp
         WidgetBreakpoint.MEDIUM -> 40.sp
         WidgetBreakpoint.LARGE -> 44.sp
+        WidgetBreakpoint.SLIM -> 20.sp // handled by the Row branch below
+    }
+
+    if (breakpoint == WidgetBreakpoint.SLIM) {
+        // One-row tile: wordmark · total · status inline, centered. Below 210 dp the
+        // status line is dropped before the total loses legibility (reference §3.4).
+        Row(
+            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                WORD_MARK,
+                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Medium),
+            )
+            Spacer(GlanceModifier.width(14.dp))
+            Text(
+                formatDuration(view.totalMs),
+                style = TextStyle(color = onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold),
+            )
+            if (!narrow) {
+                Spacer(GlanceModifier.width(16.dp))
+                Text(
+                    supportingLine,
+                    style = TextStyle(color = muted, fontSize = 11.sp),
+                )
+            }
+        }
+        return
     }
 
     Column(
@@ -282,18 +319,40 @@ private fun TotalLayout(
             Text(supporting, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
         } else {
             Text(
-            supportingLine,
-            style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center),
-        )
+                supportingLine,
+                style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center),
+            )
         }
     }
 }
 
 @Composable
 @GlanceComposable
-private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
+private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint, narrow: Boolean = false) {
     val onSurface = cp(palette.onSurface)
     val muted = cp(palette.muted)
+    if (breakpoint == WidgetBreakpoint.SLIM) {
+        Row(
+            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                WORD_MARK,
+                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Medium),
+            )
+            Spacer(GlanceModifier.width(12.dp))
+            Text(
+                PENDING_PLACEHOLDER,
+                style = TextStyle(color = onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+            )
+            if (!narrow) {
+                Spacer(GlanceModifier.width(12.dp))
+                Text(PENDING_SHORT, style = TextStyle(color = muted, fontSize = 11.sp))
+            }
+        }
+        return
+    }
     Column(
         modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -314,9 +373,28 @@ private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
 
 @Composable
 @GlanceComposable
-private fun PermissionLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
+private fun PermissionLayout(palette: Palette, breakpoint: WidgetBreakpoint, narrow: Boolean = false) {
     val onSurface = cp(palette.onSurface)
     val muted = cp(palette.muted)
+    if (breakpoint == WidgetBreakpoint.SLIM) {
+        // Permission state never shows numbers; slim shows the wordmark and a short ask.
+        Row(
+            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                WORD_MARK,
+                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Medium),
+            )
+            Spacer(GlanceModifier.width(12.dp))
+            Text(
+                PERMISSION_SHORT,
+                style = TextStyle(color = onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+            )
+        }
+        return
+    }
     Column(
         modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

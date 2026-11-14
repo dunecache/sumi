@@ -79,10 +79,14 @@ class SumiWidgetStateTest {
 
     @Test
     fun `breakpoint thresholds match the declared launcher breakpoints`() {
+        assertEquals(WidgetBreakpoint.SLIM, pickBreakpoint(140, 54))
+        assertEquals(WidgetBreakpoint.SLIM, pickBreakpoint(330, 54)) // slim at any width
+        assertEquals(WidgetBreakpoint.SLIM, pickBreakpoint(250, 70)) // height wins over width
         assertEquals(WidgetBreakpoint.COMPACT, pickBreakpoint(140, 110))
         assertEquals(WidgetBreakpoint.COMPACT, pickBreakpoint(160, 150)) // narrow is compact
         assertEquals(WidgetBreakpoint.MEDIUM, pickBreakpoint(210, 110))
         assertEquals(WidgetBreakpoint.MEDIUM, pickBreakpoint(330, 110)) // short & wide stays medium
+        assertEquals(WidgetBreakpoint.MEDIUM, pickBreakpoint(210, 130)) // narrow boundary, below large
         assertEquals(WidgetBreakpoint.LARGE, pickBreakpoint(330, 148))
         assertEquals(WidgetBreakpoint.LARGE, pickBreakpoint(250, 200))
     }
