@@ -48,7 +48,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.hierarchy
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.feature.appdetail.AppDetailScreen
 import com.sumi.feature.apps.AppsScreen
@@ -130,11 +129,12 @@ fun SumiApp(
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
     val currentBackStackEntry = navController.currentBackStackEntryAsState().value
     val currentRoute = currentBackStackEntry?.destination?.route
-    // Selection compares against the destination pattern along the whole hierarchy — an
-    // argumented destination (Apps) never matches its plain route string.
+    // Selection compares the destination and its ancestors — an argumented destination
+    // (Apps, `apps?filter={filter}`) never matches its plain route string, and walking
+    // parents keeps this correct if it ever becomes a nested graph.
     val isTabSelected: (BottomDestination) -> Boolean = { dest ->
-        currentBackStackEntry?.destination?.hierarchy
-            ?.any { it.route == dest.selectionPattern } == true
+        generateSequence(currentBackStackEntry?.destination) { it.parent }
+            .any { it.route == dest.selectionPattern }
     }
     val showBottomBar = currentRoute in MainRoutes
     val isSubRoute = currentRoute in SubRoutes
