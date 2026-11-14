@@ -26,8 +26,8 @@ val SumiTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = SumiFontFamilies.Reflection,
         fontWeight = FontWeight.Normal,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
+        fontSize = 34.sp,
+        lineHeight = 42.sp,
     ),
     displaySmall = TextStyle(
         fontFamily = SumiFontFamilies.Reflection,
@@ -62,7 +62,7 @@ val SumiTypography = Typography(
     bodyLarge = TextStyle(
         fontFamily = SumiFontFamilies.Interface,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize = 17.sp,
         lineHeight = 24.sp,
     ),
     bodyMedium = TextStyle(
@@ -76,25 +76,39 @@ val SumiTypography = Typography(
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
+        letterSpacing = 0.4.sp,
     ),
     labelMedium = TextStyle(
         fontFamily = SumiFontFamilies.Interface,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
+        letterSpacing = 0.4.sp,
     ),
     labelSmall = TextStyle(
         fontFamily = SumiFontFamilies.Interface,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
+        letterSpacing = 0.4.sp,
     ),
     bodySmall = TextStyle(
         fontFamily = SumiFontFamilies.Interface,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
     ),
+)
+
+/**
+ * Serif wordmark for root destinations (reference standard §9.3): the product voice
+ * spoken once per root destination, 22 sp. Never used on subscreens.
+ */
+val SumiWordmark = TextStyle(
+    fontFamily = SumiFontFamilies.Reflection,
+    fontWeight = FontWeight.Normal,
+    fontSize = 22.sp,
+    lineHeight = 28.sp,
 )
 
 /**
@@ -115,8 +129,8 @@ val ReflectionBody = TextStyle(
 val NumericLarge = TextStyle(
     fontFamily = SumiFontFamilies.Numeric,
     fontWeight = FontWeight.Medium,
-    fontSize = 36.sp,
-    lineHeight = 44.sp,
+    fontSize = 30.sp,
+    lineHeight = 38.sp,
     fontFeatureSettings = "tnum",
 )
 

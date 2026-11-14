@@ -142,7 +142,7 @@ private fun PreviewInsightsPopulated() {
     SumiTheme(darkTheme = false) { InsightsContent(state = samplePopulatedState()) }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Insights · Populated (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Insights · Populated (dark)")
 @Composable
 private fun PreviewInsightsPopulatedDark() {
     SumiTheme(darkTheme = true) { InsightsContent(state = samplePopulatedState()) }

@@ -74,7 +74,7 @@ private fun PreviewCategoryDetailPopulated() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Category detail · Populated (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Category detail · Populated (dark)")
 @Composable
 private fun PreviewCategoryDetailPopulatedDark() {
     SumiTheme(darkTheme = true) {
@@ -115,7 +115,7 @@ private fun PreviewCategoryManagerPopulated() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Category manager · Populated (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Category manager · Populated (dark)")
 @Composable
 private fun PreviewCategoryManagerPopulatedDark() {
     SumiTheme(darkTheme = true) {

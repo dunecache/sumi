@@ -224,3 +224,104 @@ Every component ships previews for light, dark, large font scale, and loading/em
 
 **Don't:** use red for usage, add streaks/badges, add celebratory animation, guilt the user, hide the off switch, stack dialogs, or turn the Focus tab into a wall of toggles.
 
+
+---
+
+## 14. Design Reference Standard v1.1 (2026-11-14) — adopted
+
+The 2026-11-14 Design Reference Standard v1.1 (a pixel-level critique and implementation-ready
+correction of the shipped screens, reviewed independently of this file) was adopted on branch
+`design/reference-standard-v1.1`. This section is the delta from §2–§13; it supersedes the
+values there where they conflict.
+
+### 14.1 Color (both themes, canonical)
+
+- Light: destructive red re-tokened to **`red-600 #A63A2B`** (was 4.49:1 against `#F4F1EA`;
+  5.71:1 now). `ink #36382F`, `ink-secondary #565145` (darkened for 7:1), ground
+  `#F4F1EA`, bottom-nav surface `#E8E6DA`. On-accent light `#F5F1E6`. Disabled pair
+  `#DCD7CB` / `#6F695B`.
+- Dark (measured, canonical): ground `#181F18` · **`surface-2 #273327`** shared by module
+  cards **and the bottom navigation bar** · ink `#E8EEE3` · ink-secondary `#B1BAAE` ·
+  accent fill **`#D2E4BC`** (primary buttons, selected chips, progress, links) · on-accent
+  `#2B3824` · nav pill **`#E5EEE2`** · chart bars **`#B0BBAD`** (light counterpart
+  `#565145`) · destructive `#D1A9A3` · disabled pair `#2A2F2A` / `#79806F`.
+- Category hues were re-synced to the measured dark values (sage-green `#B1C39D`, cyan
+  `#A5C5C2`, tan `#D8B49A`, lilac `#C1B2D3`, amber `#D8BD7E`, mid-green `#829874`);
+  positional token names (`categoryColor1…6`) and the seed sync are unchanged. Category
+  colors remain a redundant data layer (dots, bar segments, chart series only).
+- Chart bars and analytic progress fills use the new **`chartBar`** extended token, not the
+  accent. The intention ring and focus progress stay accent by design (action/affirmation).
+- Dynamic color stays opted out. Deliberately.
+
+### 14.2 Typography — the two-voice rule, codified
+
+Serif = the voice of the product (root-tab headlines, narrative summaries, observations,
+empty states, setup steps 1–2, completion). Sans = the voice of the system (operational
+screens, Settings, steps 3+, body, buttons, chips, metadata, diagnostics). Serif is
+Literata (as bundled); the sans stays **Inter** — the standard inferred Literata + Roboto
+from pixels, but the repo already bundles Inter (SIL-adjacent, OFL-compatible role coverage),
+so Inter remains the sans voice. IBM Plex Mono continues to carry tabular numerics.
+
+`displayLarge` is now 34/42 sp; `bodyLarge` is 17/24 sp; `bodySmall` is 15/20 sp with 0.4 sp
+label tracking; hero numerics (`NumericLarge`) are 30/38 sp with `tnum`. Screen margin is
+canonically **24 dp** and `sourceHorizontal` enforces it.
+
+### 14.3 Components and behavior adopted
+
+- **Primary button** — 48 dp tall pill (was effectively 40 dp), full width, unmistakably
+  inert disabled state (designed disabled pair, never stock Material gray).
+- **Status indicator** — 20 dp icon + one `body-sm` line; affirmative (olive check-circle,
+  "…is on."), neutral (outline circle, "…is off.", never red), attention (warning,
+  destructive-adjacent only). Color-independence satisfied by construction.
+- **Progress module** — 2 dp hairline track, accent fill, 1 polite live line beneath.
+  Used by the setup import (disabled CTA while running; Retry link on failure; empty-history
+  completion reads "Nothing to import yet — Sumi starts counting today.") and the export sheet.
+- **Fact stack** — scannable fact + qualifier rows separated by 1 dp hairlines (setup 2).
+- **Metadata/diagnostics rows** — label left, value right, tabular figures, optional status
+  tone. Settings `DIAGNOSTICS` renders these.
+- **Chips** — single-select pill, 40 dp, selected = accent fill + on-accent label, weight
+  500, announces selected state. Insights time range (Today/Yesterday/7/30 days) and Focus
+  durations use them. Apps category filter chips follow the same spec (category dot shown
+  only when unselected).
+- **Duration slider** — dotted `chartBar` track on a hairline baseline, 5-minute steps,
+  48 dp touch band, synced with the preset chips, announced to TalkBack in minutes.
+- **Category dot** — shared 10 dp decorative component; adopted by the distribution rows.
+- **Bottom navigation** — surface-bar strip + 1 dp hairline edge; selected state triple-coded
+  (indicator pill + filled icon + weight-500 label); **origin tab stays marked on the
+  Settings stack** (bottom bar now visible there).
+- **Top app bar** — root: serif wordmark left + trailing gear (48 dp); subscreen: back arrow
+  **left**, no wordmark. The back arrow is never on the right.
+- **Destructive flows** — "Delete all data" opens a 28 dp-radius dialog, title "Delete all
+  data?", body states scope and irreversibility, actions stacked full-width (Cancel above
+  Delete), Delete filled with the destructive token. ≥ 24 dp separation from Export.
+  Export opens a sheet; success closes it and shows "Saved to Downloads." inline.
+- **Privacy blurb** in Settings reduced to one line + a "See what Sumi does not do" link
+  opening the shared bottom sheet (four claims + closing line).
+
+### 14.4 Shape, spacing, motion
+
+`r-md` is now 16 dp (module cards, menus), `r-sm` 12, `r-lg` 28 (sheets, dialogs), `r-full`
+the primary button and switch track only. Rows/sections stay at `r-none`. Motion tokens are
+documented in §3.4; reduced motion is honoured via the animator-scale checks already in
+place (nav fade-through, chart entrances).
+
+### 14.5 Deviations from the reference standard (deliberate, minimal)
+
+- The sans voice stays **Inter**, not Roboto (§14.2).
+- Onboarding keeps its fifth step ("Focus, gently" — optional once-a-day reminder), so the
+  "Setup · N of 5" metadata reads 1–5, not 1–4. The standard's 4-step flow predates the
+  reminder opt-in decision (see `ROADMAP.md`); the two-voice rule and band layout apply to
+  the reminder step as well.
+- TheCompletion screen is the existing `FirstOverview` route restyled to the standard's
+  completion spec (serif "Ready.", "Enter Sumi").
+- Chips keep the standard's 40 dp height (its own §9.15 spec); the global 48 dp floor
+  applies to buttons, links, rows, nav items and icon buttons.
+- The custom dotted-track slider styles an otherwise stock M3 slider (transparent track,
+  accent thumb); a fully bespoke gesture layer was judged not worth the accessibility risk.
+
+### 14.6 Not yet verified
+
+Room migration tests, TalkBack behavior, and 200% font scale remain device/emulator-bound;
+CI's Robolectric harness covers onboarding and Today states. The Apps tab light/dark review
+and the light counterpart of `surface-2` (module cards on a light elevated surface) remain
+open (the standard marks light-theme tabs unreviewed).

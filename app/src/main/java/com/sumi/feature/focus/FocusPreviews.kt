@@ -106,7 +106,7 @@ fun PreviewFocusPopulated() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Focus · Populated (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Focus · Populated (dark)")
 @Composable
 fun PreviewFocusPopulatedDark() {
     SumiTheme(darkTheme = true) {
@@ -205,7 +205,7 @@ fun PreviewFocusActive() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Focus · Active session (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Focus · Active session (dark)")
 @Composable
 fun PreviewFocusActiveDark() {
     SumiTheme(darkTheme = true) {

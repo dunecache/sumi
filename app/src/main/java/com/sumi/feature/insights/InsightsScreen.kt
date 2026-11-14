@@ -2,6 +2,8 @@ package com.sumi.feature.insights
 
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,15 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +42,7 @@ import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
+import com.sumi.core.designsystem.component.SumiChip
 import com.sumi.core.designsystem.component.TimelineStrip
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.NumericBody
@@ -51,6 +50,7 @@ import com.sumi.core.designsystem.theme.NumericLarge
 import com.sumi.core.designsystem.theme.ReflectionBody
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.core.designsystem.theme.categoryColorOrNeutral
+import com.sumi.core.designsystem.theme.sumiExtendedColors
 import com.sumi.domain.insights.InsightKind
 import com.sumi.domain.insights.InsightsRange
 import com.sumi.domain.insights.Averages
@@ -103,7 +103,7 @@ internal fun InsightsContent(
             .padding(SumiSpacing.screenHorizontal),
     ) {
         Spacer(Modifier.height(SumiSpacing.lg))
-        Text(text = "Insights", style = MaterialTheme.typography.headlineMedium)
+        Text(text = "Insights", style = MaterialTheme.typography.displayLarge)
         Spacer(Modifier.height(SumiSpacing.sm))
         RangeSwitcher(selected = state.range, onSelect = onRangeChange)
         Spacer(Modifier.height(SumiSpacing.md))
@@ -139,20 +139,25 @@ internal fun InsightsContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Time-range picker (reference standard §9.15): single-select chips, no apply step. */
 @Composable
 private fun RangeSwitcher(
     selected: InsightsRange,
     onSelect: (InsightsRange) -> Unit,
 ) {
     val ranges = listOf(InsightsRange.TODAY, InsightsRange.YESTERDAY, InsightsRange.WEEK, InsightsRange.MONTH)
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        ranges.forEachIndexed { index, range ->
-            SegmentedButton(
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(SumiSpacing.sm),
+    ) {
+        ranges.forEach { range ->
+            SumiChip(
+                label = range.shortLabel,
                 selected = range == selected,
-                onClick = { onSelect(range) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = ranges.size),
-                label = { Text(range.shortLabel) },
+                onSelect = { onSelect(range) },
+                showCheck = true,
             )
         }
     }
@@ -508,7 +513,7 @@ private fun TrendStrip(
     modifier: Modifier = Modifier,
 ) {
     val max = values.maxOrNull()?.takeIf { it > 0L } ?: 1L
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = sumiExtendedColors().chartBar
     Row(
         modifier = modifier
             .fillMaxWidth()

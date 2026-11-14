@@ -165,6 +165,10 @@ interface DailyUsageDao {
 
     @Query("DELETE FROM daily_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)
+
+    /** Full-table read for the local CSV export (M5); rows ascending by day. */
+    @Query("SELECT * FROM daily_usage ORDER BY dateKey ASC")
+    suspend fun exportAll(): List<DailyUsage>
 }
 
 @Dao
@@ -206,6 +210,10 @@ interface DailyAppUsageDao {
 
     @Query("DELETE FROM daily_app_usage WHERE packageName IN (:packages)")
     suspend fun deleteByPackages(packages: List<String>)
+
+    /** Full-table read for the local CSV export (M5). */
+    @Query("SELECT * FROM daily_app_usage ORDER BY dateKey ASC, durationMs DESC")
+    suspend fun exportAll(): List<DailyAppUsage>
 }
 
 @Dao
@@ -229,6 +237,10 @@ interface HourlyUsageDao {
     /** Session-derived hourly rows — wiped and re-derived by full rebuilds. */
     @Query("DELETE FROM hourly_usage")
     suspend fun deleteAll()
+
+    /** Full-table read for the local CSV export (M5). */
+    @Query("SELECT * FROM hourly_usage ORDER BY dateKey ASC, hour ASC")
+    suspend fun exportAll(): List<HourlyUsage>
 }
 
 @Dao

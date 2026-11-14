@@ -8,22 +8,23 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Kanso Matcha Material 3 themes over the canonical v1.3.0 tokens. No alarm red for ordinary
- * usage (the `error` role exists for data-deletion confirmation only); no dynamic color —
- * Sumi keeps one recognizable identity across devices. See DESIGN.md §2–§3.
+ * Kanso Matcha Material 3 themes over the canonical tokens, reconciled with the
+ * 2026-11-14 "Design Reference Standard v1.1" critique (DESIGN.md §14). No alarm red for
+ * ordinary usage (the `error` role exists for data-deletion confirmation only); no
+ * dynamic color — Sumi keeps one recognizable identity across devices. See DESIGN.md §2–§3.
  */
 
 private val LightScheme = lightColorScheme(
     primary = SumiColorTokens.AccentStrongLight,
-    onPrimary = SumiColorTokens.SurfaceElevatedLight,
+    onPrimary = SumiColorTokens.OnAccentLight,
     primaryContainer = SumiColorTokens.SurfaceAccentLight,
     onPrimaryContainer = SumiColorTokens.OnBackgroundLight,
     secondary = SumiColorTokens.AccentPrimaryLight,
-    onSecondary = SumiColorTokens.SurfaceElevatedLight,
+    onSecondary = SumiColorTokens.OnAccentLight,
     secondaryContainer = SumiColorTokens.AccentSecondaryLight,
     onSecondaryContainer = SumiColorTokens.OnBackgroundLight,
     tertiary = SumiColorTokens.ClayLight,
-    onTertiary = SumiColorTokens.SurfaceElevatedLight,
+    onTertiary = SumiColorTokens.OnAccentLight,
     tertiaryContainer = SumiColorTokens.SurfaceSunkenLight,
     onTertiaryContainer = SumiColorTokens.OnBackgroundLight,
     background = SumiColorTokens.BackgroundLight,
@@ -41,7 +42,7 @@ private val LightScheme = lightColorScheme(
     outline = SumiColorTokens.BorderStrongLight,
     outlineVariant = SumiColorTokens.BorderSubtleLight,
     error = SumiColorTokens.DangerLight,
-    onError = SumiColorTokens.SurfaceElevatedLight,
+    onError = SumiColorTokens.OnAccentLight,
     errorContainer = SumiColorTokens.DiffRemovedBgLight,
     onErrorContainer = SumiColorTokens.DiffRemovedFgLight,
     inverseSurface = SumiColorTokens.OnBackgroundLight,
@@ -51,15 +52,15 @@ private val LightScheme = lightColorScheme(
 
 private val DarkScheme = darkColorScheme(
     primary = SumiColorTokens.AccentStrongDark,
-    onPrimary = SumiColorTokens.BackgroundDark,
+    onPrimary = SumiColorTokens.OnAccentDark,
     primaryContainer = SumiColorTokens.SurfaceAccentDark,
     onPrimaryContainer = SumiColorTokens.OnBackgroundDark,
     secondary = SumiColorTokens.AccentSecondaryDark,
-    onSecondary = SumiColorTokens.BackgroundDark,
+    onSecondary = SumiColorTokens.OnAccentDark,
     secondaryContainer = SumiColorTokens.AccentSecondaryDark,
     onSecondaryContainer = SumiColorTokens.BackgroundDark,
     tertiary = SumiColorTokens.ClayDark,
-    onTertiary = SumiColorTokens.BackgroundDark,
+    onTertiary = SumiColorTokens.OnAccentDark,
     tertiaryContainer = SumiColorTokens.SurfaceElevatedDark,
     onTertiaryContainer = SumiColorTokens.OnBackgroundDark,
     background = SumiColorTokens.BackgroundDark,
@@ -76,7 +77,7 @@ private val DarkScheme = darkColorScheme(
     outline = SumiColorTokens.BorderStrongDark,
     outlineVariant = SumiColorTokens.BorderSubtleDark,
     error = SumiColorTokens.DangerDark,
-    onError = SumiColorTokens.BackgroundDark,
+    onError = SumiColorTokens.OnAccentDark,
     errorContainer = SumiColorTokens.DiffRemovedBgDark,
     onErrorContainer = SumiColorTokens.DiffRemovedFgDark,
     inverseSurface = SumiColorTokens.OnBackgroundDark,
@@ -99,12 +100,16 @@ data class SumiExtendedColors(
     val stone: Color, // stone-1 — uncategorized residual bucket, never a ranked category
     val matchaTrack: Color, // matcha-1 — quiet track fill for the daily intention ring
     val terracotta: Color, // warning hue — used only for the over-goal state, never a category
+    val navPill: Color, // bottom-nav active indicator pill (triple-coded selected state)
+    val chartBar: Color, // chart bars and analytic progress fills
+    val disabledFill: Color, // disabled control fill (reference standard §8.1)
+    val disabledLabel: Color, // disabled control text
 )
 
 private val LightExtended = SumiExtendedColors(
     onSurfaceMuted = SumiColorTokens.OnSurfaceMutedLight,
     accent = SumiColorTokens.AccentPrimaryLight,
-    onAccent = SumiColorTokens.SurfaceElevatedLight,
+    onAccent = SumiColorTokens.OnAccentLight,
     accentContainer = SumiColorTokens.SurfaceAccentLight,
     selection = SumiColorTokens.SelectionLight,
     focus = SumiColorTokens.FocusLight,
@@ -115,12 +120,16 @@ private val LightExtended = SumiExtendedColors(
     stone = SumiColorTokens.Stone1Light,
     matchaTrack = SumiColorTokens.Matcha1Light,
     terracotta = SumiColorTokens.TerracottaLight,
+    navPill = SumiColorTokens.SelectionLight, // light theme: matcha-1 pill (no separate measured value)
+    chartBar = SumiColorTokens.ChartBarLight,
+    disabledFill = SumiColorTokens.DisabledFillLight,
+    disabledLabel = SumiColorTokens.DisabledLabelLight,
 )
 
 private val DarkExtended = SumiExtendedColors(
     onSurfaceMuted = SumiColorTokens.OnSurfaceMutedDark,
     accent = SumiColorTokens.AccentPrimaryDark,
-    onAccent = SumiColorTokens.BackgroundDark,
+    onAccent = SumiColorTokens.OnAccentDark,
     accentContainer = SumiColorTokens.SurfaceAccentDark,
     selection = SumiColorTokens.SelectionDark,
     focus = SumiColorTokens.FocusDark,
@@ -131,6 +140,10 @@ private val DarkExtended = SumiExtendedColors(
     stone = SumiColorTokens.Stone1Dark,
     matchaTrack = SumiColorTokens.Matcha1Dark,
     terracotta = SumiColorTokens.TerracottaDark,
+    navPill = SumiColorTokens.Olive100Dark,
+    chartBar = SumiColorTokens.ChartBarDark,
+    disabledFill = SumiColorTokens.DisabledFillDark,
+    disabledLabel = SumiColorTokens.DisabledLabelDark,
 )
 
 val LocalSumiExtendedColors = staticCompositionLocalOf { LightExtended }
