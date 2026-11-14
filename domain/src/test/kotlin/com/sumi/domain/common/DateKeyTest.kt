@@ -34,4 +34,20 @@ class DateKeyTest {
         assertThat(DateKey.shift("2026-11-06", 1)).isEqualTo("2026-11-07")
         assertThat(DateKey.shift("2026-11-06", -1)).isEqualTo("2026-11-05")
     }
+
+    @Test
+    fun `daysBetween covers a half-open range in the zone`() {
+        val zone = ZoneId.of("Europe/Berlin")
+        // 2026-11-05T23:00:00Z is 2026-11-06 00:00 in Berlin; 2026-11-07T23:00:00Z is 2026-11-08 00:00.
+        val from = java.time.Instant.parse("2026-11-05T23:00:00Z").toEpochMilli()
+        val to = java.time.Instant.parse("2026-11-07T23:00:00Z").toEpochMilli()
+        assertThat(DateKey.daysBetween(from, to, zone))
+            .isEqualTo(listOf("2026-11-06", "2026-11-07"))
+        // Same day: exactly one entry.
+        assertThat(DateKey.daysBetween(from, from + 60_000L, zone))
+            .isEqualTo(listOf("2026-11-06"))
+        // Empty and negative ranges yield no days.
+        assertThat(DateKey.daysBetween(from, from, zone)).isEmpty()
+        assertThat(DateKey.daysBetween(to, from, zone)).isEmpty()
+    }
 }

@@ -22,6 +22,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * transform needed. The Apps refresh also now marks rows whose package vanished from
  * the launcher query as `isInstalled = 0` (assignment is kept, reinstall restores it)
  * — a behavioral change, not a schema change.
+ *
+ * 4 → 5 (usage pipeline hardening): `daily_usage` gains `source` (`SESSIONS` — derived
+ * from stored sessions; `USAGE_STATS_AGGREGATE` — the imported upper bound for days
+ * without sessions) and `collection_state` gains `pipelineVersion` (below
+ * `CURRENT_PIPELINE_VERSION` triggers the one-time repair: retained-range
+ * session-derived rows are wiped and the cursor is reset so the next run rebuilds
+ * them with the corrected rules). Existing rows default to `SESSIONS` / version 0 —
+ * imported days keep `SESSIONS` labels (they are re-touched by collection anyway)
+ * and every migrated install gets exactly one repair pass.
  */
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -52,5 +61,12 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE applications ADD COLUMN isSystemApp INTEGER NOT NULL DEFAULT 0")
         db.execSQL("ALTER TABLE applications ADD COLUMN firstSeenAt INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE daily_usage ADD COLUMN source TEXT NOT NULL DEFAULT 'SESSIONS'")
+        db.execSQL("ALTER TABLE collection_state ADD COLUMN pipelineVersion INTEGER NOT NULL DEFAULT 0")
     }
 }

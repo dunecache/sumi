@@ -34,4 +34,22 @@ object DateKey {
         val date = java.time.LocalDate.parse(dateKey, formatter).plusDays(days)
         return formatter.format(date)
     }
+
+    /**
+     * The `YYYY-MM-DD` keys covering the half-open range [fromUtcMs, toUtcMs) in [zone].
+     * Empty when the range is empty. Used to derive "affected days" from the window's
+     * time span, never from output rows — a correction that zeroes a day must still
+     * trigger that day's replacement.
+     */
+    fun daysBetween(fromUtcMs: Long, toUtcMs: Long, zone: ZoneId): List<String> {
+        if (toUtcMs <= fromUtcMs) return emptyList()
+        var date = Instant.ofEpochMilli(fromUtcMs).atZone(zone).toLocalDate()
+        val last = Instant.ofEpochMilli(toUtcMs - 1).atZone(zone).toLocalDate()
+        val out = ArrayList<String>()
+        while (!date.isAfter(last)) {
+            out += formatter.format(date)
+            date = date.plusDays(1)
+        }
+        return out
+    }
 }

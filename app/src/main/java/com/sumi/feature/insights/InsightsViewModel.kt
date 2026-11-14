@@ -137,7 +137,7 @@ class InsightsViewModel @Inject constructor(
             repository.observeDailyAppUsageRange(cmpKeys),
         ) { totals, perApp -> RangeComparison(totals, perApp) }
         return combine(base, cmp) { b, c ->
-            derive(b, c, range, keys, cmpKeys, zone, now, todayKey)
+            derive(b, c, range, keys, zone, now, todayKey)
         }
     }
 
@@ -146,7 +146,6 @@ class InsightsViewModel @Inject constructor(
         c: RangeComparison,
         range: InsightsRange,
         keys: List<String>,
-        cmpKeys: List<String>,
         zone: java.time.ZoneId,
         now: Long,
         todayKey: String,
@@ -154,11 +153,14 @@ class InsightsViewModel @Inject constructor(
         val totalsByKey = b.totals.associate { it.dateKey to it.totalDurationMs }
         val totalMs = windowTotalMs(keys, totalsByKey)
         val tracked = trackedMs(b.perApp)
-        // Sessions carry no dateKey; derive their day from the UTC start instant.
-        val sessionsByDay = b.sessions.groupBy { DateKey.of(it.startTimeUtcMs, zone) }
-        val rangeSessions = keys.flatMap { sessionsByDay[it].orEmpty() }
-        val cmpSessions = cmpKeys.flatMap { sessionsByDay[it].orEmpty() }
-        val sessionDays = sessionsByDay.keys
+        // Spill-over sessions (started before the window) are clipped to it, so
+        // annotations never count time outside the range. Coverage buckets every
+        // day a session spans, not just the day it started.
+        val rangeStart = DateKey.startOfDayUtcMs(keys.first(), zone)
+        val rangeSessions = clipSessions(b.sessions, rangeStart, now)
+        val (cmpFrom, cmpTo) = range.comparisonWindow(zone, now)
+        val cmpSessions = clipSessions(b.sessions, cmpFrom, cmpTo)
+        val sessionDays = b.sessions.flatMap { spannedDays(it, zone, now) }.toSet()
 
         // Previous equivalent window; zeros included when any day was recorded, else omitted.
         val previousWindowRecorded = c.totals.isNotEmpty() || c.perApp.isNotEmpty()
@@ -263,4 +265,20 @@ class InsightsViewModel @Inject constructor(
         const val RANGE_KEY = "insights_range"
     }
 }
+
+/** Clip sessions to [fromUtcMs, toUtcMs) so windowed annotations never count out-of-range time. */
+private fun clipSessions(sessions: List<UsageSession>, fromUtcMs: Long, toUtcMs: Long): List<UsageSession> =
+    sessions.mapNotNull { session ->
+        val start = maxOf(session.startTimeUtcMs, fromUtcMs)
+        val end = minOf(session.endTimeUtcMs ?: toUtcMs, toUtcMs)
+        if (end > start) session.copy(startTimeUtcMs = start, endTimeUtcMs = end) else null
+    }
+
+/** Every date key a session spans (a midnight-crossing session covers both days). */
+private fun spannedDays(session: UsageSession, zone: java.time.ZoneId, nowUtcMs: Long): List<String> =
+    DateKey.daysBetween(
+        session.startTimeUtcMs,
+        (session.endTimeUtcMs ?: nowUtcMs).coerceAtLeast(session.startTimeUtcMs + 1),
+        zone,
+    )
 

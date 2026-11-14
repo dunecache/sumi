@@ -140,7 +140,7 @@ Rules the engine must implement (each needs unit tests with fixtures):
 | R2 | Background without matching foreground | Ignore, or if the window start is known, start from window start only when the platform guarantees it; default is ignore and log. |
 | R3 | Screen turns non-interactive (lock/off) | Close any open session at that timestamp. |
 | R4 | Screen turns interactive | Does not open a session by itself; a later foreground event does. |
-| R5 | Device reboot / shutdown | Close open sessions at the last known event time before the gap; never extend across the reboot. |
+| R5 | Device reboot / shutdown | Close open sessions at the last known event time before the gap; never extend across the reboot. API 29+ `DEVICE_SHUTDOWN` closes all sessions at the shutdown timestamp; `DEVICE_STARTUP` closes them at the last event before it. The reconstruction also never extends across `BootReceiver`-recorded instants or a boot the monotonic clock (`SystemClock.elapsedRealtime`) regressed for. |
 | R6 | Midnight boundary | Keep one session if it truly spans midnight, but aggregate by splitting its duration across date keys. |
 | R7 | Time-zone change | Sessions stay in UTC. Re-derive date keys using the zone in effect when aggregating. Reprocess affected days when the zone changes. |
 | R8 | Split-screen / multi-window | Overlapping foreground apps: count each app's own foreground time, but do not let `DailyUsage.totalDurationMs` exceed wall-clock interactive time. Document the chosen rule in code (total = union of intervals). |
@@ -218,7 +218,8 @@ No account · No analytics SDK · No advertising SDK · No cloud dependency
 ### Verification findings (agents, 2026-11-06) — hardened 2026-11-06
 
 - ~~Missing BACKGROUND (R1)~~ → session-level finalization: stale open rows close at the
-  next session start (`SessionReconstruction.closeOpenAtNextSessionStart`); event-level
+  next session start (`SessionReconstruction.finalizeOpenSessions`; was
+  `closeOpenAtNextSessionStart`, 2026-11); event-level
   per-app open is kept so genuine split-screen (R8) is unaffected.
 - ~~Stale-open finalization (H3)~~ → same fix.
 - ~~Aggregate hygiene (H5)~~ → delete-then-insert per affected day in `collectRecent`;
@@ -231,6 +232,96 @@ No account · No analytics SDK · No advertising SDK · No cloud dependency
 - ~~Reboot (R5)~~ → `BootReceiver` records `BOOT_COMPLETED` instants;
   `PlatformRebootSource` feeds them to `SessionReconstruction.rebootUtcMs`.
 - **Still open:** system/launcher exclusion set (R13) — launcher time is counted until M2 decides.
+
+### Verification findings (agents, 2026-11-14) — pipeline correctness pass
+
+- ~~Gap rule cuts long sessions (U-01)~~ → the 30-minute silence close is removed.
+  Apps emit no events while merely staying in the foreground; long silences are bounded
+  by screen-off (R3), reboot (R5), reconciliation finalization, or the retention-floor
+  stale-open close — never by an arbitrary gap.
+- ~~Aggregates derived from the window slice (U-02/U-16)~~ → after upserting sessions,
+  every touched day (derived from the window's time span, not from output rows) is
+  re-derived from **all** sessions overlapping that day (`UsageSessionDao.getOverlapping`)
+  and replaced wholesale. Days backed by sessions are owned by the sessions (their
+  `USAGE_STATS_AGGREGATE` rows are superseded); import-only days keep their import rows.
+- ~~Window could not reach back (U-03)~~ → the event window is
+  `[min(from, cursor - overlap), now]`, bounded below by the platform retention floor
+  (~7 days); a missing cursor starts at the floor; the cursor is not advanced during
+  the `UsageStats` import.
+- ~~Rebuild erased imported history (U-04)~~ → `rebuildAggregates` drops session-derived
+  rows (`source = SESSIONS`) and re-derives them; `USAGE_STATS_AGGREGATE` rows are kept.
+  The zone-change path re-keys sessions, then does the same.
+- ~~Estimated closes were permanent (U-05)~~ → the merge prefers a real close over an
+  estimated close over an open row, and finalization prefers the earliest screen-off
+  after a session's start; a stored estimated close is replaced when a later run sees
+  the real BACKGROUND event.
+- ~~Open rows escaped reconciliation forever (U-06)~~ → still-open rows are always loaded
+  (`UsageSessionDao.getOpen`, and `getOverlapping` includes open rows regardless of
+  start); the event window widens to the earliest open row (bounded by the floor); rows
+  older than the floor close at `min(now, start + MAX_PLAUSIBLE_MS)`, flagged estimated.
+- ~~Imported days showed 0 in bars (U-08)~~ → the import additionally writes an
+  approximate `DailyUsage` row per import-only day (sum of per-app time — an upper
+  bound; the per-day union is unknowable from aggregates) with
+  `daily_usage.source = USAGE_STATS_AGGREGATE`.
+- ~~Worker bypassed the mutex (U-09)~~ → the `Mutex` lives in `UsageRepositoryImpl` and
+  every collection path serializes through it; label resolution (PackageManager IPC)
+  happens before the write transaction.
+- ~~Midnight-crossing sessions invisible on the second day (U-10)~~ → all session
+  date-key queries are time-overlap queries (`observeOverlapping`,
+  `observeOverlappingForPackage`); callers clip to the day when rendering.
+- **Schema:** migration 4→5 adds `daily_usage.source` and `collection_state.pipelineVersion`.
+  Below `CURRENT_PIPELINE_VERSION` the repository runs a **one-time repair**:
+  retained-range sessions and session-derived aggregate rows are deleted (they may be
+  underestimated/wrong from the old rules) and the cursor is reset, so the next run
+  rebuilds the retained range from the platform's events. `USAGE_STATS_AGGREGATE` rows
+  are kept. Rows older than the retention floor keep whatever they held — their events
+  are gone and cannot be recovered. A fresh install never runs the repair
+  (`pipelineVersion` is born current).
+- **U-07 (reboot)** → `PlatformRebootSource` unions `BOOT_COMPLETED` records with a
+  monotonic-clock regression detector (`SystemClock.elapsedRealtime()` resets on reboot;
+  the boot wall instant ≈ `now − elapsedRealtime()`, sanity-bounded — `RebootDetection`,
+  pure and unit-tested). API 29+ `DEVICE_SHUTDOWN` events close all sessions at the
+  shutdown timestamp (`UsageEventType.DEVICE_SHUTDOWN`, not estimated); `DEVICE_STARTUP`
+  closes them at the last event before it like a reboot boundary (estimated). The
+  between-events `CrossedReboot` rule still guards every window gap.
+- **U-08 remainder** → the first day Sumi ever sees events is a coverage boundary: when
+  an imported upper-bound row exists for that day, it wins (sessions cannot reconcile
+  the pre-event remainder of the day); days after the boundary are fully
+  session-backed. Uses the recomputed `earliestSessionTime` — no extra state. The
+  import logs the oldest day it actually returns (tag `SumiUsage`) for device-truth
+  retention checks. Day-straddling boundary mechanics remain an approximation (an
+  upper-bound total instead of a union on exactly that day) — accepted and documented.
+- **U-17** → a package now closes only when its last resumed activity leaves
+  (per-package resume counter — an act1 → act2 hand-off no longer truncates the
+  session); adjacent same-package fragments separated by ≤ 2 s (activity hand-offs,
+  PAUSED/RESUMED ordering inversions) are coalesced, keeping the first start (stable
+  storage key).
+- **U-18** → per-app day totals union session intervals per (day, package) instead of
+  summing them — overlapping same-package fragments never inflate shares.
+- **U-19** → the trailing-7-day focus roll-up counts sealed sessions too
+  (`COALESCE(endedAtUtcMs, startedAtUtcMs)`), and the at-most-one-open invariant is held
+  atomically in one transaction (`insertSealingOpen`).
+- **U-20** → `UsageAccessChecker` falls back to the permission check when
+  `checkOpNoThrow` returns `MODE_DEFAULT` (some OEMs).
+- **U-21** → the launcher exclusion covers **every** package that handles HOME
+  (`queryIntentActivities`), not only the resolved default.
+- **U-22** → a fall-back day folds the duplicated local hour 01:00 into one bucket (up
+  to 120 min); a spring-forward day has no hour-02:00 bucket. Documented; consumers
+  scale buckets by value, never assume 60 minutes.
+- **U-23** → label resolution hoisted out of the write transaction; `setInstalled`
+  chunked; the prune's DISTINCT scans are memoized per process (re-run on set change or
+  restart).
+- **U-25** → while the app is visible, collection re-runs every 60 s, so today's
+  figures advance with the open session.
+- **U-10 annotations** → Insights/App-detail annotations clip sessions to the window /
+  day and bucket coverage by every spanned day (previously a spill-over session was
+  attributed to its start day in full).
+- **Still open** → Digital Wellbeing tolerance is still unmeasured on a physical device;
+  `Migration45Test` has not been executed (no emulator); the coverage boundary keeps an
+  upper-bound total for exactly the first day Sumi ever saw (accepted trade — no union
+  is possible); hidden-apps policy (R13) is unchanged; OEM event-pathologies (PAUSED/
+  RESUMED interleavings beyond the coalescing window, dropped screen events) are
+  bounded by finalization, never eliminated.
 
 Sumi prioritizes reliable daily and weekly reporting over pretending to provide perfect real-time monitoring.
 
@@ -308,7 +399,8 @@ Sumi has a user-manageable category system. Design tenets:
   is never tracked. Everything else — including ordinary system apps — is tracked unless
   the user hides it (R13).
 - **Application rows are created by every collection path**, not just the events reconcile:
-  the 90-day `UsageStats` import creates them too (`ensureApplicationRows`), and each
+  the 90-day `UsageStats` import creates them too (`planApplicationRows`/`applyApplicationRows`,
+  was `ensureApplicationRows`, 2026-11), and each
   collection run self-heals rows that exist only in imported history
   (`dailyAppDao.getPackagesMissingApplicationRows`). Without this, apps whose usage lives
   only in history (events expire after days) were invisible in the Apps library and to

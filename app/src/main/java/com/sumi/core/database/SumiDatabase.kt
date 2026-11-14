@@ -27,6 +27,7 @@ import javax.inject.Singleton
 // Schema per DATA_MODEL.md. Migration 1→2 adds the category system (sortOrder, isUserCreated).
 // Migration 2→3 adds Focus sessions (focus_sessions).
 // Migration 3→4 adds the Apps-redesign columns (isSystemApp, firstSeenAt).
+// Migration 4→5 adds the usage-pipeline columns (daily_usage.source, collection_state.pipelineVersion).
 @Database(
     entities = [
         Application::class,
@@ -38,7 +39,7 @@ import javax.inject.Singleton
         CollectionState::class,
         FocusSession::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class SumiDatabase : RoomDatabase() {
@@ -58,7 +59,7 @@ abstract class SumiDatabase : RoomDatabase() {
             context.applicationContext,
             SumiDatabase::class.java,
             DB_NAME,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
     }
 }
 

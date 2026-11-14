@@ -101,7 +101,11 @@ class AppDetailViewModel @Inject constructor(
             week = week,
             month = month,
             typicalWindow = TypicalHours.typicalWindow(summary),
-            sessionSummary = sessionSummary(todaySessions, clock.nowUtcMs()),
+            sessionSummary = sessionSummary(
+                todaySessions,
+                clock.nowUtcMs(),
+                DateKey.startOfDayUtcMs(today, timeZone.currentZone()),
+            ),
             categoryId = app?.categoryId,
             categoryName = current?.name ?: "Uncategorized",
             categoryColorToken = current?.colorToken ?: "stone-1",
@@ -159,10 +163,18 @@ internal fun dailySeries(
     }
 }
 
-/** Neutral, observed summary of today's sessions for one app (no guilt framing). */
-internal fun sessionSummary(sessions: List<UsageSession>, nowUtcMs: Long): String? {
-    // UsageSession.durationMs is a function (open sessions measure up to now).
-    val durations = sessions.map { it.durationMs(nowUtcMs) }.filter { it > 0L }
+/**
+ * Neutral, observed summary of today's sessions for one app (no guilt framing).
+ * When [dayStartUtcMs] is given, sessions are clipped to the day — a spill-over session
+ * (started yesterday, still open today) contributes only its time inside today.
+ */
+internal fun sessionSummary(sessions: List<UsageSession>, nowUtcMs: Long, dayStartUtcMs: Long? = null): String? {
+    val from = dayStartUtcMs ?: 0L
+    val durations = sessions.mapNotNull { session ->
+        val start = maxOf(session.startTimeUtcMs, from)
+        val end = minOf(session.endTimeUtcMs ?: nowUtcMs, nowUtcMs)
+        if (end > start) end - start else null
+    }.filter { it > 0L }
     if (durations.isEmpty()) return null
     val longest = durations.max()
     val count = durations.size

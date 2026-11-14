@@ -22,7 +22,9 @@ import kotlinx.coroutines.withContext
  *
  * The launcher and the IME can change while the app runs, so the set is resolved per
  * collection run rather than cached for the process lifetime. Resolution never throws:
- * an unresolvable launcher or IME simply means that package is not excluded.
+ * an unresolvable launcher or IME simply means that package is not excluded. The set
+ * includes every package that currently handles HOME (not only the default launcher),
+ * so home-screen time is never counted as app usage.
  */
 interface ExcludedPackagesResolver {
     /** Packages to exclude on this device right now. */
@@ -39,9 +41,38 @@ class DeviceExcludedPackagesResolver @Inject constructor(
         val excluded = linkedSetOf<String>()
         // Sumi itself.
         excluded += context.packageName
-        defaultLauncherPackage()?.let { excluded += it }
+        excluded += defaultLauncherPackages()
         currentInputMethodPackage()?.let { excluded += it }
         excluded
+    }
+
+    /**
+     * The packages owning a default HOME activity. `resolveActivity` alone is not enough:
+     * on devices with no default launcher set it returns the system resolver while the
+     * real launchers stay visible — so every HOME handler is excluded, not just the
+     * "default" one (some launchers hand off to each other). Package visibility comes
+     * from the manifest `<queries>` HOME entry; no QUERY_ALL_PACKAGES.
+     */
+    private fun defaultLauncherPackages(): Set<String> = try {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val handlers = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.queryIntentActivities(
+                home,
+                PackageManager.ResolveInfoFlags.of(0L),
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.queryIntentActivities(home, 0)
+        }.mapNotNull { it.activityInfo?.packageName?.takeIf { pkg -> pkg.isNotBlank() } }
+        buildSet {
+            // Prefer the OEM-resolved default when there is one (keeps the set minimal
+            // on well-behaved devices); always include every HOME handler as a backstop.
+            defaultLauncherPackage()?.let { add(it) }
+            addAll(handlers)
+        }
+    } catch (_: Exception) {
+        // Resolution never throws: an unresolvable launcher means only the default is excluded.
+        defaultLauncherPackage()?.let { setOf(it) } ?: emptySet()
     }
 
     /** The package that owns the default HOME activity. */

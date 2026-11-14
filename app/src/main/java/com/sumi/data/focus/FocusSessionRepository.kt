@@ -38,15 +38,14 @@ class FocusSessionRepository @Inject constructor(
     fun observeHistory(): Flow<List<FocusSession>> = sessionDao.observeHistory()
 
     /**
-     * Starts a session. Any open session is closed first (ENDED_EARLY) so the new one
-     * never shares state with a stale one. Returns the new session id.
+     * Starts a session. Any open session is closed first (ENDED_EARLY) in the same
+     * transaction as the insert (see [FocusSessionDao.insertSealingOpen]), so the new
+     * one never shares state with a stale one — even under a race. Returns the new
+     * session id.
      */
     suspend fun startSession(intendedMinutes: Int): Long = withContext(dispatchers.io) {
         val now = clock.nowUtcMs()
-        sessionDao.open()?.let { stale ->
-            sessionDao.finish(stale.id, now, stale.exitCount, FocusOutcome.ENDED_EARLY)
-        }
-        sessionDao.insert(
+        sessionDao.insertSealingOpen(
             FocusSession(
                 startedAtUtcMs = now,
                 intendedMinutes = intendedMinutes,

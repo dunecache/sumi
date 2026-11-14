@@ -1,6 +1,8 @@
 package com.sumi.platform.usage
 
 import android.app.AppOpsManager
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -20,13 +22,29 @@ import javax.inject.Singleton
 class UsageAccessChecker @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    @Suppress("DEPRECATION")
+    // ProtectedPermissions: PACKAGE_USAGE_STATS is the canonical special-access permission
+    // granted via Settings; lint misclassifies it (same as the manifest ignore).
+    @SuppressLint("ProtectedPermissions")
+    @Suppress("DEPRECATION", "NewApi")
     fun hasUsageAccess(): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val uid = android.os.Process.myUid()
         return try {
-            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, context.packageName) ==
-                AppOpsManager.MODE_ALLOWED
+            // checkOpNoThrow returns MODE_DEFAULT on some OEMs even when the special
+            // access is granted; in that case fall back to the permission check.
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                @Suppress("NewApi")
+                appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, context.packageName)
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, context.packageName)
+            }
+            if (mode == AppOpsManager.MODE_DEFAULT) {
+                context.checkCallingOrSelfPermission(Manifest.permission.PACKAGE_USAGE_STATS) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else {
+                mode == AppOpsManager.MODE_ALLOWED
+            }
         } catch (_: Exception) {
             false
         }

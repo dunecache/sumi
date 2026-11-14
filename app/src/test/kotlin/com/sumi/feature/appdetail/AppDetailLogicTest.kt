@@ -59,6 +59,17 @@ class AppDetailLogicTest {
     }
 
     @Test
+    fun `sessionSummary clips a spill-over session to the day when dayStart is given`() {
+        val dayStart = 12L * 60L * 60_000L
+        val sessions = listOf(
+            // Started 30 minutes before the day boundary, 20 minutes into the day.
+            UsageSession("com.app", dayStart - 30L * 60_000L, dayStart + 20L * 60_000L, isEstimated = false),
+        )
+        val summary = sessionSummary(sessions, nowUtcMs = dayStart + 60L * 60_000L, dayStartUtcMs = dayStart)
+        assertEquals("One session today, 20m long.", summary)
+    }
+
+    @Test
     fun `formatHourWindow pads and renders midnight for 24`() {
         assertEquals("21:00–00:00", formatHourWindow(ActiveWindow(21, 24, 5)))
         assertEquals("08:00–11:00", formatHourWindow(ActiveWindow(8, 11, 5)))

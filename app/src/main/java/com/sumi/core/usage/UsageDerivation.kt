@@ -167,6 +167,7 @@ fun dayBars(
 
 /** Headline date-range caption, e.g. "Nov 8 – Nov 14, 2026" or "Saturday, Nov 14, 2026". */
 fun rangeCaption(keys: List<String>): String {
+    if (keys.isEmpty()) return ""
     val first = LocalDate.parse(keys.first())
     val last = LocalDate.parse(keys.last())
     return if (keys.size == 1) {
