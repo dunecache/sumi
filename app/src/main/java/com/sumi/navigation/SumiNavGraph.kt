@@ -58,6 +58,7 @@ import com.sumi.feature.focus.FocusScreen
 import com.sumi.feature.insights.InsightsScreen
 import com.sumi.feature.onboarding.OnboardingViewModel
 import com.sumi.feature.onboarding.sections.FirstOverviewScreen
+import com.sumi.feature.onboarding.sections.FocusReminderScreen
 import com.sumi.feature.onboarding.sections.InitialSyncScreen
 import com.sumi.feature.onboarding.sections.PrivacyScreen
 import com.sumi.feature.onboarding.sections.UsageAccessScreen
@@ -130,11 +131,12 @@ fun SumiApp(
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
     val currentBackStackEntry = navController.currentBackStackEntryAsState().value
     val currentRoute = currentBackStackEntry?.destination?.route
-    // Selection compares against the destination pattern along the whole hierarchy — an
-    // argumented destination (Apps) never matches its plain route string.
+    // Selection compares the destination and its ancestors — an argumented destination
+    // (Apps, `apps?filter={filter}`) never matches its plain route string, and walking
+    // parents keeps this correct if it ever becomes a nested graph.
     val isTabSelected: (BottomDestination) -> Boolean = { dest ->
-        currentBackStackEntry?.destination?.hierarchy
-            ?.any { it.route == dest.selectionPattern } == true
+        generateSequence(currentBackStackEntry?.destination) { it.parent }
+            .any { it.route == dest.selectionPattern }
     }
     val showBottomBar = currentRoute in MainRoutes
     val isSubRoute = currentRoute in SubRoutes
@@ -263,7 +265,16 @@ fun SumiApp(
                     WelcomeScreen(onNext = { navController.navigate(Routes.ONBOARDING_PRIVACY) })
                 }
                 composable(Routes.ONBOARDING_PRIVACY) {
-                    PrivacyScreen(onNext = { navController.navigate(Routes.ONBOARDING_USAGE_ACCESS) })
+                    PrivacyScreen(onNext = { navController.navigate(Routes.ONBOARDING_FOCUS) })
+                }
+                composable(Routes.ONBOARDING_FOCUS) {
+                    val reminderEnabled by onboardingViewModel.reminderEnabled.collectAsState()
+                    FocusReminderScreen(
+                        reminderEnabled = reminderEnabled,
+                        canPostNotifications = onboardingViewModel.canPostNotifications,
+                        onToggleReminder = onboardingViewModel::setReminder,
+                        onContinue = { navController.navigate(Routes.ONBOARDING_USAGE_ACCESS) },
+                    )
                 }
                 composable(Routes.ONBOARDING_USAGE_ACCESS) {
                     UsageAccessScreen(

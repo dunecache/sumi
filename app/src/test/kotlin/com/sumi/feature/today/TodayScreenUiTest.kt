@@ -48,7 +48,7 @@ class TodayScreenUiTest {
     fun `comparison with the previous day is shown in neutral wording`() {
         setContent(populatedState())
 
-        composeRule.onNodeWithText("About 1h 30m less than yesterday.").assertIsDisplayed()
+        composeRule.onNodeWithText("About 1h 30m less than yesterday at this time.").assertIsDisplayed()
     }
 
     @Test

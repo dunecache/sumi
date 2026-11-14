@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sumi.core.designsystem.theme.SumiTheme
 import com.sumi.feature.onboarding.sections.FirstOverviewScreen
+import com.sumi.feature.onboarding.sections.FocusReminderScreen
 import com.sumi.feature.onboarding.sections.InitialSyncScreen
 import com.sumi.feature.onboarding.sections.PrivacyScreen
 import com.sumi.feature.onboarding.sections.UsageAccessScreen
@@ -35,7 +36,7 @@ class OnboardingUiTest {
     fun `welcome step states what sumi does`() {
         setContent { WelcomeScreen(onNext = {}) }
 
-        composeRule.onNodeWithText("Setup · 1 of 4").assertIsDisplayed()
+        composeRule.onNodeWithText("Setup · 1 of 5").assertIsDisplayed()
         composeRule.onNodeWithText("Understand your attention. Find your balance.").assertIsDisplayed()
         composeRule.onNodeWithText(
             "Sumi makes phone usage visible and offers optional, gentle tools to change habits.",
@@ -47,11 +48,28 @@ class OnboardingUiTest {
     fun `privacy step promises on-device processing`() {
         setContent { PrivacyScreen(onNext = {}) }
 
-        composeRule.onNodeWithText("Setup · 2 of 4").assertIsDisplayed()
+        composeRule.onNodeWithText("Setup · 2 of 5").assertIsDisplayed()
         composeRule.onNodeWithText("Private by default").assertIsDisplayed()
         composeRule.onNode(
             hasText("Sumi processes and stores your usage on this device only", substring = true),
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `focus step offers the optional reminder without prompting`() {
+        setContent {
+            FocusReminderScreen(
+                reminderEnabled = false,
+                canPostNotifications = false,
+                onToggleReminder = {},
+                onContinue = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Setup · 3 of 5").assertIsDisplayed()
+        composeRule.onNodeWithText("Focus, gently").assertIsDisplayed()
+        composeRule.onNodeWithText("Once-a-day Focus reminder").assertIsDisplayed()
+        composeRule.onNodeWithText("Continue").assertIsDisplayed()
     }
 
     @Test
@@ -64,7 +82,7 @@ class OnboardingUiTest {
             )
         }
 
-        composeRule.onNodeWithText("Setup · 3 of 4").assertIsDisplayed()
+        composeRule.onNodeWithText("Setup · 4 of 5").assertIsDisplayed()
         composeRule.onNodeWithText("Usage Access").assertIsDisplayed()
         composeRule.onNodeWithText(
             "Sumi cannot do anything without it.",
@@ -92,7 +110,7 @@ class OnboardingUiTest {
             InitialSyncScreen(uiState = UsageAccessUiState.Granted, onFinish = {})
         }
 
-        composeRule.onNodeWithText("Setup · 4 of 4").assertIsDisplayed()
+        composeRule.onNodeWithText("Setup · 5 of 5").assertIsDisplayed()
         composeRule.onNodeWithText("Preparing your history").assertIsDisplayed()
         composeRule.onNodeWithText(
             "This happens once, on your device.",
