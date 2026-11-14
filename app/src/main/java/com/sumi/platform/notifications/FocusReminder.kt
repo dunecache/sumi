@@ -25,7 +25,7 @@ import dagger.assisted.AssistedInject
 @HiltWorker
 class FocusReminderWorker @AssistedInject constructor(
     @Assisted appContext: Context,
-    workerParams: WorkerParameters,
+    @Assisted workerParams: WorkerParameters,
     private val notifications: SumiNotifications,
     private val preferences: PreferencesRepository,
 ) : CoroutineWorker(appContext, workerParams) {
