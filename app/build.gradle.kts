@@ -119,6 +119,7 @@ dependencies {
 
     // WorkManager (M1 safety-net collection; configured in M0 foundation)
     implementation(libs.work.runtime)
+    implementation(libs.glance.appwidget)
 
     // Tests
     testImplementation(libs.junit)

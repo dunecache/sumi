@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sumi home-screen widget provider info (docs/WIDGET.md).
+
+  updatePeriodMillis=0 on purpose: Sumi refreshes the widget whenever its own usage data
+  changes or the app comes to the foreground (plus the 15-minute collection safety net),
+  and the widget never claims a freshness it cannot guarantee. resizeMode allows launcher
+  resizing in both axes; Glance re-renders from the allotted size via SizeMode.Responsive
+  (140/250/330 dp breakpoints). No separate preview art is shipped — the picker uses the
+  same static initial layout, which contains no fabricated statistics.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="140dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_description"
+    android:previewLayout="@layout/widget_initial"
+    android:initialLayout="@layout/widget_initial" />
