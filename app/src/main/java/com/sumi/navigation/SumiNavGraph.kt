@@ -48,6 +48,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.hierarchy
 import com.sumi.core.datastore.ThemeMode
 import com.sumi.feature.appdetail.AppDetailScreen
 import com.sumi.feature.apps.AppsScreen
@@ -69,6 +70,12 @@ private data class BottomDestination(
     val label: String,
     val iconUnselected: ImageVector,
     val iconSelected: ImageVector,
+    /**
+     * The exact NavDestination route pattern this tab maps to. Plain destinations use
+     * [route]; a destination with path arguments (Apps, `apps?filter={filter}`) is never
+     * equal to the plain string, and `destination.route` reports the pattern.
+     */
+    val selectionPattern: String = route,
 )
 
 // One coherent icon family: outlined when at rest, filled when selected. Consistent
@@ -77,7 +84,13 @@ private val BottomDestinations = listOf(
     BottomDestination(Routes.TODAY, "Today", Icons.Outlined.WbSunny, Icons.Filled.WbSunny),
     BottomDestination(Routes.INSIGHTS, "Insights", Icons.Outlined.Insights, Icons.Filled.Insights),
     BottomDestination(Routes.FOCUS, "Focus", Icons.Outlined.CenterFocusWeak, Icons.Filled.CenterFocusStrong),
-    BottomDestination(Routes.APPS, "Apps", Icons.Outlined.GridView, Icons.Filled.GridView),
+    BottomDestination(
+        Routes.APPS,
+        "Apps",
+        Icons.Outlined.GridView,
+        Icons.Filled.GridView,
+        selectionPattern = Routes.appsWithFilter("{filter}"),
+    ),
 )
 
 /** Bottom bar stays visible for every apps route, including the filtered deep-link variant. */
@@ -115,7 +128,14 @@ fun SumiApp(
     }
 
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val currentBackStackEntry = navController.currentBackStackEntryAsState().value
+    val currentRoute = currentBackStackEntry?.destination?.route
+    // Selection compares against the destination pattern along the whole hierarchy — an
+    // argumented destination (Apps) never matches its plain route string.
+    val isTabSelected: (BottomDestination) -> Boolean = { dest ->
+        currentBackStackEntry?.destination?.hierarchy
+            ?.any { it.route == dest.selectionPattern } == true
+    }
     val showBottomBar = currentRoute in MainRoutes
     val isSubRoute = currentRoute in SubRoutes
     val showTopBar = showBottomBar || isSubRoute
@@ -178,11 +198,11 @@ fun SumiApp(
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                         BottomDestinations.forEach { dest ->
                             NavigationBarItem(
-                                selected = currentRoute == dest.route,
+                                selected = isTabSelected(dest),
                                 onClick = { navController.navigateTab(dest.route) },
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute == dest.route) {
+                                        imageVector = if (isTabSelected(dest)) {
                                             dest.iconSelected
                                         } else {
                                             dest.iconUnselected
@@ -206,11 +226,11 @@ fun SumiApp(
                     NavigationRail(containerColor = Color.Transparent) {
                         BottomDestinations.forEach { dest ->
                             NavigationRailItem(
-                                selected = currentRoute == dest.route,
+                                selected = isTabSelected(dest),
                                 onClick = { navController.navigateTab(dest.route) },
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute == dest.route) {
+                                        imageVector = if (isTabSelected(dest)) {
                                             dest.iconSelected
                                         } else {
                                             dest.iconUnselected
