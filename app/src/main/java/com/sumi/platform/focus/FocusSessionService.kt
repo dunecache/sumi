@@ -179,6 +179,9 @@ class FocusSessionService : Service() {
 
     private fun stopSelfSafely() {
         stopForegroundCompat()
+        // Detach alone would strand a static "Focusing" notification in the shade;
+        // cancel it — the session is over, so no notification should outlive it.
+        getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
         stopSelf()
     }
 
