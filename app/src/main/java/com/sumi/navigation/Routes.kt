@@ -4,6 +4,7 @@ package com.sumi.navigation
 object Routes {
     const val ONBOARDING_WELCOME = "onboarding/welcome"
     const val ONBOARDING_PRIVACY = "onboarding/privacy"
+    const val ONBOARDING_FOCUS = "onboarding/focus"
     const val ONBOARDING_USAGE_ACCESS = "onboarding/usage_access"
     const val ONBOARDING_INITIAL_SYNC = "onboarding/initial_sync"
     const val ONBOARDING_FIRST_OVERVIEW = "onboarding/first_overview"

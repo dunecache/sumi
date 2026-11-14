@@ -57,6 +57,7 @@ import com.sumi.feature.focus.FocusScreen
 import com.sumi.feature.insights.InsightsScreen
 import com.sumi.feature.onboarding.OnboardingViewModel
 import com.sumi.feature.onboarding.sections.FirstOverviewScreen
+import com.sumi.feature.onboarding.sections.FocusReminderScreen
 import com.sumi.feature.onboarding.sections.InitialSyncScreen
 import com.sumi.feature.onboarding.sections.PrivacyScreen
 import com.sumi.feature.onboarding.sections.UsageAccessScreen
@@ -263,7 +264,16 @@ fun SumiApp(
                     WelcomeScreen(onNext = { navController.navigate(Routes.ONBOARDING_PRIVACY) })
                 }
                 composable(Routes.ONBOARDING_PRIVACY) {
-                    PrivacyScreen(onNext = { navController.navigate(Routes.ONBOARDING_USAGE_ACCESS) })
+                    PrivacyScreen(onNext = { navController.navigate(Routes.ONBOARDING_FOCUS) })
+                }
+                composable(Routes.ONBOARDING_FOCUS) {
+                    val reminderEnabled by onboardingViewModel.reminderEnabled.collectAsState()
+                    FocusReminderScreen(
+                        reminderEnabled = reminderEnabled,
+                        canPostNotifications = onboardingViewModel.canPostNotifications,
+                        onToggleReminder = onboardingViewModel::setReminder,
+                        onContinue = { navController.navigate(Routes.ONBOARDING_USAGE_ACCESS) },
+                    )
                 }
                 composable(Routes.ONBOARDING_USAGE_ACCESS) {
                     UsageAccessScreen(
