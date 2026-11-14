@@ -273,8 +273,10 @@ fun SumiApp(
                 }
                 composable(Routes.INSIGHTS) {
                     InsightsScreen(
-                        onOpenCategoryDetail = { id -> navController.navigate(Routes.categoryDetail(id)) },
+                        onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
+                        onOpenCategoryDetail = { id, range -> navController.navigate(Routes.categoryDetail(id, range)) },
                         onReviewUncategorized = { navController.navigate(Routes.appsWithFilter("uncategorized")) },
+                        onSeeAllApps = { navController.navigate(Routes.appsWithFilter("all")) },
                     )
                 }
                 composable(Routes.FOCUS) { FocusScreen() }
@@ -291,8 +293,12 @@ fun SumiApp(
                 composable(Routes.CATEGORY_MANAGER) { CategoryManagerScreen() }
                 composable(
                     route = Routes.categoryDetailPattern(),
-                    arguments = listOf(navArgument("categoryId") { type = NavType.StringType }),
+                    arguments = listOf(
+                        navArgument("categoryId") { type = NavType.StringType },
+                        navArgument("range") { nullable = true; defaultValue = null },
+                    ),
                 ) {
+                    // The category id and optional range arrive via SavedStateHandle in CategoryDetailViewModel.
                     CategoryDetailScreen(
                         onOpenAppDetail = { pkg -> navController.navigate(Routes.appDetail(pkg)) },
                         onManageCategories = { navController.navigate(Routes.CATEGORY_MANAGER) },

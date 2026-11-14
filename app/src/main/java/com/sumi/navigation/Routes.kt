@@ -21,6 +21,12 @@ object Routes {
     fun appDetail(packageName: String) = "app-detail/$packageName"
     fun appDetailPattern() = "app-detail/{packageName}"
 
-    fun categoryDetail(categoryId: String) = "category/$categoryId"
-    fun categoryDetailPattern() = "category/{categoryId}"
+    fun categoryDetail(categoryId: String, range: String? = null): String =
+        if (range.isNullOrEmpty()) {
+            "category/$categoryId"
+        } else {
+            "category/$categoryId?range=$range"
+        }
+
+    fun categoryDetailPattern() = "category/{categoryId}?range={range}"
 }
