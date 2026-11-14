@@ -3,6 +3,8 @@ package com.sumi.feature.today
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -17,12 +19,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sumi.core.designsystem.component.AppUsageRow
 import com.sumi.core.designsystem.component.CategoryDistributionCard
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.SumiCard
+import com.sumi.core.designsystem.component.SumiChip
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.TimelineStrip
 import com.sumi.core.designsystem.component.formatDuration
@@ -134,6 +139,7 @@ private fun TodayBody(
     onOpenCategories: () -> Unit = {},
     onGoalEdit: () -> Unit = {},
 ) {
+    var socialFilter by rememberSaveable { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxSize()
@@ -173,26 +179,46 @@ private fun TodayBody(
         }
 
         // Most used (§3.5): ranked rows with icon, name, duration, share — no bulky cards.
-        if (!state.isLoading && state.mostUsed.isNotEmpty()) {
+        // "All | Social" single-select filter (the only category chip here, matched to the
+        // Social deep-dive on Insights). Social rows rank within the Social category.
+        if (!state.isLoading) {
             Spacer(Modifier.height(SumiSpacing.xl))
-            SumiSectionHeader("MOST USED")
-            Spacer(Modifier.height(SumiSpacing.sm))
-            Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.xs)) {
-                state.mostUsed.forEach { app ->
-                    AppUsageRow(
-                        packageName = app.packageName,
-                        displayName = app.displayName,
-                        durationMs = app.durationMs,
-                        // App percentages use total tracked application usage as the denominator.
-                        shareOfTotal = if (state.trackedDurationMs > 0L) {
-                            app.durationMs.toFloat() / state.trackedDurationMs.toFloat()
-                        } else {
-                            null
-                        },
-                        iconLoader = iconLoader,
-                        onClick = { onOpenAppDetail(app.packageName) },
-                    )
+            val shownMostUsed = if (socialFilter) state.socialMostUsed else state.mostUsed
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SumiSectionHeader("MOST USED", modifier = Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(SumiSpacing.sm)) {
+                    SumiChip(label = "All", selected = !socialFilter, onSelect = { socialFilter = false })
+                    SumiChip(label = "Social", selected = socialFilter, onSelect = { socialFilter = true })
                 }
+            }
+            Spacer(Modifier.height(SumiSpacing.sm))
+            when {
+                shownMostUsed.isNotEmpty() -> Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.xs)) {
+                    shownMostUsed.forEach { app ->
+                        AppUsageRow(
+                            packageName = app.packageName,
+                            displayName = app.displayName,
+                            durationMs = app.durationMs,
+                            // App percentages use total tracked application usage as the denominator.
+                            shareOfTotal = if (state.trackedDurationMs > 0L) {
+                                app.durationMs.toFloat() / state.trackedDurationMs.toFloat()
+                            } else {
+                                null
+                            },
+                            iconLoader = iconLoader,
+                            onClick = { onOpenAppDetail(app.packageName) },
+                        )
+                    }
+                }
+                socialFilter -> Text(
+                    text = "No social apps used today.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                else -> Unit
             }
         }
 

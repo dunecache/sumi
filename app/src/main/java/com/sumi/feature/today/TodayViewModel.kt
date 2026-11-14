@@ -44,6 +44,8 @@ data class TodayUiState(
     val intentionGoalMinutes: Int? = null,
     /** Derived category distribution of today's tracked (per-app) usage; uncategorized last. */
     val categories: List<CategorySegment> = emptyList(),
+    /** Top-5 apps within the Social category — the MOST USED list's "Social" filter. */
+    val socialMostUsed: List<MostUsedApp> = emptyList(),
     /** Σ per-app usage used as the denominator for category percentages. */
     val trackedDurationMs: Long = 0L,
     val error: String? = null,
@@ -114,6 +116,15 @@ class TodayViewModel @Inject constructor(
                 val mostUsed = mostUsedApps(data.perApp, data.applications)
                 val segments = categorySegments(data.perApp, data.applications, categories)
                 val tracked = data.perApp.sumOf { it.durationMs }
+                val socialCategory = categories.firstOrNull { it.id == com.sumi.domain.categories.DefaultPackageCategories.SOCIAL }
+                val socialPackages = socialCategory?.let { social ->
+                    data.applications.filter { it.categoryId == social.id }.map { it.packageName }.toSet()
+                } ?: emptySet()
+                val socialMostUsed = com.sumi.core.usage.topApps(
+                    data.perApp.filter { it.packageName in socialPackages },
+                    data.applications,
+                    limit = 5,
+                ).map { MostUsedApp(it.packageName, it.displayName, it.durationMs) }
                 TodayUiState(
                     isLoading = false,
                     hasUsageAccess = checker.hasUsageAccess(),
@@ -123,6 +134,7 @@ class TodayViewModel @Inject constructor(
                         yesterdayComparison(data.totalDurationMs, it)
                     },
                     mostUsed = mostUsed,
+                    socialMostUsed = socialMostUsed,
                     timeline = hourlyTotals(data.hourly),
                     observation = observationFor(data.totalDurationMs, mostUsed),
                     intention = intentionState(goalConfig, data.totalDurationMs),

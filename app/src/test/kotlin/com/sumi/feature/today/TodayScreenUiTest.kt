@@ -1,10 +1,13 @@
 package com.sumi.feature.today
 
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sumi.core.designsystem.component.CategorySegment
@@ -84,6 +87,33 @@ class TodayScreenUiTest {
     }
 
     @Test
+    fun `social filter shows only social apps and is switchable back`() {
+        setContent(populatedState())
+
+        composeRule.onNodeWithText("All").performClick().assertIsDisplayed()
+        composeRule.onNodeWithText("Social").performClick()
+        composeRule.onNode(
+            hasContentDescription("Messages, 40m, 57% of today"),
+        ).assertIsDisplayed()
+        composeRule.onNode(
+            hasContentDescription("Browser", substring = true),
+        ).assertDoesNotExist()
+
+        composeRule.onNodeWithText("All").performClick()
+        composeRule.onNode(
+            hasContentDescription("Browser", substring = true),
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun `social filter with nothing social shows a calm empty line`() {
+        setContent(populatedState().copy(socialMostUsed = emptyList()))
+
+        composeRule.onNodeWithText("Social").performClick()
+        composeRule.onNodeWithText("No social apps used today.").assertIsDisplayed()
+    }
+
+    @Test
     fun `permission missing state explains how to enable usage access`() {
         setContent(
             populatedState().copy(
@@ -134,6 +164,9 @@ class TodayScreenUiTest {
         mostUsed = listOf(
             MostUsedApp("com.example.messages", "Messages", 2_400_000L),
             MostUsedApp("com.example.browser", "Browser", 1_200_000L),
+        ),
+        socialMostUsed = listOf(
+            MostUsedApp("com.example.messages", "Messages", 2_400_000L),
         ),
         observation = "Your phone was busiest in the evening.",
         intention = DailyIntentionState.Progress(
