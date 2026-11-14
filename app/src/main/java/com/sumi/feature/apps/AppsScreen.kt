@@ -450,7 +450,7 @@ private fun SumiFilterChip(
             selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             labelColor = MaterialTheme.colorScheme.onSurface,
-            leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
         label = { Text(label, maxLines = 1) },
         leadingIcon = dotColorToken?.let { token ->
@@ -675,7 +675,7 @@ private fun weekShare(ms: Long, total: Long): Float? =
 
 private const val ZERO_DIVIDER_KEY = "__zero_div__"
 private const val FOOTER_KEY = "__footer__"
-private const val SELECTION_BAR_CLEARANCE = 88.dp
+private val SELECTION_BAR_CLEARANCE = 88.dp
 private val CHIP_DOT = 10.dp
 private val CHIP_BORDER = 1.dp
 private val SUCCESS_ICON = 18.dp

@@ -82,9 +82,9 @@ class TypicalHoursTest {
             perHourMs = List(24) { hour -> if (hour in 22..23) 50L else 0L },
             daysWithUsage = 6,
         )
-        // Windows never wrap past midnight: [20,23) and [21,24) both carry the load;
-        // ties resolve to the earlier window deterministically.
+        // Windows never wrap past midnight: [20,23) carries 50 (hour 22 only),
+        // [21,24) carries 100 (hours 22+23) — the later window wins by the sum.
         val window = TypicalHours.typicalWindow(summary)
-        assertEquals(ActiveWindow(20, 23, 6), window)
+        assertEquals(ActiveWindow(21, 24, 6), window)
     }
 }
