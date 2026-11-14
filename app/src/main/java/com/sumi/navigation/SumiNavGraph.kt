@@ -264,8 +264,9 @@ fun SumiApp(
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     indicatorColor = navPill,
-                                    selectedIconColor = onNavPill,
-                                    selectedTextColor = onNavPill,
+                                    selectedIconColor = onNavPill, // icon sits ON the pill
+                                    // Label paints on the bar surface itself — it is NOT on the pill.
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
                                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 ),
@@ -309,8 +310,9 @@ fun SumiApp(
                                 },
                                 colors = NavigationRailItemDefaults.colors(
                                     indicatorColor = navPill,
-                                    selectedIconColor = onNavPill,
-                                    selectedTextColor = onNavPill,
+                                    selectedIconColor = onNavPill, // icon sits ON the pill
+                                    // Label paints on the bar surface itself — it is NOT on the pill.
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
                                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 ),
