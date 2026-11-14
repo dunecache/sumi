@@ -43,7 +43,7 @@ private fun PreviewTodayLoading() {
     SumiTheme(darkTheme = false) { TodayContent(state = TodayUiState()) }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Today · Loading (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Today · Loading (dark)")
 @Composable
 private fun PreviewTodayLoadingDark() {
     SumiTheme(darkTheme = true) { TodayContent(state = TodayUiState()) }
@@ -81,7 +81,7 @@ private fun PreviewTodayPopulated() {
     SumiTheme(darkTheme = false) { TodayContent(state = samplePopulatedState()) }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Today · Populated (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Today · Populated (dark)")
 @Composable
 private fun PreviewTodayPopulatedDark() {
     SumiTheme(darkTheme = true) { TodayContent(state = samplePopulatedState()) }
@@ -141,7 +141,7 @@ private fun PreviewIntentionExceeded() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF171F18, name = "Daily intention · Today (dark)")
+@Preview(showBackground = true, backgroundColor = 0xFF181F18, name = "Daily intention · Today (dark)")
 @Composable
 private fun PreviewIntentionDark() {
     SumiTheme(darkTheme = true) {

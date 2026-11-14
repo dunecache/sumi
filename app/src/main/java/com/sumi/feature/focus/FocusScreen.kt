@@ -2,7 +2,9 @@ package com.sumi.feature.focus
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,12 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,7 +33,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,6 +43,8 @@ import com.sumi.core.database.entity.FocusOutcome
 import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
+import com.sumi.core.designsystem.component.SumiChip
+import com.sumi.core.designsystem.component.SumiDurationSlider
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.NumericLarge
 import com.sumi.core.designsystem.theme.SumiSpacing
@@ -338,10 +342,10 @@ private fun LauncherCard(
         Spacer(Modifier.height(SumiSpacing.md))
         Row(horizontalArrangement = Arrangement.spacedBy(SumiSpacing.sm)) {
             PRESET_MINUTES.forEach { minutes ->
-                FilterChip(
+                SumiChip(
+                    label = "${minutes}m",
                     selected = selectedMinutes == minutes,
-                    onClick = { onDurationChange(minutes) },
-                    label = { Text("${minutes}m") },
+                    onSelect = { onDurationChange(minutes) },
                 )
             }
         }
@@ -364,16 +368,12 @@ private fun LauncherCard(
                 )
             }
         }
-        Slider(
-            value = selectedMinutes.toFloat(),
-            onValueChange = { onDurationChange(it.toInt()) },
-            valueRange = DURATION_MIN.toFloat()..DURATION_MAX.toFloat(),
-            steps = (DURATION_MAX - DURATION_MIN) / DURATION_STEP - 1,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics {
-                    contentDescription = "Session length, $selectedMinutes minutes"
-                },
+        SumiDurationSlider(
+            valueMinutes = selectedMinutes,
+            onValueChange = onDurationChange,
+            valueRange = DURATION_MIN..DURATION_MAX,
+            stepMinutes = DURATION_STEP,
+            modifier = Modifier.fillMaxWidth(),
         )
         if (intention.isNotBlank()) {
             Spacer(Modifier.height(SumiSpacing.xs))
@@ -602,8 +602,15 @@ private fun ReminderCard(
 ) {
     SumiCard {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = SumiSpacing.minTouchTarget)
+                .clickable(onClick = { onToggle(!(enabled && notificationsAllowed)) })
+                .semantics(mergeDescendants = true) {
+                    role = androidx.compose.ui.semantics.Role.Switch
+                    stateDescription = if (enabled && notificationsAllowed) "on" else "off"
+                },
+            verticalAlignment = Alignment.Top,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 SumiSectionHeader("Reminder")
@@ -620,6 +627,7 @@ private fun ReminderCard(
                 checked = enabled && notificationsAllowed,
                 onCheckedChange = onToggle,
                 enabled = true,
+                modifier = Modifier.padding(top = SumiSpacing.xs),
             )
         }
         if (!notificationsAllowed) {

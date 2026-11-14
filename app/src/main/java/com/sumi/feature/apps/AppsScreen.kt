@@ -6,7 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +56,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -251,7 +253,7 @@ internal fun AppsContent(
 
     Column(modifier.fillMaxSize().padding(SumiSpacing.screenHorizontal)) {
         Spacer(Modifier.height(SumiSpacing.lg))
-        Text(text = "Apps", style = MaterialTheme.typography.headlineMedium)
+        Text(text = "Apps", style = MaterialTheme.typography.displayLarge)
         Spacer(Modifier.height(SumiSpacing.md))
         if (selectionMode) {
             SelectionHeader(
@@ -427,7 +429,7 @@ private fun CategoryFilterRow(
     }
 }
 
-/** Filter chip styled with Sumi tokens — never default Material secondary styling. */
+/** Filter chip styled with Sumi tokens — reference standard §9.15 (accent fill when selected). */
 @Composable
 private fun SumiFilterChip(
     selected: Boolean,
@@ -435,37 +437,42 @@ private fun SumiFilterChip(
     label: String,
     dotColorToken: String? = null,
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        border = BorderStroke(
-            width = CHIP_BORDER,
-            color = if (selected) {
-                MaterialTheme.colorScheme.outline
-            } else {
-                MaterialTheme.colorScheme.outlineVariant
-            },
-        ),
-        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            labelColor = MaterialTheme.colorScheme.onSurface,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
-        label = { Text(label, maxLines = 1) },
-        leadingIcon = dotColorToken?.let { token ->
-            {
-                Box(
-                    Modifier
-                        .size(CHIP_DOT)
-                        .clip(CircleShape)
-                        .background(categoryColorOrNeutral(token)),
-                )
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .height(CHIP_HEIGHT)
+            .clip(CircleShape)
+            .background(if (selected) scheme.primary else androidx.compose.ui.graphics.Color.Transparent)
+            .border(
+                width = CHIP_BORDER,
+                color = if (selected) scheme.primary else scheme.outlineVariant,
+                shape = CircleShape,
+            )
+            .clickable(onClickLabel = label, onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                stateDescription = if (selected) "selected" else "not selected"
             }
-        },
-    )
+            .padding(horizontal = SumiSpacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SumiSpacing.xs),
+    ) {
+        // The category dot is an unselected-only affordance — on the accent fill it is noise.
+        if (!selected && dotColorToken != null) {
+            Box(
+                Modifier
+                    .size(CHIP_DOT)
+                    .clip(CircleShape)
+                    .background(categoryColorOrNeutral(dotColorToken)),
+            )
+        }
+        Text(
+            text = label,
+            maxLines = 1,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal,
+            color = if (selected) scheme.onPrimary else scheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -681,5 +688,6 @@ private const val ZERO_DIVIDER_KEY = "__zero_div__"
 private const val FOOTER_KEY = "__footer__"
 private val SELECTION_BAR_CLEARANCE = 88.dp
 private val CHIP_DOT = 10.dp
+private val CHIP_HEIGHT = 40.dp
 private val CHIP_BORDER = 1.dp
 private val SUCCESS_ICON = 18.dp
