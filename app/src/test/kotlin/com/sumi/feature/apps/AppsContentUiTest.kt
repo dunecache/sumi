@@ -92,7 +92,8 @@ class AppsContentUiTest {
 
         composeRule.onNodeWithText("All").assertIsDisplayed()
         composeRule.onNodeWithText("Social").assertIsDisplayed()
-        composeRule.onNodeWithText("Uncategorized").assertIsDisplayed()
+        // The chip row scrolls; offscreen chips must be scrolled into view first.
+        composeRule.onNodeWithText("Uncategorized").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Manage…").performScrollTo().assertIsDisplayed()
     }
 
