@@ -4,10 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sumi.core.designsystem.theme.SumiTheme
-import com.sumi.feature.onboarding.sections.FirstOverviewScreen
+import com.sumi.feature.onboarding.sections.ReadyScreen
+import com.sumi.feature.onboarding.InitialSyncUiState
 import com.sumi.feature.onboarding.sections.FocusReminderScreen
 import com.sumi.feature.onboarding.sections.InitialSyncScreen
 import com.sumi.feature.onboarding.sections.PrivacyScreen
@@ -50,9 +52,10 @@ class OnboardingUiTest {
 
         composeRule.onNodeWithText("Setup · 2 of 5").assertIsDisplayed()
         composeRule.onNodeWithText("Private by default").assertIsDisplayed()
-        composeRule.onNode(
-            hasText("Sumi processes and stores your usage on this device only", substring = true),
-        ).assertIsDisplayed()
+        composeRule.onNodeWithText("Everything stays on this device.").assertIsDisplayed()
+        composeRule.onNodeWithText("No account.").assertIsDisplayed()
+        composeRule.onNodeWithText("No analytics.").assertIsDisplayed()
+        composeRule.onNodeWithText("No network access.").assertIsDisplayed()
     }
 
     @Test
@@ -88,7 +91,7 @@ class OnboardingUiTest {
             "Sumi cannot do anything without it.",
             substring = true,
         ).assertIsDisplayed()
-        composeRule.onNodeWithText("Open system settings").assertIsDisplayed()
+        composeRule.onNodeWithText("Open system Settings").assertIsDisplayed()
     }
 
     @Test
@@ -101,13 +104,20 @@ class OnboardingUiTest {
             )
         }
 
-        composeRule.onNodeWithText("Usage Access is enabled.").assertIsDisplayed()
+        composeRule.onNodeWithText("Usage access is on.").assertIsDisplayed()
     }
 
     @Test
     fun `initial sync step explains the one-time import`() {
         setContent {
-            InitialSyncScreen(uiState = UsageAccessUiState.Granted, onFinish = {})
+            InitialSyncScreen(
+                permissionState = UsageAccessUiState.Granted,
+                importState = InitialSyncUiState.Importing,
+                onOpenSettings = {},
+                onRetry = {},
+                onStartImport = {},
+                onContinue = {},
+            )
         }
 
         composeRule.onNodeWithText("Setup · 5 of 5").assertIsDisplayed()
@@ -121,19 +131,60 @@ class OnboardingUiTest {
     @Test
     fun `initial sync step without permission is honest instead of hidden`() {
         setContent {
-            InitialSyncScreen(uiState = UsageAccessUiState.Missing, onFinish = {})
+            InitialSyncScreen(
+                permissionState = UsageAccessUiState.Missing,
+                importState = InitialSyncUiState.NotStarted,
+                onOpenSettings = {},
+                onRetry = {},
+                onStartImport = {},
+                onContinue = {},
+            )
         }
 
-        composeRule.onNodeWithText("Usage Access is off").assertIsDisplayed()
+        composeRule.onNodeWithText("Usage access is off.").assertIsDisplayed()
     }
 
     @Test
-    fun `first overview marks setup complete and only opens the app`() {
-        setContent { FirstOverviewScreen(onOpenApp = {}) }
+    fun `ready screen marks setup complete and only opens the app`() {
+        setContent { ReadyScreen(onOpenApp = {}) }
 
-        composeRule.onNodeWithText("Setup complete").assertIsDisplayed()
-        composeRule.onNodeWithText("This is Today.").assertIsDisplayed()
-        composeRule.onNodeWithText("Open Sumi").assertIsDisplayed()
+        composeRule.onNodeWithText("Ready.").assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "Sumi stays quiet and counts.",
+            substring = true,
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText("Enter Sumi").assertIsDisplayed()
+    }
+
+    @Test
+    fun `initial sync failure offers retry and keeps the cta inert`() {
+        setContent {
+            InitialSyncScreen(
+                permissionState = UsageAccessUiState.Granted,
+                importState = InitialSyncUiState.Failed,
+                onOpenSettings = {},
+                onRetry = {},
+                onStartImport = {},
+                onContinue = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Import stopped before finishing.").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
+        composeRule.onNodeWithText("Continue").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `usage access step keeps continue inert until granted`() {
+        setContent {
+            UsageAccessScreen(
+                uiState = UsageAccessUiState.Missing,
+                onOpenSettings = {},
+                onContinue = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Continue").assertIsNotEnabled()
     }
 
     private fun setContent(content: @Composable () -> Unit) {

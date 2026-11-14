@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.sumi.domain.common.DateKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,12 +28,36 @@ sealed interface UsageAccessUiState {
     data object Missing : UsageAccessUiState
 }
 
+/**
+ * One-time import state for the final onboarding step (reference standard §10.3).
+ * The import starts when the screen appears; it never runs speculatively before then.
+ */
+sealed interface InitialSyncUiState {
+    /** Screen just appeared; waiting for the permission check / import kickoff. */
+    data object NotStarted : InitialSyncUiState
+
+    /** Import running — determinate progress is not available from the system. */
+    data object Importing : InitialSyncUiState
+
+    /** Import finished and days are stored. */
+    data object Ready : InitialSyncUiState
+
+    /** Import finished and nothing was found — the app starts counting today. */
+    data object ReadyEmpty : InitialSyncUiState
+
+    /** Import threw; the user retries explicitly. */
+    data object Failed : InitialSyncUiState
+}
+
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val preferences: PreferencesRepository,
     private val usageAccessChecker: UsageAccessChecker,
     private val collector: UsageCollector,
     private val reminderScheduler: FocusReminderScheduler,
+    private val usageRepository: com.sumi.domain.usage.UsageRepository,
+    private val clock: com.sumi.domain.common.Clock,
+    private val timeZone: com.sumi.domain.common.TimeZoneProvider,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -52,6 +77,10 @@ class OnboardingViewModel @Inject constructor(
 
     private val _usageAccessState = MutableStateFlow<UsageAccessUiState>(UsageAccessUiState.Checking)
     val usageAccessState: StateFlow<UsageAccessUiState> = _usageAccessState.asStateFlow()
+
+    private companion object {
+        const val HISTORY_DAYS = 90
+    }
 
     init {
         refreshUsageAccess()
@@ -74,12 +103,48 @@ class OnboardingViewModel @Inject constructor(
 
     fun settingsIntent() = usageAccessChecker.usageAccessSettingsIntent()
 
-    fun runInitialSync(onDone: () -> Unit) {
+    private val _initialSyncState = MutableStateFlow<InitialSyncUiState>(InitialSyncUiState.NotStarted)
+
+    /** State of the one-time 90-day import for the final setup step. */
+    val initialSyncState: StateFlow<InitialSyncUiState> = _initialSyncState.asStateFlow()
+
+    /** Idempotent kickoff: safe to call on every composition of the sync step. */
+    fun startInitialSync() {
+        if (_initialSyncState.value != InitialSyncUiState.NotStarted) return
+        runInitialSync()
+    }
+
+    /** Explicit retry after a failure. */
+    fun retryInitialSync() {
+        if (_initialSyncState.value == InitialSyncUiState.Importing) return
+        runInitialSync()
+    }
+
+    private fun runInitialSync() {
         viewModelScope.launch {
-            if (usageAccessChecker.hasUsageAccess()) {
-                collector.importHistory()
+            if (!usageAccessChecker.hasUsageAccess()) {
+                _initialSyncState.value = InitialSyncUiState.NotStarted
+                return@launch
             }
-            onDone()
+            _initialSyncState.value = InitialSyncUiState.Importing
+            try {
+                collector.importHistory()
+                val zone = timeZone.currentZone()
+                val today = DateKey.of(clock.nowUtcMs(), zone)
+                val keys = (0 until HISTORY_DAYS).map { DateKey.shift(today, -it.toLong()) }
+                val stored = runCatching {
+                    usageRepository.observeDailyTotalsRange(keys).first()
+                }.getOrDefault(emptyList())
+                _initialSyncState.value = if (stored.isEmpty()) {
+                    InitialSyncUiState.ReadyEmpty
+                } else {
+                    InitialSyncUiState.Ready
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                _initialSyncState.value = InitialSyncUiState.Failed
+            }
         }
     }
 
