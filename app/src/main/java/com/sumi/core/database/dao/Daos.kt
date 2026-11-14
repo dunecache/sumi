@@ -9,6 +9,7 @@ import com.sumi.core.database.entity.Application
 import com.sumi.core.database.entity.CollectionState
 import com.sumi.core.database.entity.DailyAppUsage
 import com.sumi.core.database.entity.DailyUsage
+import com.sumi.core.database.entity.FocusSession
 import com.sumi.core.database.entity.HourlyUsage
 import com.sumi.core.database.entity.UsageSession
 import kotlinx.coroutines.flow.Flow
@@ -202,6 +203,43 @@ interface HourlyUsageDao {
     suspend fun deleteByPackages(packages: List<String>)
 
     @Query("DELETE FROM hourly_usage")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface FocusSessionDao {
+    @Insert
+    suspend fun insert(session: FocusSession): Long
+
+    /** Updates an existing open session (finish any open row atomically at write time). */
+    @Query("UPDATE focus_sessions SET endedAtUtcMs = :endedAtUtcMs, exitCount = :exitCount, outcome = :outcome WHERE id = :id")
+    suspend fun finish(id: Long, endedAtUtcMs: Long, exitCount: Int, outcome: String)
+
+    /** The at most one "open" row — marker semantics only; callers never expect a list here. */
+    @Query("SELECT * FROM focus_sessions WHERE outcome = 'open' ORDER BY startedAtUtcMs DESC LIMIT 1")
+    suspend fun open(): FocusSession?
+
+    /** Live view of the open session; null when nobody is focusing. */
+    @Query("SELECT * FROM focus_sessions WHERE outcome = 'open' ORDER BY startedAtUtcMs DESC LIMIT 1")
+    fun observeOpen(): Flow<FocusSession?>
+
+    /** Bump the exit counter of the open session only; keeps the open marker untouched. */
+    @Query("UPDATE focus_sessions SET exitCount = exitCount + 1 WHERE outcome = 'open'")
+    suspend fun incrementOpenExitCount(): Int
+
+    /** Marks an open session with [outcome] without inventing a wall-clock end it cannot know. */
+    @Query("UPDATE focus_sessions SET outcome = :outcome WHERE id = :id AND outcome = 'open'")
+    suspend fun sealOpenAs(id: Long, outcome: String): Int
+
+    /** Closed sessions, newest first. */
+    @Query("SELECT * FROM focus_sessions WHERE outcome != 'open' ORDER BY startedAtUtcMs DESC LIMIT 50")
+    fun observeHistory(): Flow<List<FocusSession>>
+
+    /** Sessions ended inside a caller-supplied window (history roll-up uses trailing 7 days). */
+    @Query("SELECT * FROM focus_sessions WHERE outcome != 'open' AND endedAtUtcMs >= :windowStart ORDER BY startedAtUtcMs ASC")
+    suspend fun since(windowStart: Long): List<FocusSession>
+
+    @Query("DELETE FROM focus_sessions")
     suspend fun deleteAll()
 }
 

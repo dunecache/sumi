@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,6 +24,7 @@ import com.sumi.core.designsystem.theme.SumiTheme
 import com.sumi.feature.onboarding.OnboardingViewModel
 import com.sumi.feature.usage.UsageCollector
 import com.sumi.navigation.SumiApp
+import com.sumi.platform.notifications.SumiNotifications
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.launch
@@ -35,11 +38,19 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var usageCollector: UsageCollector
 
+    /**
+     * Monotonic counter of "open the Focus tab" requests, bumped by notification taps
+     * (ongoing session notification and reminder). Composed into [SumiApp]; the nav
+     * graph navigates to Focus once per increment.
+     */
+    private var openFocusRequest by mutableStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Edge-to-edge: Sumi draws behind the system bars; Scaffold + M3 components
         // consume insets. Light/dark icon appearance follows the composed theme.
         enableEdgeToEdge()
+        consumeFocusIntent(intent)
 
         // Collect on open; re-check Usage Access + collect on resume.
         // repeatOnLifecycle also fires when this activity starts; no second standalone collect.
@@ -73,12 +84,26 @@ class MainActivity : ComponentActivity() {
                         isOnboardingCompleted = completed,
                         themeMode = themeMode,
                         onboardingViewModel = onboardingViewModel,
+                        openFocusRequest = openFocusRequest,
                         onThemeSelected = { mode ->
                             lifecycleScope.launch { preferences.setThemeMode(mode) }
                         },
                     )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeFocusIntent(intent)
+    }
+
+    private fun consumeFocusIntent(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(SumiNotifications.EXTRA_OPEN_FOCUS, false) == true) {
+            openFocusRequest += 1
+            intent.removeExtra(SumiNotifications.EXTRA_OPEN_FOCUS)
         }
     }
 }
