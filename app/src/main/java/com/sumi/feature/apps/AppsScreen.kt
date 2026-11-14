@@ -48,6 +48,7 @@ import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -390,7 +391,16 @@ private fun CategoryFilterRow(
     onFilterChange: (AppsFilter) -> Unit,
     onManageCategories: () -> Unit,
 ) {
+    state: AppsUiState,
+    onFilterChange: (AppsFilter) -> Unit,
+    onManageCategories: () -> Unit,
+) {
+    state: AppsUiState,
+    onFilterChange: (AppsFilter) -> Unit,
+    onManageCategories: () -> Unit,
+) {
     LazyRow(
+        modifier = Modifier.testTag(CHIPS_ROW_TEST_TAG),
         horizontalArrangement = Arrangement.spacedBy(SumiSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -673,6 +683,8 @@ private fun todayShare(ms: Long, total: Long): Float? =
 private fun weekShare(ms: Long, total: Long): Float? =
     if (total > 0L && ms > 0L) ms.toFloat() / total.toFloat() else null
 
+/** Test-tag for the live-data chip row (scrolling to offscreen chips in UI tests). */
+internal const val CHIPS_ROW_TEST_TAG = "apps-filter-chips"
 private const val ZERO_DIVIDER_KEY = "__zero_div__"
 private const val FOOTER_KEY = "__footer__"
 private val SELECTION_BAR_CLEARANCE = 88.dp

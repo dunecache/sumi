@@ -3,8 +3,10 @@ package com.sumi.feature.apps
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sumi.core.designsystem.theme.SumiTheme
 import org.junit.Rule
@@ -72,6 +74,9 @@ class AppsContentUiTest {
         CategoryFilterChip("ai", "AI", "wisteria", sortOrder = 8),
     )
 
+    // All + 3 category chips + Uncategorized + Manage… → index 5 is the last item.
+    private val LAST_CHIP_INDEX = 5
+
     private val sampleApps = listOf(
         row("com.instagram.android", "Instagram", "social", "Social", 60_000L, 23_400_000L),
         // Kept categorized so the "Uncategorized" chip is the only such text on screen.
@@ -96,9 +101,11 @@ class AppsContentUiTest {
         // appears as the row's category-identity line — that one is expected twice).
         composeRule.onNodeWithText("Education").assertIsDisplayed()
         composeRule.onNodeWithText("AI").assertIsDisplayed()
-        // The chip row scrolls; offscreen chips must be scrolled into view first.
+        // Lazy rows compose only onscreen items; offscreen chips must be scrolled
+        // to by index (the Manage… affordance sits beyond the pre-composition window).
         composeRule.onNodeWithText("Uncategorized").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Manage…").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag(CHIPS_ROW_TEST_TAG).performScrollToIndex(LAST_CHIP_INDEX)
+        composeRule.onNodeWithText("Manage…").assertIsDisplayed()
     }
 
     @Test
