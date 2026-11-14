@@ -70,6 +70,8 @@ data class SocialFacts(
     /** Per-day series across the range for the trend strip. */
     val dailyMs: List<Long>,
     val topApps: List<TopUsedApp>,
+    /** Distinct Social apps used this range beyond the [topApps] shown — the remainder the card must account for. */
+    val moreApps: Int = 0,
     /** Neutral comparison vs the equivalent previous window; null for TODAY or thin history. */
     val comparison: String?,
 )
@@ -164,6 +166,7 @@ fun socialFacts(
         rangeRows.filter { it.dateKey == key }.sumOf { it.durationMs }
     }
     val top = topApps(rangeRows, applications, limit = 3)
+    val moreApps = (rangeRows.mapTo(HashSet()) { it.packageName }.size - top.size).coerceAtLeast(0)
     val comparison = if (range == InsightsRange.TODAY) {
         null
     } else if (comparisonRecorded) {
@@ -178,6 +181,7 @@ fun socialFacts(
         share = if (trackedMs > 0L) total.toFloat() / trackedMs.toFloat() else 0f,
         dailyMs = perDay,
         topApps = top,
+        moreApps = moreApps,
         comparison = comparison,
     )
 }

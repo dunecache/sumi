@@ -297,6 +297,14 @@ private fun Populated(
                                 onClick = { onOpenAppDetail(app.packageName) },
                             )
                         }
+                        if (social.moreApps > 0) {
+                            Text(
+                                text = "and ${social.moreApps} more ${if (social.moreApps == 1) "app" else "apps"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = SumiSpacing.md),
+                            )
+                        }
                     }
                 }
             } else {

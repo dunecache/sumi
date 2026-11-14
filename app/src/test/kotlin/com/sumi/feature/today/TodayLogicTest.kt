@@ -76,17 +76,17 @@ class TodayLogicTest {
 
     @Test
     fun `tiny deltas read as unchanged`() {
-        assertEquals("About the same as yesterday.", yesterdayComparison(10L * 60_000L, 8L * 60_000L))
+        assertEquals("About the same as yesterday at this time.", yesterdayComparison(10L * 60_000L, 8L * 60_000L))
     }
 
     @Test
     fun `minutes delta phrased neutrally`() {
         assertEquals(
-            "About 20m less than yesterday.",
+            "About 20m less than yesterday at this time.",
             yesterdayComparison(2L * 60_000L * 60, 2L * 60_000L * 60 + 20L * 60_000L),
         )
         assertEquals(
-            "About 20m more than yesterday.",
+            "About 20m more than yesterday at this time.",
             yesterdayComparison(2L * 60_000L * 60 + 20L * 60_000L, 2L * 60_000L * 60),
         )
     }
@@ -94,7 +94,7 @@ class TodayLogicTest {
     @Test
     fun `hours delta reuses duration formatting`() {
         assertEquals(
-            "About 2h 15m more than yesterday.",
+            "About 2h 15m more than yesterday at this time.",
             yesterdayComparison(3L * 60_000L * 60 + 15L * 60_000L, 60_000L * 60),
         )
     }

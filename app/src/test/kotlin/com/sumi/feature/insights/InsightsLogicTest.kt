@@ -227,6 +227,32 @@ class InsightsLogicTest {
     }
 
     @Test
+    fun `social card counts the apps beyond the top three`() {
+        val manySocialApps = socialApps + listOf(
+            Application(packageName = "com.readlater", displayName = "ReadLater", categoryId = "social"),
+            Application(packageName = "com.forum", displayName = "Forum", categoryId = "social"),
+        )
+        val result = socialFacts(
+            range = InsightsRange.WEEK,
+            rangeKeys = weekKeys,
+            trackedMs = 1_000_000L,
+            perApp = listOf(
+                usage("2026-11-12", "com.feed", 400_000L),
+                usage("2026-11-12", "com.chat", 300_000L),
+                usage("2026-11-12", "com.readlater", 10_000L),
+                usage("2026-11-12", "com.forum", 5_000L),
+            ),
+            comparisonPerApp = emptyList(),
+            comparisonRecorded = false,
+            applications = manySocialApps,
+            categories = socialCategories,
+        )
+        assertNotNull(result)
+        assertEquals(4, result!!.topApps.size + result.moreApps)
+        assertEquals(1, result.moreApps)
+    }
+
+    @Test
     fun `social facts carry a per-day series across the range`() {
         val result = socialFacts(
             range = InsightsRange.WEEK,

@@ -70,6 +70,12 @@ private data class BottomDestination(
     val label: String,
     val iconUnselected: ImageVector,
     val iconSelected: ImageVector,
+    /**
+     * The exact NavDestination route pattern this tab maps to. Plain destinations use
+     * [route]; a destination with path arguments (Apps, `apps?filter={filter}`) is never
+     * equal to the plain string, and `destination.route` reports the pattern.
+     */
+    val selectionPattern: String = route,
 )
 
 // One coherent icon family: outlined when at rest, filled when selected. Consistent
@@ -78,7 +84,13 @@ private val BottomDestinations = listOf(
     BottomDestination(Routes.TODAY, "Today", Icons.Outlined.WbSunny, Icons.Filled.WbSunny),
     BottomDestination(Routes.INSIGHTS, "Insights", Icons.Outlined.Insights, Icons.Filled.Insights),
     BottomDestination(Routes.FOCUS, "Focus", Icons.Outlined.CenterFocusWeak, Icons.Filled.CenterFocusStrong),
-    BottomDestination(Routes.APPS, "Apps", Icons.Outlined.GridView, Icons.Filled.GridView),
+    BottomDestination(
+        Routes.APPS,
+        "Apps",
+        Icons.Outlined.GridView,
+        Icons.Filled.GridView,
+        selectionPattern = Routes.appsWithFilter("{filter}"),
+    ),
 )
 
 /** Bottom bar stays visible for every apps route, including the filtered deep-link variant. */
@@ -116,7 +128,15 @@ fun SumiApp(
     }
 
     val usageAccessState by onboardingViewModel.usageAccessState.collectAsState()
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val currentBackStackEntry = navController.currentBackStackEntryAsState().value
+    val currentRoute = currentBackStackEntry?.destination?.route
+    // Selection compares the destination and its ancestors — an argumented destination
+    // (Apps, `apps?filter={filter}`) never matches its plain route string, and walking
+    // parents keeps this correct if it ever becomes a nested graph.
+    val isTabSelected: (BottomDestination) -> Boolean = { dest ->
+        generateSequence(currentBackStackEntry?.destination) { it.parent }
+            .any { it.route == dest.selectionPattern }
+    }
     val showBottomBar = currentRoute in MainRoutes
     val isSubRoute = currentRoute in SubRoutes
     val showTopBar = showBottomBar || isSubRoute
@@ -179,11 +199,11 @@ fun SumiApp(
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                         BottomDestinations.forEach { dest ->
                             NavigationBarItem(
-                                selected = currentRoute == dest.route,
+                                selected = isTabSelected(dest),
                                 onClick = { navController.navigateTab(dest.route) },
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute == dest.route) {
+                                        imageVector = if (isTabSelected(dest)) {
                                             dest.iconSelected
                                         } else {
                                             dest.iconUnselected
@@ -207,11 +227,11 @@ fun SumiApp(
                     NavigationRail(containerColor = Color.Transparent) {
                         BottomDestinations.forEach { dest ->
                             NavigationRailItem(
-                                selected = currentRoute == dest.route,
+                                selected = isTabSelected(dest),
                                 onClick = { navController.navigateTab(dest.route) },
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute == dest.route) {
+                                        imageVector = if (isTabSelected(dest)) {
                                             dest.iconSelected
                                         } else {
                                             dest.iconUnselected

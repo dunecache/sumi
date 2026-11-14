@@ -54,7 +54,7 @@ object InsightsEngine {
         if (totalSessions > 0) {
             insights += Insight(
                 InsightKind.FACT,
-                "You had $totalSessions sessions in this period.",
+                "You had $totalSessions sessions in this period (any length — a glance counts).",
             )
         }
         if (longest > 0) {

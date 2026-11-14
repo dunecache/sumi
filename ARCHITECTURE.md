@@ -548,6 +548,18 @@ The Insights destination is range-aware. Ranges are canonical in `:domain`
 | WEEK | Trailing 7 days | yes | The 7 days immediately before the window |
 | MONTH | Trailing 30 days | yes | The 30 days immediately before the window |
 
+**One number source.** Day totals are merged at read time in the repository: stored
+session-backed rows always win (the collection writes them from the same sessions, so
+they are identical), and days without a stored row derive from the per-app sum for the
+same day — the only days that exist are the imported per-app history. The 90-day
+`UsageStats` import writes per-app rows but never `daily_usage`, so without this merge
+every total-driven surface (overview, bars, averages, comparison sums) would read an
+empty table while categories and most-used summed the import — showing two totals on
+one screen and an invented "more than the previous 7 days". Session-backed days behave
+exactly as before; the merge only back-fills what was never stored. The Today screen's
+yesterday comparison uses the same TODAY-clip rule as Insights (yesterday up to the
+same wall-clock time, session granularity; omitted when yesterday holds no sessions).
+
 - TODAY is never compared against a complete day. The clipped comparison uses
   `IntervalMath.unionMsInWindow` over yesterday's sessions (union, R8); if no session
   rows exist for yesterday (events retention), the comparison line is omitted — not fudged.
@@ -574,7 +586,9 @@ The Insights destination is range-aware. Ranges are canonical in `:domain`
 **Social lens.** "Time in social apps" is a curated lens on the Social category, never a
 parallel data system. It hides entirely when the Social category row no longer exists
 (the user deleted it), honors user renames, and never shows a today-vs-complete-day
-comparison.
+comparison. It shows the top three Social apps by tracked time and counts the rest as
+"and N more apps" (distinct Social packages with range usage beyond the three shown) so
+the card reconciles visibly against its own total.
 
 **Known limitation.** The "See all" action in Insights' top-five block links to the Apps
 destination unfiltered (`apps?filter=all`); a matching-window sort cannot be expressed
