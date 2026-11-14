@@ -384,3 +384,49 @@ a correctness issue, not a cosmetic one: the numbers have to describe the user's
 **Still open (R13).** Whether *hidden* apps (a user-facing "hide this app" switch)
 count toward totals is a separate decision and is unchanged: hidden apps are still
 counted today.
+## 16. Insights ranges and comparison rules (implemented 2026-11)
+
+The Insights destination is range-aware. Ranges are canonical in `:domain`
+(`InsightsRange`); every caller uses the same window definitions.
+
+**Ranges** (all end today, inclusive; days split at local midnight via `DateKey`):
+
+| Range | Window | Complete? | Comparison window |
+|---|---|---|---|
+| TODAY | [today, now) — partial | no | Yesterday, clipped to the same local wall-clock time (session granularity) |
+| YESTERDAY | Yesterday, full day | yes | The day before yesterday |
+| WEEK | Trailing 7 days | yes | The 7 days immediately before the window |
+| MONTH | Trailing 30 days | yes | The 30 days immediately before the window |
+
+- TODAY is never compared against a complete day. The clipped comparison uses
+  `IntervalMath.unionMsInWindow` over yesterday's sessions (union, R8); if no session
+  rows exist for yesterday (events retention), the comparison line is omitted — not fudged.
+- Complete windows compare zeros-included: days without records count as zero, but the
+  comparison is shown only when the previous window recorded *at least one* day (a daily
+  or per-app row). Otherwise it is omitted.
+- Averages always state their window: "X per day across N days", zeros included
+  (`Averages.dailyAverage`). A 1-day window has no average line (it is the total).
+  The bar chart's average rule renders only when the average line exists.
+- Every share uses the documented denominator — the same window's total tracked usage
+  (`Σ per-app usage`, uncategorized included) — through `Averages.percentOf[Share]`
+  (whole percents, one rounding rule). 26-vs-27 cannot recur.
+- Category views for any range re-derive from untouched per-app records against the
+  CURRENT assignment (§13 policy). TODAY's category detail is never compared to a
+  complete day either; comparisons elsewhere use the previous equivalent window.
+- Coverage is counted (`coverageDays` = days with any row). When history is thinner than
+  the window, Insights says so ("Based on the N days …") and pattern observations are
+  withheld until ≥ 3 days of data exist.
+- The range survives navigation to detail screens (query arg `category/{id}?range=…`)
+  and process death (`SavedStateHandle` key `insights_range`). Sessions and hourly
+  buckets are fetched per range; the 90-day `UsageStats` import supplies complete-window
+  coverage beyond events retention.
+
+**Social lens.** "Time in social apps" is a curated lens on the Social category, never a
+parallel data system. It hides entirely when the Social category row no longer exists
+(the user deleted it), honors user renames, and never shows a today-vs-complete-day
+comparison.
+
+**Known limitation.** The "See all" action in Insights' top-five block links to the Apps
+destination unfiltered (`apps?filter=all`); a matching-window sort cannot be expressed
+until the Apps screen's scope/sort support lands. The Apps and Focus destinations are
+being redesigned separately (2026-11).
