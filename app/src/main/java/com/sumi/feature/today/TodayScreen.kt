@@ -172,17 +172,6 @@ private fun TodayBody(
             )
         }
 
-        // Category distribution (§5): total tracked, proportional bar, labeled list. Uncategorized last.
-        if (!state.isLoading && state.categories.isNotEmpty()) {
-            Spacer(Modifier.height(SumiSpacing.xl))
-            CategoryDistributionCard(
-                segments = state.categories,
-                totalDurationMs = state.trackedDurationMs,
-                onCategoryClick = onOpenCategoryDetail,
-                onSeeAll = onOpenCategories,
-            )
-        }
-
         // Most used (§3.5): ranked rows with icon, name, duration, share — no bulky cards.
         if (!state.isLoading && state.mostUsed.isNotEmpty()) {
             Spacer(Modifier.height(SumiSpacing.xl))
@@ -205,6 +194,17 @@ private fun TodayBody(
                     )
                 }
             }
+        }
+
+        // Category distribution (§5): total tracked, proportional bar, labeled list. Uncategorized last.
+        if (!state.isLoading && state.categories.isNotEmpty()) {
+            Spacer(Modifier.height(SumiSpacing.xl))
+            CategoryDistributionCard(
+                segments = state.categories,
+                totalDurationMs = state.trackedDurationMs,
+                onCategoryClick = onOpenCategoryDetail,
+                onSeeAll = onOpenCategories,
+            )
         }
 
         // Timeline (§3.6): real hourly buckets; ghost bars read as "no data yet", never an error.

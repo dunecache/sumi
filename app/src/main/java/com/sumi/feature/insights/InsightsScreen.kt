@@ -236,6 +236,35 @@ private fun Populated(
         }
     }
 
+    // Most used in the range.
+    if (state.topApps.isNotEmpty()) {
+        Spacer(Modifier.height(SumiSpacing.xl))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SumiSectionHeader("MOST USED", modifier = Modifier.weight(1f))
+            TextButton(onClick = onSeeAllApps) {
+                Text("See all", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+        Spacer(Modifier.height(SumiSpacing.sm))
+        Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.xs)) {
+            state.topApps.forEach { app ->
+                AppUsageRow(
+                    packageName = app.packageName,
+                    displayName = app.displayName,
+                    durationMs = app.durationMs,
+                    shareOfTotal = if (state.trackedMs > 0L) {
+                        app.durationMs.toFloat() / state.trackedMs.toFloat()
+                    } else {
+                        null
+                    },
+                    iconLoader = iconLoader,
+                    onClick = { onOpenAppDetail(app.packageName) },
+                    sharePeriod = state.range.windowLabel.replaceFirstChar { it.lowercase() },
+                )
+            }
+        }
+    }
+
     // Category distribution: who the time went to.
     if (state.categories.isNotEmpty()) {
         Spacer(Modifier.height(SumiSpacing.xl))
@@ -324,35 +353,6 @@ private fun Populated(
                 contentPadding = PaddingValues(horizontal = 0.dp),
             ) {
                 Text("Open social analytics")
-            }
-        }
-    }
-
-    // Most used in the range.
-    if (state.topApps.isNotEmpty()) {
-        Spacer(Modifier.height(SumiSpacing.xl))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SumiSectionHeader("MOST USED", modifier = Modifier.weight(1f))
-            TextButton(onClick = onSeeAllApps) {
-                Text("See all", style = MaterialTheme.typography.labelLarge)
-            }
-        }
-        Spacer(Modifier.height(SumiSpacing.sm))
-        Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.xs)) {
-            state.topApps.forEach { app ->
-                AppUsageRow(
-                    packageName = app.packageName,
-                    displayName = app.displayName,
-                    durationMs = app.durationMs,
-                    shareOfTotal = if (state.trackedMs > 0L) {
-                        app.durationMs.toFloat() / state.trackedMs.toFloat()
-                    } else {
-                        null
-                    },
-                    iconLoader = iconLoader,
-                    onClick = { onOpenAppDetail(app.packageName) },
-                    sharePeriod = state.range.windowLabel.replaceFirstChar { it.lowercase() },
-                )
             }
         }
     }
