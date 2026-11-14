@@ -37,7 +37,7 @@ import com.sumi.feature.onboarding.UsageAccessUiState
 @Composable
 private fun StepLabel(step: Int) {
     Text(
-        text = "Setup · $step of 4",
+        text = "Setup · $step of 5",
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
