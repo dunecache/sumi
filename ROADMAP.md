@@ -93,6 +93,23 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 > (`UsageExclusions`, unit-tested), device set resolved per collection run in the
 > platform layer (`DeviceExcludedPackagesResolver`) because the launcher/IME can
 > change. R13 (hidden apps counting toward totals) stays open and unchanged.
+>
+> **Apps redesign pass (2026-11):** Apps rebuilt as the categorization funnel —
+> live category chips (All · user categories in manager order · Uncategorized · Manage…),
+> search that matches labels, packages, category names and "uncategorized", four sorts
+> (today / this week / alphabetical / category) with the matching window's share as the
+> row percentage, `NOT USED YET` zero-usage divider in usage sorts, category identity per
+> row (dot + name, letter-mark-on-category-color icon fallback), long-press and explicit
+> Select entry to multi-select, bottom-bar "Move N apps to…", shared category picker sheet
+> with inline create-new-category (used by bulk, single reassign and app detail),
+> confirmation snackbar with Undo (restores prior per-row assignment incl. the user-set
+> flag), schema v3 (`isSystemApp`, `firstSeenAt`) for the system-apps policy (hidden by
+> default; Settings → Apps → Show system apps) and the quiet New marker with an inline
+> categorize affordance, `isInstalled` now flips to 0 on uninstall (assignment/history
+> kept; reinstall restores), app detail gains week/30-day totals, a 30-day trend and a
+> "usually active" window derived from the hourly buckets (honest below three days of
+> history). Migration 2→3 in code; schema JSONs 2.json/3.json committed. NOT yet run:
+> migration tests on a device/emulator — see acceptance note below.
 
 - [x] **Today**: total screen time, comparison with previous day, most-used apps, usage distribution, daily timeline, one small observation
 - [x] **Apps**: searchable library with icon, name, today and weekly usage, category

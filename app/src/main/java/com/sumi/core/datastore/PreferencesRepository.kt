@@ -43,6 +43,7 @@ class PreferencesRepository @Inject constructor(
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val DAILY_GOAL_MINUTES = intPreferencesKey("daily_goal_minutes")
         val DAILY_GOAL_ENABLED = booleanPreferencesKey("daily_goal_enabled")
+        val SHOW_SYSTEM_APPS = booleanPreferencesKey("show_system_apps")
     }
 
     val onboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[Keys.ONBOARDING_COMPLETED] ?: false }
@@ -56,6 +57,14 @@ class PreferencesRepository @Inject constructor(
 
     val notificationsEnabled: Flow<Boolean> =
         context.dataStore.data.map { it[Keys.NOTIFICATIONS_ENABLED] ?: false }
+
+    /**
+     * Apps library system-furniture policy: false (default) hides system apps from the
+     * Apps list (they still accrue usage and keep their assignments); true mixes them in.
+     * Never affects collection, exclusions, or percentages.
+     */
+    val showSystemApps: Flow<Boolean> =
+        context.dataStore.data.map { it[Keys.SHOW_SYSTEM_APPS] ?: false }
 
     /** Live goal configuration; the Today screen renders from this plus the same daily aggregate as the headline. */
     val dailyGoal: Flow<DailyGoalConfig> = context.dataStore.data.map { prefs ->
@@ -91,6 +100,10 @@ class PreferencesRepository @Inject constructor(
 
     suspend fun setNotificationsEnabled(value: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = value }
+    }
+
+    suspend fun setShowSystemApps(value: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_SYSTEM_APPS] = value }
     }
 
     suspend fun clearAll() {

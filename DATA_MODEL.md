@@ -28,6 +28,8 @@ Entities marked **(added)** extend the original concept to cover cases the conce
 | `isHidden` | Boolean | User-hidden app |
 | `isCategoryUserSet` | Boolean **(added)** | Prevents default mapping from overwriting a user choice |
 | `isInstalled` | Boolean **(added)** | Keep history for uninstalled apps |
+| `isSystemApp` | Boolean **(schema v3)** | Launcher-visible system app; hidden from the Apps library by default (Settings → Apps → Show system apps). Collection and exclusions are unaffected |
+| `firstSeenAt` | Long **(schema v3)** | UTC ms the row was first created; drives the quiet "New" marker. 0 = unknown (pre-v3 rows never read as new) |
 
 Icons are loaded from `PackageManager` at display time and are not stored.
 
@@ -202,7 +204,7 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 ## 8. Migrations and testing
 
 - `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets).
-- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2 against the real Room-exported v1 schema; **not yet executed anywhere**, no device/emulator available — see ROADMAP.md).
+- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2; **not yet executed anywhere**, no device/emulator available — see ROADMAP.md. `Migration23Test.kt` — 2→3 rewritten schema coverage the same way). 2.json and 3.json were reconstructed to match the applied migrations (column lists, `DEFAULT 0`), since only 1.json had ever been committed; `identityHash` values in the JSON are placeholders and carry no validation semantics — Room builds the reference database from `createSql`.
 - DAO tests with an in-memory database for: idempotent upsert, midnight split queries, aggregate rebuild equality, cascade/flag behavior for uninstalled apps.
 - Seed data (categories) is inserted at bootstrap (`CategoryBootstrap`): fresh installs get the full taxonomy; existing installs get only the seeds that are new in their version (`ai`, `finance`, `browser`) — ids the user deleted are never re-added; user-created rows with a colliding id win. `INSERT … IGNORE` keeps it idempotent; `isUserCreated` rows are never reseeded or overwritten.
 

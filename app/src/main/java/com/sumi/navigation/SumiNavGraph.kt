@@ -302,10 +302,13 @@ fun SumiApp(
                     val settingsViewModel: com.sumi.feature.settings.SettingsViewModel =
                         androidx.hilt.navigation.compose.hiltViewModel()
                     val diagnostics by settingsViewModel.diagnosticsLines.collectAsState()
+                    val showSystemApps by settingsViewModel.showSystemApps.collectAsState(initial = false)
                     SettingsScreen(
                         themeMode = themeMode,
                         onThemeSelected = onThemeSelected,
                         diagnosticsLines = diagnostics,
+                        showSystemApps = showSystemApps,
+                        onShowSystemAppsChange = settingsViewModel::setShowSystemApps,
                     )
                 }
                 composable(

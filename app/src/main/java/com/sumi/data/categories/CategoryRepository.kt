@@ -77,15 +77,18 @@ class CategoryRepository @Inject constructor(
 
     fun observeCategories(): Flow<List<AppCategory>> = categoryDao.observeAll()
 
-    /** Creates a user category; name blank → ignored. Ids are stable slugs. */
-    suspend fun create(name: String, colorToken: String): Boolean = withContext(dispatchers.io) {
+    /**
+     * Creates a user category; name blank → null. Ids are stable slugs.
+     * @return the new category's id, or null when the name was blank.
+     */
+    suspend fun create(name: String, colorToken: String): String? = withContext(dispatchers.io) {
         val trimmed = name.trim()
-        if (trimmed.isEmpty()) return@withContext false
+        if (trimmed.isEmpty()) return@withContext null
         val existing = categoryDao.getAll()
         val slug = categorySlug(trimmed, existing.map { it.id }.toSet())
         val nextOrder = (existing.maxOfOrNull { it.sortOrder } ?: -1) + 1
         categoryDao.insertAll(listOf(AppCategory(slug, trimmed, colorToken, nextOrder, isUserCreated = true)))
-        true
+        slug
     }
 
     suspend fun rename(id: String, name: String) = withContext(dispatchers.io) {

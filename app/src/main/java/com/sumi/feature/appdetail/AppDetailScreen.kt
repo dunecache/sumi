@@ -1,7 +1,6 @@
 package com.sumi.feature.appdetail
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,12 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,18 +29,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sumi.core.designsystem.component.AppIcon
+import com.sumi.core.designsystem.component.DailyTrendBars
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
 import com.sumi.core.designsystem.component.WeeklyBars
 import com.sumi.core.designsystem.component.formatDuration
+import com.sumi.core.designsystem.theme.NumericBody
 import com.sumi.core.designsystem.theme.NumericLarge
 import com.sumi.core.designsystem.theme.SumiSpacing
 import com.sumi.core.designsystem.theme.categoryColorOrNeutral
+import com.sumi.feature.categories.CategoryPickerOption
+import com.sumi.feature.categories.CategoryPickerSheet
 
 /**
- * App detail (M2): individual usage history on real data — identity header, today's
- * total, a 7-day chart, a 30-day average, and today's session summary. The raw package
+ * App detail: individual usage history on real data — identity header, today's total,
+ * this week's and the last 30 days' totals, a 7-day chart, a 30-day trend across the
+ * available history, a neutral "typically active" window derived from the same hourly
+ * buckets that power Today's timeline, and today's session summary. The raw package
  * name appears here as quiet metadata; it never headlines the screen.
  */
 @Composable
@@ -71,6 +71,7 @@ fun AppDetailScreen(
                 packageName = state.packageName,
                 displayName = state.displayName,
                 loader = iconLoader,
+                fallbackColorToken = state.categoryColorToken,
             )
             Column {
                 Text(text = state.displayName, style = MaterialTheme.typography.headlineSmall)
@@ -122,6 +123,30 @@ fun AppDetailScreen(
             style = NumericLarge,
         )
 
+        if (!state.isLoading) {
+            Spacer(Modifier.height(SumiSpacing.lg))
+            SumiCard {
+                Row(horizontalArrangement = Arrangement.spacedBy(SumiSpacing.xl)) {
+                    Column {
+                        Text(
+                            text = "THIS WEEK",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(text = formatDuration(state.weekMs), style = NumericBody)
+                    }
+                    Column {
+                        Text(
+                            text = "LAST 30 DAYS",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(text = formatDuration(state.monthMs), style = NumericBody)
+                    }
+                }
+            }
+        }
+
         if (!state.isLoading && state.week.any { it > 0L }) {
             Spacer(Modifier.height(SumiSpacing.xl))
             SumiSectionHeader("LAST 7 DAYS")
@@ -129,21 +154,29 @@ fun AppDetailScreen(
             SumiCard { WeeklyBars(dailyTotals = state.week) }
         }
 
-        if (!state.isLoading) {
+        if (!state.isLoading && state.month.any { it > 0L }) {
+            Spacer(Modifier.height(SumiSpacing.xl))
+            SumiSectionHeader("LAST 30 DAYS")
+            Spacer(Modifier.height(SumiSpacing.sm))
+            SumiCard { DailyTrendBars(dailyTotals = state.month) }
             val activeDays = state.month.count { it > 0L }
-            val monthAverage = if (activeDays >= 2) {
-                state.month.filter { it > 0L }.average()
-            } else {
-                null
-            }
-            monthAverage?.let { avg ->
-                Spacer(Modifier.height(SumiSpacing.md))
+            if (activeDays >= 2) {
+                Spacer(Modifier.height(SumiSpacing.sm))
                 Text(
-                    text = "About ${formatDuration(avg.toLong())} a day over the last 30 days.",
+                    text = "About ${formatDuration(state.month.filter { it > 0L }.average().toLong())} a day over $activeDays active days.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // Same hourly buckets that power Today's timeline; honest when data is thin.
+            Text(
+                text = state.typicalWindow?.let { window ->
+                    "Usually active ${formatHourWindow(window)}, last 30 days."
+                } ?: "Not enough history to say when you usually use this app.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = SumiSpacing.xs),
+            )
         }
 
         if (!state.isLoading) {
@@ -170,91 +203,22 @@ fun AppDetailScreen(
 
     if (showCategoryPicker) {
         CategoryPickerSheet(
-            options = state.categories,
+            title = "Move to…",
+            subtitle = state.displayName,
+            options = state.categories.map { CategoryPickerOption(it.id, it.name, it.colorToken) },
+            showSelection = true,
             selectedId = state.categoryId,
             onDismiss = { showCategoryPicker = false },
             onSelect = { id ->
                 viewModel.setCategory(id)
                 showCategoryPicker = false
             },
+            onCreateCategory = { name ->
+                viewModel.createCategoryAndAssign(name)
+                showCategoryPicker = false
+            },
         )
-    }
-}
-
-/** Category assignment sheet: every category plus the uncategorized residual. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CategoryPickerSheet(
-    options: List<com.sumi.feature.appdetail.CategoryOption>,
-    selectedId: String?,
-    onDismiss: () -> Unit,
-    onSelect: (String?) -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = SumiSpacing.screenHorizontal),
-        ) {
-            Text(text = "Category", style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(SumiSpacing.lg))
-            PickerRow(
-                name = "Uncategorized",
-                colorToken = "stone-1",
-                selected = selectedId == null,
-                onClick = { onSelect(null) },
-            )
-            options.forEach { option ->
-                PickerRow(
-                    name = option.name,
-                    colorToken = option.colorToken,
-                    selected = selectedId == option.id,
-                    onClick = { onSelect(option.id) },
-                )
-            }
-            Spacer(Modifier.height(SumiSpacing.xl))
-        }
-    }
-}
-
-@Composable
-private fun PickerRow(
-    name: String,
-    colorToken: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClickLabel = "Select $name", onClick = onClick)
-            .padding(vertical = SumiSpacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(PICKER_DOT)
-                .clip(CircleShape)
-                .background(categoryColorOrNeutral(colorToken)),
-        )
-        Text(
-            text = name,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = SumiSpacing.md),
-            maxLines = 1,
-        )
-        if (selected) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = "Selected",
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        }
     }
 }
 
 private val CATEGORY_DOT = 28.dp
-private val PICKER_DOT = 24.dp

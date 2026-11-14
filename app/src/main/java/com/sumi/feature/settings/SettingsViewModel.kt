@@ -3,6 +3,7 @@ package com.sumi.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sumi.core.datastore.PreferencesRepository
+import kotlinx.coroutines.flow.Flow
 import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
@@ -31,6 +32,13 @@ class SettingsViewModel @Inject constructor(
 
     private val _diagnosticsLines = MutableStateFlow<List<String>>(emptyList())
     val diagnosticsLines: StateFlow<List<String>> = _diagnosticsLines.asStateFlow()
+
+    /** Apps library: whether system apps appear mixed into the library. Default false. */
+    val showSystemApps: Flow<Boolean> = preferences.showSystemApps
+
+    fun setShowSystemApps(value: Boolean) {
+        viewModelScope.launch { preferences.setShowSystemApps(value) }
+    }
 
     init {
         viewModelScope.launch {
