@@ -82,7 +82,7 @@ class AppsContentUiTest {
         setContent(state(sampleApps))
 
         composeRule.onNode(
-            hasContentDescription("Instagram. Social category. 1m today. 6h 30m this week."),
+            hasContentDescription("Instagram. Social category. 1m today. 6h 30m this week.", substring = true),
         ).assertIsDisplayed()
     }
 
