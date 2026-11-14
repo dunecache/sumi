@@ -28,8 +28,8 @@ Entities marked **(added)** extend the original concept to cover cases the conce
 | `isHidden` | Boolean | User-hidden app |
 | `isCategoryUserSet` | Boolean **(added)** | Prevents default mapping from overwriting a user choice |
 | `isInstalled` | Boolean **(added)** | Keep history for uninstalled apps |
-| `isSystemApp` | Boolean **(schema v3)** | Launcher-visible system app; hidden from the Apps library by default (Settings → Apps → Show system apps). Collection and exclusions are unaffected |
-| `firstSeenAt` | Long **(schema v3)** | UTC ms the row was first created; drives the quiet "New" marker. 0 = unknown (pre-v3 rows never read as new) |
+| `isSystemApp` | Boolean **(schema v4)** | Launcher-visible system app; hidden from the Apps library by default (Settings → Apps → Show system apps). Collection and exclusions are unaffected |
+| `firstSeenAt` | Long **(schema v4)** | UTC ms the row was first created; drives the quiet "New" marker. 0 = unknown (pre-v4 rows never read as new) |
 
 Icons are loaded from `PackageManager` at display time and are not stored.
 
@@ -60,7 +60,6 @@ A session crossing midnight is stored once; aggregation splits its duration acro
 | `lastCollectedAt` | Long | UTC ms of last successful collection covering this day |
 
 ### 2.4 DailyAppUsage **(added)**
-
 Per-app per-day totals. Needed for the Apps list, weekly charts, and for historical days that only have `UsageStats` aggregates (no sessions).
 
 | Field | Type | Notes |
@@ -117,23 +116,31 @@ would be the extension path for per-app goals; it is not created in schema v2.
 - Exactly one of `packageName` / `categoryId` must be non-null (enforce in code and with a check constraint or DAO validation).
 - Used from V1 (goals) and V1.5 (soft limits).
 
-### 2.8 FocusSession
+### 2.8 FocusSession **(added, v3)**
+
+Shipped in migration 2→3 (`focus_sessions`, index on `startedAtUtcMs`). The planned
+per-app shape was dropped with M4's "no blocking" direction: a session is an activity
+the user is in, not a restriction on anything else. Drift awareness measures *leaving
+Sumi*, not which app the user went to.
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | Long (PK, auto) | |
-| `startTime` | Long | UTC ms |
-| `endTime` | Long? | null = active |
-| `status` | String | `ACTIVE`, `COMPLETED`, `ENDED_EARLY` (no "failed" state) |
+| `startedAtUtcMs` | Long | UTC ms |
+| `endedAtUtcMs` | Long? | **null while the session is open** — the open-session invariant (at most one row with `outcome = 'open'` at a time) |
+| `intendedMinutes` | Int | Minutes the user aimed for; doubles as the remembered default for the next session |
+| `exitCount` | Int | Gentle exits (a Sumi→other-app transition) observed during the session; never package names |
+| `outcome` | String | `open` (marker), `completed`, `ended_early`, `away_limit` (auto-end after 2 minutes away), `interrupted` (no end timestamp — the end instant is unknowable; never fabricated), `reboot` (sealed at the recorded boot instant) |
 
-### 2.9 FocusSessionApp **(added)**
+Timestamps are UTC; the trailing-7-day roll-up uses the same local-day boundaries as the
+aggregation pipeline. The daily goal is a different instrument (see ARCHITECTURE.md §14)
+and shares no state with these rows; starting/ending sessions never touches goal state.
 
-Selected apps for a focus session.
+### 2.9 FocusSessionApp — superseded, never built
 
-| Field | Type |
-|---|---|
-| `focusSessionId` | Long (FK, PK part) |
-| `packageName` | String (PK part) |
+The earlier draft paired sessions with a selected-app list. **Dropped by design**: Sumi
+does not block or target individual apps in Focus. Kept here only as a historical note;
+no such table exists.
 
 ### 2.10 CollectionState **(added)**
 
@@ -156,11 +163,15 @@ Single-row table for the collection cursor.
 | `notifications_enabled` | Boolean | Global switch, default off |
 | `daily_goal_minutes` | Int? | Daily screen-time intention in minutes; absent = no goal. Read alongside `daily_goal_enabled` |
 | `daily_goal_enabled` | Boolean | Default true. False = goal kept but paused; UI shows the disabled state. The goal gates nothing, ever (see ARCHITECTURE.md §14) |
-| `quiet_periods` | Serialized list | Start/end local times and days; small enough for DataStore |
-| `daily_intention` | String? + date key | Today's intention text |
-| `reminders_per_day_cap` | Int | Bounded notification rate |
-| `week_start_day` | Enum | |
-| `show_hidden_apps` | Boolean | |
+| `daily_intention` | String? | Focus-tab intention text, persisted only with its date |
+| `daily_intention_date` | String? | `YYYY-MM-DD` in the zone at save time; the intention renders on that day only, next day it starts blank |
+| `focus_last_duration_min` | Int | Remembered duration for the next session; default 25 |
+| `focus_reminder_enabled` | Boolean | Default false; one daily reminder at `focus_reminder_minute_of_day`, asked for POST_NOTIFICATIONS only when the user opts in (Android 13+) |
+| `focus_reminder_minute_of_day` | Int | Minutes after local midnight (0–1439); default 540 (09:00) |
+| `quiet_periods` | Serialized list | **Not yet implemented** |
+| `reminders_per_day_cap` | Int | **Not yet implemented** (M4) |
+| `week_start_day` | Enum | **Not yet implemented** |
+| `show_hidden_apps` | Boolean | **Not yet implemented** |
 
 Rule of thumb: preferences go to DataStore; anything queried, joined, or aggregated goes to Room.
 
@@ -171,8 +182,8 @@ AppCategory 1 ── * Application 1 ── * UsageSession
 Application 1 ── * DailyAppUsage
 Application 1 ── * HourlyUsage
 DailyUsage   1 ── * DailyAppUsage   (via dateKey)
-FocusSession 1 ── * FocusSessionApp * ── 1 Application
-UsageGoal * ── 0..1 Application / AppCategory
+FocusSession — standalone; no foreign keys (deliberately: holds no package data)
+UsageGoal * ── 0..1 Application / AppCategory   (reserved, not implemented)
 ```
 
 Foreign keys use `ON DELETE` rules that preserve history: deleting an `Application` row is not done; uninstalled apps are flagged `isInstalled = false`. Full data deletion truncates everything.
@@ -203,10 +214,12 @@ Foreign keys use `ON DELETE` rules that preserve history: deleting an `Applicati
 
 ## 8. Migrations and testing
 
-- `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets).
-- `MigrationTestHelper` test for every version bump (`androidTest/.../Migration12Test.kt` — written for 1→2; **not yet executed anywhere**, no device/emulator available — see ROADMAP.md. `Migration23Test.kt` — 2→3 rewritten schema coverage the same way). 2.json and 3.json were reconstructed to match the applied migrations (column lists, `DEFAULT 0`), since only 1.json had ever been committed; `identityHash` values in the JSON are placeholders and carry no validation semantics — Room builds the reference database from `createSql`.
-- DAO tests with an in-memory database for: idempotent upsert, midnight split queries, aggregate rebuild equality, cascade/flag behavior for uninstalled apps.
-- Seed data (categories) is inserted at bootstrap (`CategoryBootstrap`): fresh installs get the full taxonomy; existing installs get only the seeds that are new in their version (`ai`, `finance`, `browser`) — ids the user deleted are never re-added; user-created rows with a colliding id win. `INSERT … IGNORE` keeps it idempotent; `isUserCreated` rows are never reseeded or overwritten.
+- `exportSchema = true`; schemas committed to the repo. Room 2.6 writes them to a package-scoped path: `app/schemas/com.sumi.core.database.SumiDatabase/<version>.json` (the same layout `MigrationTestHelper` expects in androidTest assets). `1.json` (v1), `2.json` (category system), `3.json` (Focus sessions) and `4.json` (Apps columns) are all committed. `2.json`/`3.json`/`4.json` were reconstructed to match the applied migrations (column lists, `DEFAULT 0`, index DDL), since only `1.json` had ever been committed; `identityHash` values in the JSONs are placeholders and carry no validation semantics — Room builds the reference database from `createSql`. `kspDebugKotlin` on any machine with the SDK will overwrite them with the compiler's own exports.
+- `MigrationTestHelper` test for every version bump (`Migration12Test.kt` 1→2, `Migration23Test.kt` 2→3 Focus, `Migration34Test.kt` 3→4 Apps — **not yet executed anywhere**, no device/emulator available; `Migration23Test` also verifies the `index_focus_sessions_startedAtUtcMs` index and that existing rows survive; `Migration34Test` verifies the Apps columns land with `DEFAULT 0` — see ROADMAP.md).
+- DAO/repository tests with an in-memory database (`:app:testDebugUnitTest` → `data/focus/FocusSessionStoreTest`): open/close invariant, stale-close-on-restart, exit counting, double-close no-op, boot finalization at the recorded instant, trailing-7-day roll-up boundaries.
+- Migration 2→3 creates `focus_sessions` (+ index on `startedAtUtcMs`) and touches no other table; `outcome = 'open'` with NULL `endedAtUtcMs` is the single-open-session invariant, sealed by `FocusSessionRepository.startSession()` closing any existing open row first.
+- Migration 3→4 adds `isSystemApp` and `firstSeenAt` to `applications` (`INTEGER NOT NULL DEFAULT 0`) and touches nothing else; the Apps refresh also marks vanished packages `isInstalled = 0` (a behavioral change, not a schema change).
+- Seed data (categories) is inserted at bootstrap (`CategoryBootstrap`): fresh installs get the full taxonomy; existing installs get only the seeds that are new in their version (`ai`, `finance`, `browser`) — ids the user deleted are never re-added; user-created rows with a colliding id win. `INSERT … IGNORE` keeps it idempotent; `isUserCreated` rows are never reseeded or overwritten. Focus bootstrap: any open session whose start precedes the newest recorded boot instant is sealed as `reboot` at that instant (`CategoryBootstrap` → `FocusSessionRepository.finalizeOpenAfterReboot`); the boot receiver itself stays read-only.
 
 ## 9. Export format (M5)
 

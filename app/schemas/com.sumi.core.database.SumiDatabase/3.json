@@ -6,7 +6,7 @@
   "entities": [
    {
     "tableName": "applications",
-    "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packageName` TEXT NOT NULL, `displayName` TEXT NOT NULL, `categoryId` TEXT, `isHidden` INTEGER NOT NULL, `isCategoryUserSet` INTEGER NOT NULL, `isInstalled` INTEGER NOT NULL, `isSystemApp` INTEGER NOT NULL DEFAULT 0, `firstSeenAt` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`packageName`))",
+    "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packageName` TEXT NOT NULL, `displayName` TEXT NOT NULL, `categoryId` TEXT, `isHidden` INTEGER NOT NULL, `isCategoryUserSet` INTEGER NOT NULL, `isInstalled` INTEGER NOT NULL, PRIMARY KEY(`packageName`))",
     "fields": [
      {
       "fieldPath": "packageName",
@@ -41,18 +41,6 @@
      {
       "fieldPath": "isInstalled",
       "columnName": "isInstalled",
-      "affinity": "INTEGER",
-      "notNull": true
-     },
-     {
-      "fieldPath": "isSystemApp",
-      "columnName": "isSystemApp",
-      "affinity": "INTEGER",
-      "notNull": true
-     },
-     {
-      "fieldPath": "firstSeenAt",
-      "columnName": "firstSeenAt",
       "affinity": "INTEGER",
       "notNull": true
      }
@@ -379,6 +367,66 @@
      ]
     },
     "indices": [],
+    "foreignKeys": []
+   },
+   {
+    "tableName": "focus_sessions",
+    "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startedAtUtcMs` INTEGER NOT NULL, `endedAtUtcMs` INTEGER, `intendedMinutes` INTEGER NOT NULL, `exitCount` INTEGER NOT NULL, `outcome` TEXT NOT NULL)",
+    "fields": [
+     {
+      "fieldPath": "id",
+      "columnName": "id",
+      "affinity": "INTEGER",
+      "notNull": true
+     },
+     {
+      "fieldPath": "startedAtUtcMs",
+      "columnName": "startedAtUtcMs",
+      "affinity": "INTEGER",
+      "notNull": true
+     },
+     {
+      "fieldPath": "endedAtUtcMs",
+      "columnName": "endedAtUtcMs",
+      "affinity": "INTEGER",
+      "notNull": false
+     },
+     {
+      "fieldPath": "intendedMinutes",
+      "columnName": "intendedMinutes",
+      "affinity": "INTEGER",
+      "notNull": true
+     },
+     {
+      "fieldPath": "exitCount",
+      "columnName": "exitCount",
+      "affinity": "INTEGER",
+      "notNull": true
+     },
+     {
+      "fieldPath": "outcome",
+      "columnName": "outcome",
+      "affinity": "TEXT",
+      "notNull": true
+     }
+    ],
+    "primaryKey": {
+     "autoGenerate": true,
+     "columnNames": [
+      "id"
+     ]
+    },
+    "indices": [
+     {
+      "name": "index_focus_sessions_startedAtUtcMs",
+      "unique": false,
+      "columnNames": [
+       "startedAtUtcMs"
+      ],
+      "orders": [],
+      "createSql": "CREATE INDEX `index_focus_sessions_startedAtUtcMs` ON `${TABLE_NAME}` (`startedAtUtcMs`)"
+     }
+    ],
     "foreignKeys": []
    }
   ],

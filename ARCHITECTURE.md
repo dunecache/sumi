@@ -387,7 +387,105 @@ a correctness issue, not a cosmetic one: the numbers have to describe the user's
 count toward totals is a separate decision and is unchanged: hidden apps are still
 counted today.
 
-## 16. Apps library policy (implemented 2026-11, "Apps redesign")
+## 16. Focus sessions (implemented 2026-11)
+
+Focus is a practice, not a restriction surface. Starting, completing, or abandoning a
+session **never** touches the daily goal and never counts as "usage" anywhere else; the
+goal's instrument lives on Today (§14). A session ends with a fact, never a judgment:
+`completed`, `ended_early`, `away_limit`, `interrupted`, or `reboot` — there is no
+"failed" outcome and no score.
+
+### 16.1 Intention (per local day)
+
+The Focus tab holds today's intention, stored as `daily_intention` +
+`daily_intention_date` (`YYYY-MM-DD`, zone resolved at save time — same boundary rule as
+aggregation). A new day starts blank; the intention renders only on its own date; saving
+a blank clears it. The editor prefills only when the stored date is today.
+
+### 16.2 Sessions: storage and lifecycle
+
+Room `focus_sessions` (schema v3, migration 2→3). UTC timestamps throughout. The
+**open-session invariant** — at most one row with `outcome = 'open'` and a NULL
+`endedAtUtcMs` — is enforced in `FocusSessionRepository.startSession()`, which closes
+any existing open row as `ended_early` before inserting the new one. Table writes are
+indexed on `startedAtUtcMs`; the history feed (newest, limit 50) and the trailing-7-day
+roll-up (`weekStart` from `:domain` `FocusHistory`, same boundary rule as Insights)
+both read from it. The open/close state machine rules live in `:domain`
+(`FocusMath` — remaining time, completion, exits, progress) and are JVM-tested.
+
+### 16.3 The reliability layer — foreground service
+
+The session runs in `platform/focus/FocusSessionService`, a user-chosen foreground
+service with `SPECIAL_USE` type (countdown for a task the user explicitly started; not
+data sync, not media, not location). Two deliberate choices:
+
+- **Manifest** declares `foregroundServiceType="specialUse"` with the
+  `PROPERTY_SPECIAL_USE_FGS_SUBTYPE="focus_session_timer"` and the matching
+  `FOREGROUND_SERVICE_SPECIAL_USE` permission on Android 14+; the app also calls the
+  API-34 3-argument `startForeground` with the literal `0x10` on API 34+ only and the
+  deprecated 2-argument call below, so `minSdk = 26` devices are unaffected.
+- **Database is the source of truth, not the service.** The service reads the open row,
+  mounts an ongoing low-importance (silent, `onlyAlertOnce`) notification with the
+  remaining time — tappable, returns to Focus via the `open_focus` extra through
+  `MainActivity.onNewIntent` — and re-reads the row each tick. If the service or the
+  process is killed, the row outlives it: the app seals any open session whose start
+  precedes the newest recorded boot instant as `reboot` at that instant on the next cold
+  start (`CategoryBootstrap` → `FocusSessionRepository.finalizeOpenAfterReboot`). The
+  boot receiver itself records instants only. If no recorded boot follows the session's
+  start (OEM kill, archive), the row is sealed as `interrupted` with **no end
+  timestamp** — the actual end instant is unknowable and is never fabricated. The
+  history list labels these honestly ("Ended when the phone restarted", "Couldn't
+  confirm how it ended"), and interrupted rows are excluded from the weekly roll-up
+  rather than counted with a guessed end.
+
+### 16.4 Drift awareness — gentle exits
+
+While a session is open the service polls `UsageEvents` every **60 seconds** (coarse,
+battery-conscious — not a live tracker) and counts **gentle exits**: a transition from
+Sumi to any other app. An `ExitState` machine (`:domain` `FocusMath.ExitState`)
+guarantees staying away does not inflate the count, and returning to Sumi resets for the
+next leave. Screen events (no package) never count. After **2 cumulative minutes away**
+(`AUTO_END_AWAY_MS`, a named constant in `:domain`) the session ends with outcome
+`away_limit`. Drift data is **counts and timestamps only** — never package names,
+never windows. If usage access is revoked mid-session (or was never granted), exits
+simply aren't observed: the session still runs, the UI says so honestly. `UsageAccess`
+is re-checked at ~10 s cadence while on screen; drift awareness pauses silently on
+failure rather than guessing.
+
+### 16.5 The reminder (opt-in, bounded)
+
+One optional once-a-day reminder at a user-chosen local time (default 09:00, **off by
+default**), scheduled with WorkManager (`sumi_focus_reminder_daily`, periodic 24 h with
+initial delay to the next occurrence of the time); the worker re-checks the preference
+before posting and is a no-op otherwise. `POST_NOTIFICATIONS` is asked for **only when
+the user flips the reminder on** (Android 13+); denial leaves the reminder off with an
+explanation and a deep link to system notification settings. Copy invites ("Time for a
+session?"), never chases; the whole block hides itself when notifications are denied.
+
+### 16.6 Weekly "time in focus"
+
+`SUM of actual elapsed in sessions ended inside the trailing 7 local days`, computed at
+read time (`FocusHistory` in `:domain`, unit-tested; trailing window start via
+`LocalDate.minusDays`, start-of-day in the current zone) — same boundaries and
+formatting as Insights. No targets, no comparisons, no streaks. The history list shows
+up to 4 recent sessions: date, `aim` vs `actual`, exits, honest outcome labels for
+interrupted/reboot rows. Empty state: "No sessions yet — that's fine."
+
+### 16.7 Known limitations — focus, stated honestly
+
+- **Polling, not push.** Foreground-notification and drift updates ride a 1 s/60 s
+  cadence; exact wall-clock drift after process death is bounded by next-open healing,
+  not by surviving process death (Android does not keep FGS guaranteed either).
+- **WorkManager drift.** The reminder is minute-of-day at schedule time and drifts
+  slowly across DST and OEM batching; it is not an alarm and must not be treated as one.
+- **Device-specific.** OEMs with aggressive battery policies may kill the FGS; the
+  session then reads as `reboot`/`interrupted` honestly rather than silently.
+- **2-minute away threshold** is a named constant (`FocusMath.AUTO_END_AWAY_MS`), not a
+  user-tunable — changing it changes the product's promise, not just a preference.
+- **Manual verification pending.** None of this has run on a device or emulator in this
+  environment; see ROADMAP.md.
+
+## 17. Apps library policy (implemented 2026-11, "Apps redesign")
 
 The Apps destination is the categorization funnel: it answers "which applications account
 for my usage" and "is my library organized the way I want it", nothing else.
@@ -395,7 +493,7 @@ for my usage" and "is my library organized the way I want it", nothing else.
 **System-app policy.** Launchable system apps are **hidden from the Apps library by
 default**; Settings → Apps → *Show system apps* mixes them back in (no separate section —
 the row list stays one list). Detection flags `FLAG_SYSTEM | FLAG_UPDATED_SYSTEM_APP` at
-discovery time and refreshes the flag on every refresh (`isSystemApp`, schema v3). The
+discovery time and refreshes the flag on every refresh (`isSystemApp`, schema v4). The
 policy only affects *visibility*: system apps that are not Sumi/launcher/IME/SystemUI are
 still collected and counted exactly like user apps, and hiding them changes no total and
 no percentage. Collection and the §15 exclusion set are untouched; percentages on the
