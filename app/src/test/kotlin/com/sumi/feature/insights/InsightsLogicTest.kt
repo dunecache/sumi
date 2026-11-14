@@ -1,6 +1,8 @@
 package com.sumi.feature.insights
 
 import com.sumi.core.database.entity.AppCategory
+import com.sumi.core.usage.dayBars
+import com.sumi.core.usage.rangeCaption
 import com.sumi.core.database.entity.Application
 import com.sumi.domain.insights.InsightsRange
 import com.sumi.domain.usage.DailyAppUsage
