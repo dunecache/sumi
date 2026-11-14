@@ -112,12 +112,12 @@ class InsightsLogicTest {
     fun `pattern facts split morning and evening from hourly buckets`() {
         val hourly = listOf(
             HourlyUsage("2026-11-09", 7, "com.a", 600_000L),  // morning hour
-            HourlyUsage("2026-11-09", 18, "com.a", 900_000L), // evening hour
-            HourlyUsage("2026-11-10", 21, "com.a", 900_000L), // evening hour
+            HourlyUsage("2026-11-09", 18, "com.a", 800_000L), // evening hour
+            HourlyUsage("2026-11-10", 21, "com.a", 900_000L), // busiest evening hour
         )
         val facts = patternFacts(weekKeys, hourly, emptyMap())
         assertEquals(600_000L, facts.morningMs)
-        assertEquals(1_800_000L, facts.eveningMs)
+        assertEquals(1_700_000L, facts.eveningMs)
         assertEquals(21, facts.busiestHour)
         assertEquals(900_000L, facts.busiestHourMs)
     }
