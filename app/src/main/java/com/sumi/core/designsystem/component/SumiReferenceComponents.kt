@@ -380,7 +380,6 @@ fun SumiChip(
     val selectedFill = MaterialTheme.colorScheme.primary
     val selectedLabel = MaterialTheme.colorScheme.onPrimary
     val unselectedLabel = MaterialTheme.colorScheme.onSurfaceVariant
-    val scheme = MaterialTheme.colorScheme
     Row(
         modifier = modifier
             .height(CHIP_HEIGHT)
