@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Initial placeholder shown (a) by the launcher before our first RemoteViews pass lands and
+  (b) in the system widget picker as the preview image. Intentionally minimal: the Sumi
+  wordmark on the canonical light surface — deliberately no numbers, no progress, so no
+  fabricated statistic can ever be seen. RemoteViews-compatible (views-only subset).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:background="@color/sumi_widget_initial_bg">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textSize="11sp"
+        android:textColor="@color/sumi_widget_initial_muted"
+        android:textAllCaps="true"
+        android:fontFamily="sans-serif-medium" />
+</LinearLayout>

@@ -686,3 +686,48 @@ the card reconciles visibly against its own total.
 destination unfiltered (`apps?filter=all`); a matching-window sort cannot be expressed
 until that destination's sort model can pin a window (the Apps and Focus destinations
 have since shipped — see §16 and §17).
+
+
+## 19. Home-screen widget (Glance, implemented 2026-11-14)
+
+**Frame.** `GlanceAppWidget` (`androidx.glance:glance-appwidget` 1.2.0, newly added
+dependency — justification in the M6 PR) instead of hand-managed RemoteViews: responsive
+sizes, declarative content, the same Compose idiom as the app. Hosted by the launcher;
+Sumi owns only composition and refresh cadence, never the surface lifecycle.
+
+**Layering.** `platform/widget/`:
+- `SumiWidgetState.kt` — pure, android-free state machine (JVM unit tests in
+  `app/src/test/.../SumiWidgetStateTest.kt`): `resolveWidgetView(totalMs?, hasAccess,
+  goal)` → `Total | Pending | PermissionMissing`; `GoalProgressView` (percent, short
+  percent, neutral status line, clamped draw fraction, unclamped percent);
+  `pickBreakpoint` (140/250/330 dp); a11y summary strings. No Android imports.
+- `SumiWidget.kt` — the Glance renderer + `SumiWidgetEntryPoint` (Hilt entry point into
+  the SingletonComponent: `UsageRepository`, `PreferencesRepository`, `UsageAccessChecker`,
+  `Clock`, `TimeZoneProvider`) + `WidgetUpdater` (`refreshAsync` fire-and-forget,
+  `refreshNow` suspending).
+- `SumiWidgetReceiver` registered in the manifest (`APPWIDGET_UPDATE`, exported per the
+  AppWidget contract); `res/xml/sumi_widget_info.xml` (`updatePeriodMillis="0"`,
+  `resizeMode="horizontal|vertical"`, 2×2 default cells); static RemoteViews layout
+  shared by `initialLayout` and `previewLayout` — no numbers, so the picker cannot
+  show fabricated statistics.
+
+**Data.** Identical definition of "today" as the Today screen: `DateKey` for the
+device's zone at render time; `observeDailyTotal(key).first()` for the total;
+`dailyGoal` + `themeMode` from DataStore. Goal evaluation reuses `DailyGoal.evaluate`;
+the same `formatDuration` as everywhere. No widget-specific queries or stores.
+
+**Refresh triggers (all push; the widget never self-schedules).** App to foreground
+(STARTED), the 60 s visible tick while the app is open, theme change (setThemeMode then
+`refreshNow`), usage collection in `CollectionWorker` and visible collection, and the
+system's `APPWIDGET_UPDATE` via the receiver. `updatePeriodMillis=0` — no guaranteed
+cadence is claimed.
+
+**Theme.** Palette resolved at render time from the app's theme preference: System →
+current night setting; forced Light/Dark → forced palette. Between system day/night
+transitions and the next trigger the widget may briefly show the previous variant.
+
+**Known limitations (device-unverified).** Widget pixels are launcher-hosted: size
+breakpoint behavior, corner masking (Android 12+ system radius vs. the 16 dp clip on
+older hosts), focus/TalkBack traversal, real refresh cadence, and resize rendering were
+not exercised on a device or emulator in this change. CI verifies compile, lint, JUnit
+and the Robolectric suites only.

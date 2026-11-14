@@ -25,6 +25,7 @@ import com.sumi.feature.onboarding.OnboardingViewModel
 import com.sumi.feature.usage.UsageCollector
 import com.sumi.navigation.SumiApp
 import com.sumi.platform.notifications.SumiNotifications
+import com.sumi.platform.widget.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 onboardingViewModel.refreshUsageAccess()
                 usageCollector.collectOnForeground()
+                WidgetUpdater.refreshAsync(applicationContext)
             }
         }
         // While the app is visible, refresh on a slow timer so the figures for today
@@ -75,6 +77,9 @@ class MainActivity : ComponentActivity() {
                 while (true) {
                     delay(OPEN_TAIL_REFRESH_MS)
                     usageCollector.collectOnForeground()
+                    // Keep the home-screen widget in step while the app is open (the widget
+                    // never re-reads usage by itself; it re-renders on our triggers only).
+                    WidgetUpdater.refreshAsync(applicationContext)
                 }
             }
         }
@@ -104,7 +109,11 @@ class MainActivity : ComponentActivity() {
                         onboardingViewModel = onboardingViewModel,
                         openFocusRequest = openFocusRequest,
                         onThemeSelected = { mode ->
-                            lifecycleScope.launch { preferences.setThemeMode(mode) }
+                            lifecycleScope.launch {
+                                preferences.setThemeMode(mode)
+                                // Theme changed: re-render the widget so app and widget agree.
+                                WidgetUpdater.refreshNow(applicationContext)
+                            }
                         },
                     )
                 }

@@ -231,12 +231,30 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
 
+## M6 — Home screen widget (pulled forward 2026-11-14)
+*Goal: a quiet glanceable home-screen widget — today's total and optional goal progress — shipped ahead of the rest of the V2 backlog at the owner's request.*
+
+Design reference: adopted as `docs/WIDGET.md` (2026-11-14) — the resolved form of the pasted widget design standard, incl. the owner's §11 decisions. Implementation record: ARCHITECTURE.md §19; visual mapping: DESIGN.md §15.
+
+- [x] Glance foundation (`androidx.glance:glance-appwidget` 1.2.0; no other new dependencies)
+- [x] `AppWidgetProvider` metadata (2×2 default cells, `resizeMode="horizontal|vertical"`, `updatePeriodMillis=0`) + 12+ picker preview without fabricated statistics
+- [x] Responsive layouts via `SizeMode.Responsive` (Compact 140 dp · Medium 250 dp canonical · Large 330 dp)
+- [x] States rendered: normal+goal, normal no-goal, zero usage, Usage Access missing, pending first sync; goal exceeded in neutral wording only
+- [x] Theme follows app preference (System resolves night at render time; forced Light/Dark always forced); Kanso Matcha tokens; never red/terracotta on the widget
+- [x] A11y: single tappable surface, content description carries action + values; progress rule decorative
+- [x] Refresh push-driven: app foreground, 60 s visible tick, theme change, collection (foreground + worker), system APPWIDGET_UPDATE
+- [x] Pure state machine unit-tested on JVM (`SumiWidgetStateTest`)
+
+**Acceptance criteria**
+- CI green (build/test/lint); app still builds with no new permissions.
+- On-device: widget places, resizes without clipping at Compact, both themes, tap opens Today, talkback announced. **None of this was verified in the adopting change — everything on-device is open.**
+
 ## Later (V2 backlog, unscheduled)
 
 - Custom app groups
 - Flexible weekly goals
 - Advanced usage comparisons
-- Home screen widgets
+- ~~Home screen widgets~~ → shipped as M6 (2026-11-14)
 - Custom notification rules
 - Export usage reports
 - Local backups
@@ -281,3 +299,4 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 
 | 2026-11-14 | Onboarding gains an optional "Focus, gently" step (3 of 5) between Privacy and Usage Access (#25): one once-a-day reminder toggle (default off). It is the only new ask moment — flipping it launches POST_NOTIFICATIONS (API 33+), denying leaves it off with a quiet explanation; the rest of onboarding never prompts. Owner requested (notification ask was undiscoverable); rule 9 kept — no launch-time or bare onboarding prompt exists. |
 | 2026-11-14 | On-device review fix pass (#24): (1) Apps tab selection restored — bottom bar/rail compare against the destination hierarchy (the Apps destination is declared `apps?filter={filter}`, so the plain-route equality never matched); (2) day totals merged at read time — the 90-day UsageStats import only writes per-app rows, which made Insights show two totals on one screen and a fabricated "more than the previous 7 days" line; every total-driven surface now derives imported days from per-app sums; (3) Today's yesterday comparison made time-aware (sessions clipped to the same wall-clock time, "yesterday at this time"; omitted when yesterday holds no sessions); (4) Social card counts the apps beyond the top three ("and N more apps"); (5) Insights observations now label the session threshold ("any length — a glance counts"); (6) Focus launcher hides the custom-value readout when a preset is selected; (7) kspDebugKotlin now runs on this host (ad-hoc aarch64 aapt2 override, 4.json regenerated locally). NOT verified on device/emulator — service persistence, drift, tap routing, reboot seal, Apps/Insights redesigns all still unproven on a phone. |
+| 2026-11-14 | Home-screen widget pulled forward from the V2 backlog (owner decision): adopted as M6 + `docs/WIDGET.md` with the owner's §11 calls (total + optional goal progress · no variant picker · no category summary · no Focus action · no manual refresh · no Updated stamp). Glance 1.2.0 is the only new dependency; tapping the widget opens Today; system-sans total; no terracotta ever; refresh push-driven (foreground, 60 s tick, theme change, collection + worker, APPWIDGET_UPDATE); state machine JVM-tested; 12+ picker preview carries no numbers. NOT verified on any device/emulator: layout breakpoints, resize behavior, corner masking, TalkBack, refresh cadence. CI is the gate. |

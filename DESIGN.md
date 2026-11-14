@@ -325,3 +325,25 @@ Room migration tests, TalkBack behavior, and 200% font scale remain device/emula
 CI's Robolectric harness covers onboarding and Today states. The Apps tab light/dark review
 and the light counterpart of `surface-2` (module cards on a light elevated surface) remain
 open (the standard marks light-theme tabs unreviewed).
+
+
+## 15. Home-screen widget (adopted 2026-11-14)
+
+The widget design reference is canonical as `docs/WIDGET.md`; it is implemented as the
+M6 milestone in `ROADMAP.md` and intentionally shares the app's visual DNA:
+
+- Warm paper background (`#F4F1EA`) in light; deep forest (`#181F18`) in dark — the
+  canonical `background` tokens, not wallpaper-derived tints.
+- `SUMI` wordmark (sans caps, muted) over the dominant numeric total (bold sans,
+  28–36 sp); supporting lines 12 sp muted; a thin 3 dp goal rule in `accentStrong`
+  with a matcha-1 track. **No red/terracotta on the widget ever**, including over-goal.
+- 16 dp corner radius (`r-md`); no nested cards, pills, borders, or charts.
+- Theme follows the app preference (System resolves night mode at render time; forced
+  variants are always forced). Wallpaper color is never consulted.
+- No "Updated" timestamp, no Focus action, no configuration, no category summary.
+
+**Deviations (deliberate):** the sans voice renders as the platform sans (standard
+inferred Roboto), not Inter; RemoteViews offers no tabular-figure control, so durations
+do not force tabular numerals; the over-goal state shows the actual total with neutral
+wording (the in-app card may switch its rule to terracotta, the widget never does).
+Widget pixels are hosted by the launcher; device rendering is unverified here.

@@ -1,3 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#F6F2E8</color>
+
+    <!-- Widget initial/preview surface only (res/layout/widget_initial.xml). The live
+         widget renders canonical Kanso Matcha tokens directly (see SumiWidget.kt); these
+         two values exist because RemoteViews inflation needs resource colors. Static and
+         intentionally theme-free: this is the millisecond placeholder in the picker. -->
+    <color name="sumi_widget_initial_bg">#F4F1EA</color>
+    <color name="sumi_widget_initial_muted">#565145</color>
 </resources>

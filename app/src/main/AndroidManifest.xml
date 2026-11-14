@@ -79,6 +79,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Home-screen widget (design reference: docs/WIDGET.md). exported=true per the
+             AppWidget contract; only the system sends APPWIDGET_UPDATE. The widget reads no
+             new permissions and surfaces only what the Today screen already shows. -->
+        <receiver
+            android:name=".platform.widget.SumiWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sumi_widget_info" />
+        </receiver>
+
         <receiver
             android:name=".platform.usage.BootReceiver"
             android:exported="false">

@@ -17,6 +17,7 @@ room = "2.6.1"
 datastore = "1.1.1"
 coroutines = "1.9.0"
 work = "2.9.1"
+glance = "1.2.0"
 
 ktlint = "12.1.2"
 detekt = "1.23.7"
@@ -62,6 +63,7 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 
 work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }

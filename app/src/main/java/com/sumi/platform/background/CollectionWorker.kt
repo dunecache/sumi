@@ -7,6 +7,8 @@ import androidx.work.WorkerParameters
 import com.sumi.domain.common.Clock
 import com.sumi.domain.usage.UsageRepository
 import com.sumi.platform.usage.UsageAccessChecker
+import com.sumi.platform.widget.WidgetUpdater
+import android.util.Log
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -16,7 +18,7 @@ import dagger.assisted.AssistedInject
  */
 @HiltWorker
 class CollectionWorker @AssistedInject constructor(
-    @Assisted appContext: Context,
+    @Assisted private val appContext: Context,
     @Assisted params: WorkerParameters,
     private val repository: UsageRepository,
     private val clock: Clock,
@@ -24,11 +26,16 @@ class CollectionWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        if (!usageAccessChecker.hasUsageAccess()) return Result.success()
-        val now = clock.nowUtcMs()
-        // 7d retention guard: reconcile last 7 days plus overlap.
-        val from = now - SEVEN_DAYS_MS
-        repository.collectRecent(from, now)
+        // Widget refresh on every path: grant state can change while we run, and the
+        // widget honestly renders the permission explanation when access is absent.
+        if (usageAccessChecker.hasUsageAccess()) {
+            val now = clock.nowUtcMs()
+            // 7d retention guard: reconcile last 7 days plus overlap.
+            val from = now - SEVEN_DAYS_MS
+            repository.collectRecent(from, now)
+        }
+        runCatching { WidgetUpdater.refreshNow(appContext) }
+            .onFailure { Log.w("CollectionWorker", "widget refresh failed", it) }
         return Result.success()
     }
 
