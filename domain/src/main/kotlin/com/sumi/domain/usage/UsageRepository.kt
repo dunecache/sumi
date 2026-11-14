@@ -26,7 +26,7 @@ interface UsageRepository {
     /** Observed hourly buckets for [dateKey]. */
     fun observeHourlyUsage(dateKey: String): Flow<List<HourlyUsage>>
 
-    /** Observed hourly buckets across [dateKeys] (e.g. the trailing 30 days). */
+    /** Observed hourly buckets across [dateKeys] (e.g. the trailing week or 30 days). */
     fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>>
 
     /** Sessions overlapping [dateKey] (stored once; aggregation splits at midnight). */
@@ -34,9 +34,6 @@ interface UsageRepository {
 
     /** Sessions overlapping any of [dateKeys] (stored once; aggregation splits at midnight). */
     fun observeSessionsForDateKeys(dateKeys: List<String>): Flow<List<UsageSession>>
-
-    /** Observed hourly buckets for [dateKeys] (already split at hour boundaries). */
-    fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>>
 
     /** Observed sessions for one app on one day. */
     fun observeSessionsForPackageAndDate(packageName: String, dateKey: String): Flow<List<UsageSession>>

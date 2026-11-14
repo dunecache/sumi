@@ -99,13 +99,6 @@ class UsageRepositoryImpl @Inject constructor(
             list.map { DailyAppUsage(it.dateKey, it.packageName, it.durationMs, parseSource(it.source)) }
         }
 
-    override fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>> {
-        if (dateKeys.isEmpty()) return flowOf(emptyList())
-        return db.hourlyUsageDao().observeByDateKeys(dateKeys).map { list ->
-            list.map { HourlyUsage(it.dateKey, it.hour, it.packageName, it.durationMs) }
-        }
-    }
-
     private fun observeDailyAppUsageEntities(dateKey: String): Flow<List<EntityDailyAppUsage>> =
         db.dailyAppUsageDao().observeByDateKey(dateKey)
 
