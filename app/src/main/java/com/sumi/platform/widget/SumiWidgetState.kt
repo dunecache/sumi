@@ -44,9 +44,10 @@ internal data class GoalProgressView(
 )
 
 /** Widget breakpoint, picked from the size the launcher actually allotted. */
-internal enum class WidgetBreakpoint { COMPACT, MEDIUM, LARGE }
+internal enum class WidgetBreakpoint { SLIM, COMPACT, MEDIUM, LARGE }
 
 internal fun pickBreakpoint(widthDp: Int, heightDp: Int): WidgetBreakpoint = when {
+    heightDp < 80 -> WidgetBreakpoint.SLIM // one-row tile (any width)
     widthDp < 210 -> WidgetBreakpoint.COMPACT
     heightDp >= 140 -> WidgetBreakpoint.LARGE
     else -> WidgetBreakpoint.MEDIUM
@@ -98,10 +99,12 @@ internal const val ZERO_USAGE_LINE = "No usage recorded yet"
 /** Permission-missing copy; direct and actionable, no stale numbers. */
 internal const val PERMISSION_TITLE = "Sumi needs Usage Access to show today."
 internal const val PERMISSION_ACTION = "Open Sumi to enable it in Settings"
+internal const val PERMISSION_SHORT = "Sumi needs Usage Access"
 
 /** Data-pending placeholder; honest about the first sync. */
 internal const val PENDING_PLACEHOLDER = "—"
 internal const val PENDING_LINE = "Waiting for today's first sync"
+internal const val PENDING_SHORT = "Waiting for first sync"
 
 /** Tap route label for accessibility services (design reference §9). */
 internal const val OPEN_SUMI_LABEL = "Open Sumi — today's screen time"

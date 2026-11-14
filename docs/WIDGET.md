@@ -52,13 +52,15 @@ allotments, not fixed pixels, select the layout:
 
 | Breakpoint | Width | Height | Content |
 |---|---|---|---|
-| **Compact** | 140 dp | 110 dp | `SUMI`, total (28 sp), one status line. No bar. |
+| **Slim** | any | < 80 dp | One inline row: `SUMI` · total (20 sp) · status (11 sp). Status dropped below 210 dp. No bar. |
+| **Compact** | 140 dp | 110 dp | `SUMI`, total (30 sp), one status line. No bar. |
 | **Medium** *(canonical)* | 250 dp | 110 dp | `SUMI`, total (32 sp), 3 dp progress rule, one `percent · remaining` line. |
 | **Large** | 330 dp | 148 dp | `SUMI`, total (36 sp), 3 dp progress rule, full `62% of daily goal` line + status line. |
 
-- `resizeMode="horizontal|vertical"`; `minWidth`/`minHeight` = 140/110 dp; initial
+- `resizeMode="horizontal|vertical"`; `minWidth`/`minHeight` = 140/54 dp; initial
   footprint **4×2** (canonical medium landscape, §3.1 of the reference). Content is centered
-  on both axes; totals scale with the breakpoint (30/40/44 sp).
+  on both axes; totals scale with the breakpoint (20/30/40/44 sp). The 54 dp floor lets the
+  launcher place a one-row slim tile; default placement stays 4×2.
 - At minimum size: wordmark + total stay readable; the secondary line is removed before
   the total shrinks; labels never clip; no icon-only actions are substituted.
 - Compact omits the bar (and the percent) when legibility demands; the status line
