@@ -229,7 +229,9 @@ fun SumiApp(
                     // M3 NavigationBar customized per the reference standard §9.4: surface-bar
                     // strip + hairline edge, pill + filled icon + medium label = triple-coded
                     // selected state (F-08/F-20).
-                    val navPill = sumiExtendedColors().navPill
+                    val extended = sumiExtendedColors()
+                    val navPill = extended.navPill
+                    val onNavPill = extended.onNavPill
                     Column {
                         HorizontalDivider(
                             thickness = 1.dp,
@@ -262,8 +264,8 @@ fun SumiApp(
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     indicatorColor = navPill,
-                                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
-                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    selectedIconColor = onNavPill,
+                                    selectedTextColor = onNavPill,
                                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 ),
@@ -280,7 +282,9 @@ fun SumiApp(
                     .fillMaxSize(),
             ) {
                 if (showBottomBar && expanded) {
-                    val navPill = sumiExtendedColors().navPill
+                    val extended = sumiExtendedColors()
+                    val navPill = extended.navPill
+                    val onNavPill = extended.onNavPill
                     NavigationRail(containerColor = Color.Transparent) {
                         BottomDestinations.forEach { dest ->
                             val selected = isTabSelected(dest)
@@ -305,8 +309,8 @@ fun SumiApp(
                                 },
                                 colors = NavigationRailItemDefaults.colors(
                                     indicatorColor = navPill,
-                                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
-                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    selectedIconColor = onNavPill,
+                                    selectedTextColor = onNavPill,
                                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 ),
