@@ -26,10 +26,10 @@ import java.util.Locale
  * The ViewModel only wires flows; every rule that shapes a number lives here.
  */
 
-/** Hour buckets [inclusive..inclusive] treated as "morning". */
+/** Hour buckets (5 through 11 inclusive) treated as morning. */
 private val MORNING_HOURS = 5..11
 
-/** Hour buckets [inclusive..inclusive] treated as "evening". */
+/** Hour buckets (17 through 22 inclusive) treated as evening. */
 private val EVENING_HOURS = 17..22
 
 /** Minimum days of recorded data before pattern observations are shown. */
