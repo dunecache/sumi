@@ -23,6 +23,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 // Schema per DATA_MODEL.md. Migration 1→2 adds the category system (sortOrder, isUserCreated).
+// Migration 2→3 adds the Apps-redesign columns (isSystemApp, firstSeenAt).
 @Database(
     entities = [
         Application::class,
@@ -33,7 +34,7 @@ import javax.inject.Singleton
         AppCategory::class,
         CollectionState::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class SumiDatabase : RoomDatabase() {
@@ -52,7 +53,7 @@ abstract class SumiDatabase : RoomDatabase() {
             context.applicationContext,
             SumiDatabase::class.java,
             DB_NAME,
-        ).addMigrations(MIGRATION_1_2).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
 }
 
