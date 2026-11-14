@@ -101,6 +101,7 @@ data class SumiExtendedColors(
     val matchaTrack: Color, // matcha-1 — quiet track fill for the daily intention ring
     val terracotta: Color, // warning hue — used only for the over-goal state, never a category
     val navPill: Color, // bottom-nav active indicator pill (triple-coded selected state)
+    val onNavPill: Color, // icon + label on the active pill — always >= 7:1 against navPill
     val chartBar: Color, // chart bars and analytic progress fills
     val disabledFill: Color, // disabled control fill (reference standard §8.1)
     val disabledLabel: Color, // disabled control text
@@ -121,6 +122,7 @@ private val LightExtended = SumiExtendedColors(
     matchaTrack = SumiColorTokens.Matcha1Light,
     terracotta = SumiColorTokens.TerracottaLight,
     navPill = SumiColorTokens.SelectionLight, // light theme: matcha-1 pill (no separate measured value)
+    onNavPill = SumiColorTokens.OnBackgroundLight, // 10.6:1 on #DCE2D1
     chartBar = SumiColorTokens.ChartBarLight,
     disabledFill = SumiColorTokens.DisabledFillLight,
     disabledLabel = SumiColorTokens.DisabledLabelLight,
@@ -141,6 +143,7 @@ private val DarkExtended = SumiExtendedColors(
     matchaTrack = SumiColorTokens.Matcha1Dark,
     terracotta = SumiColorTokens.TerracottaDark,
     navPill = SumiColorTokens.Olive100Dark,
+    onNavPill = SumiColorTokens.OnAccentDark, // 8.7:1 on #E5EEE2
     chartBar = SumiColorTokens.ChartBarDark,
     disabledFill = SumiColorTokens.DisabledFillDark,
     disabledLabel = SumiColorTokens.DisabledLabelDark,
