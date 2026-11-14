@@ -353,11 +353,16 @@ private fun LauncherCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            Text(
-                text = "$selectedMinutes min",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            // The value readout repeats the preset chip when one is selected; show it
+            // only for a genuinely custom value. TalkBack still hears the slider's
+            // contentDescription either way.
+            if (selectedMinutes !in PRESET_MINUTES) {
+                Text(
+                    text = "$selectedMinutes min",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
         Slider(
             value = selectedMinutes.toFloat(),
