@@ -20,21 +20,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import java.util.Locale
 import com.sumi.core.designsystem.component.AppUsageRow
+import com.sumi.core.designsystem.component.DailyBars
 import com.sumi.core.designsystem.component.EmptyState
 import com.sumi.core.designsystem.component.LoadingState
 import com.sumi.core.designsystem.component.SumiCard
 import com.sumi.core.designsystem.component.SumiSectionHeader
-import com.sumi.core.designsystem.component.WeeklyBars
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.designsystem.theme.NumericLarge
-import com.sumi.domain.insights.Averages
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.domain.insights.Averages
 
 /**
- * Category detail: total usage, share of tracked time, the trailing week, and every
- * assigned app. Derives from the same per-app records as everything else; the week
- * series applies the *current* assignment (ARCHITECTURE.md §13 recalculation policy).
+ * Category detail: total for the selected range, share of tracked time, the daily trend,
+ * the neutral comparison against the equivalent previous window, and every assigned app.
+ * Derives from the same per-app records as everything else; the series applies the
+ * *current* assignment (ARCHITECTURE.md §13 recalculation policy).
  */
 @Composable
 fun CategoryDetailScreen(
@@ -87,50 +89,90 @@ internal fun CategoryDetailContent(
             }
             Spacer(Modifier.height(SumiSpacing.md))
             Text(
-                text = "Today",
+                text = state.rangeCaption.uppercase(Locale.getDefault()),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(text = formatDuration(state.todayMs), style = NumericLarge)
+            Text(text = formatDuration(state.rangeTotalMs), style = NumericLarge)
             Spacer(Modifier.height(SumiSpacing.xs))
             Text(
-                text = "${Averages.percentOfShare(state.todayShare)}% of tracked time today",
+                text = "${Averages.percentOfShare(state.rangeShare)}% of tracked time ${state.range.windowLabel}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            state.comparison?.let { comparison ->
+                Text(
+                    text = comparison,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-            Spacer(Modifier.height(SumiSpacing.xl))
-            SumiSectionHeader("THIS WEEK")
-            Spacer(Modifier.height(SumiSpacing.sm))
-            Text(
-                text = "${formatDuration(state.weekTotalMs)} in the trailing 7 days",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(SumiSpacing.sm))
-            SumiCard {
-                WeeklyBars(dailyTotals = state.week, caption = "Daily usage in ${state.name}")
+            if (state.rangeTotalMs > 0L) {
+                Spacer(Modifier.height(SumiSpacing.xl))
+                SumiSectionHeader("DAILY TREND")
+                Spacer(Modifier.height(SumiSpacing.sm))
+                SumiCard {
+                    Text(
+                        text = "Daily usage in ${state.name} across ${state.range.windowLabel}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(SumiSpacing.md))
+                    DailyBars(
+                        days = state.dayBars,
+                    )
+                    Spacer(Modifier.height(SumiSpacing.sm))
+                    state.mostActiveDayIndex?.let { index ->
+                        Text(
+                            text = "Most active day: ${state.dayLabels[index]} · ${formatDuration(state.series[index])}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    state.quietestDayIndex?.let { index ->
+                        Text(
+                            text = "Quietest day: ${state.dayLabels[index]} · ${formatDuration(state.series[index])}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(SumiSpacing.xl))
             SumiSectionHeader("APPS IN CATEGORY")
             Spacer(Modifier.height(SumiSpacing.sm))
+            Text(
+                text = "Usage across ${state.range.windowLabel}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(SumiSpacing.xs))
             if (state.apps.isEmpty()) {
                 Text(
                     text = "No apps assigned yet. Assign some from an app's detail screen.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            } else if (state.rangeTotalMs == 0L) {
+                Column {
+                    EmptyState(
+                        title = "No usage in this range",
+                        message = "Nothing was recorded for ${state.name} across ${state.range.windowLabel}.",
+                    )
+                }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(SumiSpacing.xs)) {
                     state.apps.forEach { app ->
                         AppUsageRow(
                             packageName = app.packageName,
                             displayName = app.displayName,
-                            durationMs = app.todayMs,
+                            durationMs = app.rangeMs,
                             shareOfTotal = app.shareOfTracked,
                             iconLoader = iconLoader,
                             onClick = { onOpenAppDetail(app.packageName) },
+                            sharePeriod = state.range.windowLabel.replaceFirstChar { it.lowercase() },
                         )
                     }
                 }
@@ -143,4 +185,3 @@ internal fun CategoryDetailContent(
         }
     }
 }
-

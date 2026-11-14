@@ -18,13 +18,35 @@ private fun sampleCategoryState() = CategoryDetailUiState(
     categoryId = "social",
     name = "Social",
     colorToken = "matcha-4",
-    todayMs = 3_000_000L, // 50m
-    todayShare = 0.71f,
-    week = listOf(2L, 1L, 4L, 3L, 6L, 5L, 5L).map { it * 600_000L },
-    weekTotalMs = 26_000_000L,
+    range = com.sumi.domain.insights.InsightsRange.WEEK,
+    rangeCaption = "Nov 8 – Nov 14, 2026",
+    rangeTotalMs = 3_000_000L * 7, // 5h 50m across the week
+    rangeShare = 0.41f,
+    comparison = "About 55m more than the previous 7 days.",
+    series = listOf(20L, 5L, 40L, 30L, 65L, 50L, 45L).map { it * 60_000L },
+    dayBars = listOf(
+        com.sumi.core.designsystem.component.DayBar("Su", 20L * 60_000L, false, "Sunday, 20m"),
+        com.sumi.core.designsystem.component.DayBar("Mo", 5L * 60_000L, false, "Monday, 5m"),
+        com.sumi.core.designsystem.component.DayBar("Tu", 40L * 60_000L, false, "Tuesday, 40m"),
+        com.sumi.core.designsystem.component.DayBar("We", 30L * 60_000L, false, "Wednesday, 30m"),
+        com.sumi.core.designsystem.component.DayBar("Th", 65L * 60_000L, false, "Thursday, 65m"),
+        com.sumi.core.designsystem.component.DayBar("Fr", 50L * 60_000L, false, "Friday, 50m"),
+        com.sumi.core.designsystem.component.DayBar("Sa", 45L * 60_000L, true, "Saturday, 45m, so far"),
+    ),
+    dayLabels = listOf(
+        "Sunday, Nov 8",
+        "Monday, Nov 9",
+        "Tuesday, Nov 10",
+        "Wednesday, Nov 11",
+        "Thursday, Nov 12",
+        "Friday, Nov 13",
+        "Saturday, Nov 14",
+    ),
+    mostActiveDayIndex = 4,
+    quietestDayIndex = 1,
     apps = listOf(
-        CategoryAppRow("com.sample.messages", "Messages", 1_800_000L, 0.43f),
-        CategoryAppRow("com.sample.feed", "Fieldnotes", 1_200_000L, 0.29f),
+        CategoryAppRow("com.sample.messages", "Messages", 1_800_000L * 7, 0.43f),
+        CategoryAppRow("com.sample.feed", "Fieldnotes", 1_200_000L * 7, 0.29f),
     ),
 )
 
