@@ -188,8 +188,7 @@ private fun palette(dark: Boolean): Palette = if (dark) {
     )
 }
 
-private fun ColorProvider(color: androidx.compose.ui.graphics.Color): ColorProvider =
-    ColorProvider(color.value)
+private fun cp(color: androidx.compose.ui.graphics.Color): ColorProvider = ColorProvider(color)
 
 @Composable
 @GlanceComposable
@@ -202,7 +201,7 @@ private fun WidgetContent(snapshot: WidgetSnapshot) {
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(palette.background))
+            .background(cp(palette.background))
             .cornerRadius(WIDGET_CORNER_RADIUS.dp)
             .clickable(actionStartActivity<MainActivity>())
             .semantics { contentDescription = accessibilitySummary(view) },
@@ -232,10 +231,10 @@ private fun TotalLayout(
     palette: Palette,
     breakpoint: WidgetBreakpoint,
 ) {
-    val onSurface = ColorProvider(palette.onSurface)
-    val muted = ColorProvider(palette.muted)
-    val progress = ColorProvider(palette.progress)
-    val track = ColorProvider(palette.track)
+    val onSurface = cp(palette.onSurface)
+    val muted = cp(palette.muted)
+    val progress = cp(palette.progress)
+    val track = cp(palette.track)
     val zero = view.totalMs == 0L
     val supporting = when {
         zero -> ZERO_USAGE_LINE
@@ -288,8 +287,8 @@ private fun TotalLayout(
 @Composable
 @GlanceComposable
 private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
-    val onSurface = ColorProvider(palette.onSurface)
-    val muted = ColorProvider(palette.muted)
+    val onSurface = cp(palette.onSurface)
+    val muted = cp(palette.muted)
     Column(
         modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -310,8 +309,8 @@ private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
 @Composable
 @GlanceComposable
 private fun PermissionLayout(palette: Palette, breakpoint: WidgetBreakpoint) {
-    val onSurface = ColorProvider(palette.onSurface)
-    val muted = ColorProvider(palette.muted)
+    val onSurface = cp(palette.onSurface)
+    val muted = cp(palette.muted)
     Column(
         modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
