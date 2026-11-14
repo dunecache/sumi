@@ -89,3 +89,30 @@ data class CollectionState(
     val lastTimeZoneId: String = "",
     val initialSyncCompleted: Boolean = false,
 )
+
+/** Outcomes a Focus session can end with. The OPEN marker means "still running". */
+object FocusOutcome {
+    const val OPEN = "open"
+    const val COMPLETED = "completed"
+    const val ENDED_EARLY = "ended_early"
+    const val AWAY_LIMIT = "away_limit"
+    const val INTERRUPTED = "interrupted"
+    const val REBOOT = "reboot"
+}
+
+/** A Focus session. Timestamps UTC epoch ms; ends exactly at wall-clock truth. */
+@Entity(
+    tableName = "focus_sessions",
+    indices = [Index("startedAtUtcMs")],
+)
+data class FocusSession(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val startedAtUtcMs: Long,
+    /** Null while running — unique "open session" marker (at most one row open at a time). */
+    val endedAtUtcMs: Long? = null,
+    /** Minutes the user aimed for; remembered as the default duration for the next session. */
+    val intendedMinutes: Int,
+    val exitCount: Int = 0,
+    /** See FocusOutcome; CLOSED after any ending. */
+    val outcome: String = FocusOutcome.OPEN,
+)

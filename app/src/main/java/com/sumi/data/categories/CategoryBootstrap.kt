@@ -1,6 +1,8 @@
 package com.sumi.data.categories
 
 import com.sumi.core.common.AppDispatchers
+import com.sumi.data.focus.FocusSessionRepository
+import com.sumi.domain.usage.RebootBoundarySource
 import com.sumi.domain.usage.UsageRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,15 +12,18 @@ import kotlinx.coroutines.launch
 
 /**
  * App-start bootstrap: seed categories, recolor untouched seeded rows, apply default
- * classification to never-classified rows, then backfill the install library — every
+ * classification to never-classified rows, backfill the install library — every
  * launchable installed app gets an `applications` row even before it produced any
- * usage. Runs once per process, off the main thread; failures are non-fatal (rows and
- * categories appear on next launch at the latest).
+ * usage — then seal any focus session orphaned by a reboot/process death. Runs once
+ * per process, off the main thread; failures are non-fatal (rows and categories appear
+ * on next launch at the latest).
  */
 @Singleton
 class CategoryBootstrap @Inject constructor(
     private val repository: CategoryRepository,
     private val usageRepository: UsageRepository,
+    private val focusSessions: FocusSessionRepository,
+    private val rebootSource: RebootBoundarySource,
     private val dispatchers: AppDispatchers,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
@@ -30,6 +35,7 @@ class CategoryBootstrap @Inject constructor(
                 repository.syncSeededColors()
                 repository.classifyPendingAssignments()
                 usageRepository.backfillInstalledApps()
+                focusSessions.finalizeOpenAfterReboot(rebootSource.rebootInstantsUtcMs())
             }
         }
     }

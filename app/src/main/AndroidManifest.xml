@@ -22,6 +22,11 @@
     <!-- Records reboot instants for usage-engine R5. No special permission needed. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Focus session foreground service (§16.5): user-chosen, start-and-end explicitly,
+         ongoing ongoing notification; anyone killing it leaves an honest interrupted row. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- App discovery per AGENTS.md §2: visibility of launchable apps only, via the
          launcher intent filter (never QUERY_ALL_PACKAGES). This is what lets Sumi
          resolve display labels and launcher icons (platform/applications) for
@@ -81,6 +86,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Foreground service for an active Focus session. SPECIAL_USE per Android 14:
+             persistent user-chosen countdown; not data sync, not location, not media. -->
+        <service
+            android:name=".platform.focus.FocusSessionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:targetApi="35">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="focus_session_timer" />
+        </service>
     </application>
 
 </manifest>
