@@ -11,6 +11,9 @@ interface UsageRepository {
     /** Observed daily total for [dateKey]; emits null until data exists. */
     fun observeDailyTotal(dateKey: String): Flow<DailyUsage?>
 
+    /** Observed daily totals for [dateKeys], oldest first; days without records are absent. */
+    fun observeDailyTotalsRange(dateKeys: List<String>): Flow<List<DailyUsage>>
+
     /** Observed per-app totals for [dateKey], sorted by duration desc. */
     fun observeDailyAppUsage(dateKey: String): Flow<List<DailyAppUsage>>
 
@@ -23,11 +26,14 @@ interface UsageRepository {
     /** Observed hourly buckets for [dateKey]. */
     fun observeHourlyUsage(dateKey: String): Flow<List<HourlyUsage>>
 
-    /** Observed hourly buckets across [dateKeys] (e.g. the trailing 30 days). */
+    /** Observed hourly buckets across [dateKeys] (e.g. the trailing week or 30 days). */
     fun observeHourlyUsageRange(dateKeys: List<String>): Flow<List<HourlyUsage>>
 
     /** Sessions overlapping [dateKey] (stored once; aggregation splits at midnight). */
     fun observeSessionsForDate(dateKey: String): Flow<List<UsageSession>>
+
+    /** Sessions overlapping any of [dateKeys] (stored once; aggregation splits at midnight). */
+    fun observeSessionsForDateKeys(dateKeys: List<String>): Flow<List<UsageSession>>
 
     /** Observed sessions for one app on one day. */
     fun observeSessionsForPackageAndDate(packageName: String, dateKey: String): Flow<List<UsageSession>>

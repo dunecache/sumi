@@ -9,9 +9,6 @@ import com.sumi.core.designsystem.component.CategorySegment
 import com.sumi.core.designsystem.component.formatDuration
 import com.sumi.core.datastore.PreferencesRepository
 import com.sumi.data.categories.CategoryRepository
-import com.sumi.data.categories.DefaultCategories
-import com.sumi.domain.categories.AppUsage
-import com.sumi.domain.categories.CategoryAnalytics
 import com.sumi.domain.common.Clock
 import com.sumi.domain.common.DateKey
 import com.sumi.domain.common.TimeZoneProvider
@@ -148,38 +145,22 @@ class TodayViewModel @Inject constructor(
     )
 }
 
-/** Milliseconds per minute for comparison math and summary thresholds. */
+/** Milliseconds per minute for summary thresholds. */
 private const val MILLIS_PER_MINUTE = 60_000L
-
-/** Deltas under this many minutes read as "about the same" (no noise for tiny changes). */
-private const val SIMILAR_THRESHOLD_MINUTES = 5L
 
 /**
  * Neutral previous-day comparison (DESIGN.md §5.1-4: no up/down arrows in red/green):
- * deltas under five minutes read as unchanged; otherwise the magnitude is reused from
- * [formatDuration] — "About 20m less than yesterday." / "About 2h 15m more than yesterday."
+ * delegates to the shared [NeutralComparison] rule with "yesterday" as the window label.
  */
-internal fun yesterdayComparison(todayMs: Long, yesterdayMs: Long): String {
-    val delta = todayMs - yesterdayMs
-    val absMinutes = kotlin.math.abs(delta) / MILLIS_PER_MINUTE
-    if (absMinutes < SIMILAR_THRESHOLD_MINUTES) return "About the same as yesterday."
-    val amount = formatDuration(absMinutes * MILLIS_PER_MINUTE)
-    return if (delta < 0) "About $amount less than yesterday." else "About $amount more than yesterday."
-}
+internal fun yesterdayComparison(todayMs: Long, yesterdayMs: Long): String =
+    com.sumi.domain.insights.NeutralComparison.neutralComparison(todayMs, yesterdayMs, "yesterday")
 
 /**
  * Sums per-app hourly buckets into 24 wall-clock totals for the timeline strip.
- * Hour values from aggregation are always 0–23 (zone `hour`); values outside that range
- * are clamped defensively so malformed rows can never crash rendering.
+ * Delegates to the shared derivation (ARCHITECTURE.md §16); kept for local call sites.
  */
-internal fun hourlyTotals(hourly: List<HourlyUsage>): List<Long> {
-    val totals = MutableList(TodayUiState.HOURS_PER_DAY) { 0L }
-    for (row in hourly) {
-        val index = row.hour.coerceIn(0, TodayUiState.HOURS_PER_DAY - 1)
-        totals[index] += row.durationMs.coerceAtLeast(0L)
-    }
-    return totals
-}
+internal fun hourlyTotals(hourly: List<HourlyUsage>): List<Long> =
+    com.sumi.core.usage.hourlyTotals(hourly)
 
 /**
  * Calm summary templates (navigation/Today reference §3.7), in priority order:
@@ -193,74 +174,21 @@ internal fun observationFor(totalMs: Long, mostUsed: List<MostUsedApp>): String?
 }
 
 /**
- * Top-5 most-used apps (navigation/Today reference §3.5): duration descending with an
- * alphabetical tiebreak, friendly display labels, and package-tail disambiguation when two
- * packages resolve to the same display name (`android (system)`).
+ * Top-5 most-used apps (navigation/Today reference §3.5). Delegates to the shared
+ * derivation; kept as the local entry point used by tests and the screen.
  */
 internal fun mostUsedApps(
     perApp: List<DailyAppUsage>,
     applications: List<Application>,
-): List<MostUsedApp> {
-    if (perApp.isEmpty()) return emptyList()
-    val labels = applications.associate { it.packageName to it.displayName }
-    val names = perApp.associate { usage ->
-        usage.packageName to (labels[usage.packageName] ?: usage.packageName.substringAfterLast('.'))
-    }
-    val nameCounts = names.values.groupingBy { it }.eachCount()
-    return perApp
-        .sortedWith(
-            compareByDescending<DailyAppUsage> { it.durationMs }
-                .thenBy { names.getValue(it.packageName) },
-        )
-        .take(5)
-        .map { usage ->
-            val name = names.getValue(usage.packageName)
-            val display = if (nameCounts.getValue(name) > 1) {
-                "$name (${disambiguationSuffix(usage.packageName, name)})"
-            } else {
-                name
-            }
-            MostUsedApp(usage.packageName, display, usage.durationMs)
-        }
-}
+): List<MostUsedApp> = com.sumi.core.usage.topApps(perApp, applications, limit = 5)
+    .map { MostUsedApp(it.packageName, it.displayName, it.durationMs) }
 
 /**
  * Derives the display segments for the category bar from today's per-app usage and the
- * current assignment. Seeded defaults act as a fallback name/color source so the bar
- * still renders sensibly in the brief window before [CategoryRepository] finishes seeding.
+ * current assignment. Delegates to the shared derivation; see ARCHITECTURE.md §16.
  */
 internal fun categorySegments(
     perApp: List<DailyAppUsage>,
     applications: List<Application>,
     categories: List<AppCategory>,
-): List<CategorySegment> {
-    if (perApp.isEmpty()) return emptyList()
-    val fallbackNames = DefaultCategories.ALL.associate { it.id to it.name }
-    val fallbackColors = DefaultCategories.ALL.associate { it.id to it.colorToken }
-    val nameById = fallbackNames + categories.associate { it.id to it.name }
-    val colorById = fallbackColors + categories.associate { it.id to it.colorToken }
-    val assignment = applications.associate { it.packageName to it.categoryId }
-    val breakdown = CategoryAnalytics.breakdown(
-        perApp = perApp.map { AppUsage(it.packageName, it.durationMs) },
-        categoryNames = nameById,
-        assignment = assignment,
-    )
-    val total = breakdown.totalDurationMs
-    return breakdown.categories.map { usage ->
-        CategorySegment(
-            categoryId = usage.categoryId,
-            name = usage.name,
-            durationMs = usage.durationMs,
-            share = if (total > 0L) usage.durationMs.toFloat() / total.toFloat() else 0f,
-            colorToken = usage.categoryId?.let { colorById[it] } ?: "stone-1",
-        )
-    }
-}
-
-/** Package-tail suffix per §3.5; falls back to the parent segment (or "system") when the tail equals the name. */
-private fun disambiguationSuffix(packageName: String, name: String): String {
-    val tail = packageName.substringAfterLast('.')
-    if (!tail.equals(name, ignoreCase = true)) return tail
-    val head = packageName.substringBeforeLast('.')
-    return head.substringAfterLast('.', "system")
-}
+): List<CategorySegment> = com.sumi.core.usage.categorySegments(perApp, applications, categories)

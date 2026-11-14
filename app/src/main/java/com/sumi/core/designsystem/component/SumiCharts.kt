@@ -4,8 +4,10 @@ import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.NumericBody
@@ -336,4 +339,175 @@ private const val HOURS_PER_DAY = 24
 private val HOUR_MARKERS = listOf(0, 6, 12, 18, 24)
 private val TIMELINE_HEIGHT = 64.dp
 private val WEEKLY_HEIGHT = 96.dp
+
+/**
+ * One bar per day of any Insights range. The current, still-in-progress day renders in
+ * accent at reduced opacity so a partial day never reads as a complete one; the selected
+ * bar renders in full accent; the remainder uses the quiet container tone. Zero-usage days
+ * get a dashed ghost stub so "nothing recorded" is never mistaken for "error". When
+ * [onSelect] is provided each slot becomes a ≥48dp touch target speaking its takeaway
+ * ("Friday, 8h 12m (so far)"); otherwise the chart is display-only. Reduced-motion
+ * respected by construction (no entrance sweep).
+ */
+@Composable
+fun DailyBars(
+    days: List<DayBar>,
+    selectedIndex: Int? = null,
+    onSelect: ((Int?) -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    averageMs: Long? = null,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    val ghost = MaterialTheme.colorScheme.onSurfaceVariant
+    val barColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val averageColor = MaterialTheme.colorScheme.outline
+    val barHeight = RATIO_BAR_HEIGHT
+    val max = days.maxOfOrNull { it.valueMs }?.takeIf { it > 0 } ?: 1L
+    val stride = labelStride(days.size)
+
+    val description = run {
+        val busiest = days.withIndex().maxByOrNull { it.value.valueMs }?.takeIf { it.value.valueMs > 0 }
+        when (busiest) {
+            null -> "Daily screen time: no usage recorded"
+            else -> "Daily screen time: busiest on ${days[busiest.index].contentDescription.substringBefore(',')}"
+        }
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.fillMaxWidth().height(barHeight)) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(barHeight)
+                    .semantics { contentDescription = description },
+            ) {
+                val slot = size.width / days.size.coerceAtLeast(1)
+                val barWidth = slot * 0.62f
+                val ghostStroke = Stroke(
+                    width = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f)),
+                )
+                days.forEachIndexed { index, day ->
+                    val left = index * slot + slot * 0.19f
+                    when {
+                        day.valueMs <= 0L -> {
+                            val stub = 6.dp.toPx()
+                            drawRoundRect(
+                                color = ghost,
+                                topLeft = Offset(left, size.height - stub),
+                                size = Size(barWidth, stub),
+                                cornerRadius = CornerRadius(4f, 4f),
+                                style = ghostStroke,
+                            )
+                        }
+                        index == selectedIndex -> {
+                            drawRoundRect(
+                                color = accent,
+                                topLeft = Offset(
+                                    left,
+                                    size.height - barHeightFraction(day.valueMs, max) * size.height,
+                                ),
+                                size = Size(barWidth, barHeightFraction(day.valueMs, max) * size.height),
+                                cornerRadius = CornerRadius(5f, 5f),
+                            )
+                        }
+                        day.isPartial -> {
+                            drawRoundRect(
+                                color = accent.copy(alpha = 0.45f),
+                                topLeft = Offset(
+                                    left,
+                                    size.height - barHeightFraction(day.valueMs, max) * size.height,
+                                ),
+                                size = Size(barWidth, barHeightFraction(day.valueMs, max) * size.height),
+                                cornerRadius = CornerRadius(5f, 5f),
+                            )
+                        }
+                        else -> {
+                            drawRoundRect(
+                                color = barColor,
+                                topLeft = Offset(
+                                    left,
+                                    size.height - barHeightFraction(day.valueMs, max) * size.height,
+                                ),
+                                size = Size(barWidth, barHeightFraction(day.valueMs, max) * size.height),
+                                cornerRadius = CornerRadius(5f, 5f),
+                            )
+                        }
+                    }
+                }
+                averageMs?.takeIf { it > 0L && it < max }?.let { avg ->
+                    val y = size.height * (1f - (avg.toFloat() / max.toFloat())).coerceIn(0f, 1f)
+                    drawLine(
+                        color = averageColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 2.dp.toPx(),
+                    )
+                }
+            }
+            if (onSelect != null) {
+                // Transparent selection layer: real semantics per bar, ≥48dp effective height.
+                Row(modifier = Modifier.fillMaxWidth().height(barHeight)) {
+                    days.forEachIndexed { index, day ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(barHeight)
+                                .clickable { onSelect(if (selectedIndex == index) null else index) }
+                                .semantics {
+                                    contentDescription = if (selectedIndex == index) {
+                                        "${day.contentDescription}, selected"
+                                    } else {
+                                        day.contentDescription
+                                    }
+                                },
+                        )
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = SumiSpacing.xs),
+        ) {
+            days.forEachIndexed { index, day ->
+                Text(
+                    text = if (index % stride == 0) day.label else "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (index == days.lastIndex && days[index].isPartial) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** One bar of [DailyBars]. `isPartial` marks today, which is still in progress. */
+data class DayBar(
+    val label: String,
+    val valueMs: Long,
+    val isPartial: Boolean,
+    /** Spoken takeaway: "Friday, 8 hours 12 minutes" (+ ", so far" when partial). */
+    val contentDescription: String,
+)
+
+/** Minimum visible bar fraction; tiny days stay honest sliver minimums, never zero height. */
+private fun barHeightFraction(valueMs: Long, max: Long): Float =
+    (valueMs.toFloat() / max.toFloat()).coerceIn(0.02f, 1f)
+
+/** Label cadence: every bar up to 7, every second up to 14, every fifth beyond that. */
+private fun labelStride(size: Int): Int = when {
+    size <= 7 -> 1
+    size <= 14 -> 2
+    else -> 5
+}
+
+private val RATIO_BAR_HEIGHT = 96.dp
+
 private val TREND_HEIGHT = 88.dp

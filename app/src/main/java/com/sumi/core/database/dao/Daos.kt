@@ -113,6 +113,9 @@ interface UsageSessionDao {
     @Query("SELECT * FROM usage_sessions WHERE dateKey = :dateKey ORDER BY startTime")
     fun observeByDateKey(dateKey: String): Flow<List<UsageSession>>
 
+    @Query("SELECT * FROM usage_sessions WHERE dateKey IN (:dateKeys) ORDER BY startTime")
+    fun observeByDateKeys(dateKeys: List<String>): Flow<List<UsageSession>>
+
     @Query("SELECT * FROM usage_sessions WHERE packageName = :packageName AND dateKey = :dateKey")
     suspend fun getByPackageAndDateKey(packageName: String, dateKey: String): List<UsageSession>
 
@@ -149,6 +152,9 @@ interface DailyUsageDao {
 
     @Query("SELECT * FROM daily_usage ORDER BY dateKey DESC")
     fun observeAll(): Flow<List<DailyUsage>>
+
+    @Query("SELECT * FROM daily_usage WHERE dateKey IN (:dateKeys)")
+    fun observeByDateKeys(dateKeys: List<String>): Flow<List<DailyUsage>>
 
     @Query("DELETE FROM daily_usage WHERE dateKey IN (:dateKeys)")
     suspend fun deleteByDateKeys(dateKeys: List<String>)

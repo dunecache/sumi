@@ -27,7 +27,12 @@ data class InsightsSummary(
 
 object InsightsEngine {
 
-    /** Deterministic rules over sessions + aggregates in [zone]. No psychological claims. */
+    /**
+     * Deterministic rules over sessions + aggregates in [zone]. No psychological claims.
+     * [includeAverage] and [includeTimeOfDay] default to true; callers that surface the
+     * same figures in a dedicated overview/patterns block pass false so no number appears
+     * twice with two different windows.
+     */
     fun summarize(
         sessions: List<UsageSession>,
         dailyTotals: List<DailyUsage>,
@@ -37,6 +42,8 @@ object InsightsEngine {
         /** Trailing-week total for the average figure (zeros included) and its window. */
         windowTotalMs: Long,
         windowDays: Int,
+        includeAverage: Boolean = true,
+        includeTimeOfDay: Boolean = true,
     ): InsightsSummary {
         val insights = mutableListOf<Insight>()
         val durations = sessions.map { it.durationMs(nowUtcMs) }
@@ -56,7 +63,9 @@ object InsightsEngine {
                 "Your longest uninterrupted session was ${format(longest)}.",
             )
         }
-        if (windowDays > 0) {
+        // Window days of 1 make the "average" identical to the total — the overview owns
+        // that figure; repeating it here would say the same thing twice.
+        if (includeAverage && windowDays > 1) {
             // Window is stated in the copy; zeros are included — a quiet day is still a day.
             val avg = Averages.dailyAverage(windowTotalMs, windowDays)
             insights += Insight(
@@ -65,11 +74,15 @@ object InsightsEngine {
             )
         }
         // Time-of-day rhythm: peak hour from hourly buckets.
-        val peakHour = hourly
-            .groupBy { it.hour }
-            .mapValues { (_, rows) -> rows.sumOf { it.durationMs } }
-            .maxByOrNull { it.value }
-            ?.key
+        val peakHour = if (includeTimeOfDay) {
+            hourly
+                .groupBy { it.hour }
+                .mapValues { (_, rows) -> rows.sumOf { it.durationMs } }
+                .maxByOrNull { it.value }
+                ?.key
+        } else {
+            null
+        }
         if (peakHour != null) {
             insights += Insight(
                 InsightKind.FACT,
