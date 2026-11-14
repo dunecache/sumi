@@ -337,6 +337,8 @@ M6 milestone in `ROADMAP.md` and intentionally shares the app's visual DNA:
 - `SUMI` wordmark (sans caps, muted) over the dominant numeric total (bold sans,
   28–36 sp); supporting lines 12 sp muted; a thin 3 dp goal rule in `accentStrong`
   with a matcha-1 track. **No red/terracotta on the widget ever**, including over-goal.
+- Default footprint **4×2** (canonical medium landscape); content centered on both axes;
+  totals scale 30/40/44 sp by breakpoint.
 - 16 dp corner radius (`r-md`); no nested cards, pills, borders, or charts.
 - Theme follows the app preference (System resolves night mode at render time; forced
   variants are always forced). Wallpaper color is never consulted.
