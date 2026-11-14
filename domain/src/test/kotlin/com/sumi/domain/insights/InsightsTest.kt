@@ -78,6 +78,45 @@ class InsightsTest {
     }
 
     @Test
+    fun `average is omitted for one-day windows and by flag`() {
+        val sessions = listOf(UsageSession("com.a", start, start + 3_600_000L, isEstimated = false))
+        val oneDay = InsightsEngine.summarize(
+            sessions, emptyList(), emptyList(), zone, start + 20 * 60_000L,
+            windowTotalMs = 3_600_000L,
+            windowDays = 1,
+        )
+        assertThat(oneDay.insights.none { "average" in it.text }).isTrue()
+
+        val suppressed = InsightsEngine.summarize(
+            sessions, emptyList(), emptyList(), zone, start + 20 * 60_000L,
+            windowTotalMs = 3_600_000L,
+            windowDays = 7,
+            includeAverage = false,
+        )
+        assertThat(suppressed.insights.none { "average" in it.text }).isTrue()
+    }
+
+    @Test
+    fun `includeTimeOfDay false drops the peak-hour observations`() {
+        val hourly = listOf(HourlyUsage("2026-11-06", 21, "com.a", 900_000L))
+        val visible = InsightsEngine.summarize(
+            emptyList(), emptyList(), hourly, zone, start,
+            windowTotalMs = 900_000L,
+            windowDays = 7,
+        )
+        assertThat(visible.insights.any { "around" in it.text }).isTrue()
+
+        val hidden = InsightsEngine.summarize(
+            emptyList(), emptyList(), hourly, zone, start,
+            windowTotalMs = 900_000L,
+            windowDays = 7,
+            includeTimeOfDay = false,
+        )
+        assertThat(hidden.insights.none { "around" in it.text }).isTrue()
+        assertThat(hidden.insights.none { it.kind == InsightKind.INTERPRETATION }).isTrue()
+    }
+
+    @Test
     fun `no psychological claims`() {
         val sessions = listOf(UsageSession("com.a", start, start + 5_000L * 60_000L, isEstimated = true))
         val daily = listOf(DailyUsage("2026-11-06", 1L, start))

@@ -10,7 +10,8 @@ import kotlin.math.roundToInt
  *   functions only do deterministic integer math. Zero-usage days are included —
  *   a quiet day is still a day (the old engine silently excluded them).
  * - Percentages share one denominator — the bucket's window total tracked usage
- *   (uncategorized included) — and one rounding rule: whole percents, half-up,
+ *   (uncategorized included) — and one rounding rule, the shared whole percent of
+ *   [percentOf] / [percentOfShare] (Kotlin `roundToInt`, round-half-even at exact .5),
  *   clamped at 0..100.
  */
 object Averages {
