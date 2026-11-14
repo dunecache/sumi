@@ -270,7 +270,13 @@ private fun TotalLayout(
             )
             Spacer(GlanceModifier.height(4.dp))
         }
-        Text(supportingLine, style = TextStyle(color = muted, fontSize = 12.sp))
+        if (breakpoint == WidgetBreakpoint.LARGE && view.goal != null && !zero) {
+            // Large breakpoints get the full reference copy in two calm lines.
+            Text(view.goal.percentText, style = TextStyle(color = muted, fontSize = 12.sp))
+            Text(supporting, style = TextStyle(color = muted, fontSize = 12.sp))
+        } else {
+            Text(supportingLine, style = TextStyle(color = muted, fontSize = 12.sp))
+        }
     }
 }
 
