@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.core.designsystem.theme.sumiExtendedColors
 import com.sumi.core.designsystem.theme.categoryColorOrNeutral
 import com.sumi.domain.insights.Averages
 
@@ -237,7 +238,7 @@ fun ProportionalUsageBar(share: Float, modifier: Modifier = Modifier) {
                 .fillMaxWidth(share.coerceIn(0f, 1f))
                 .height(USAGE_BAR_HEIGHT)
                 .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary),
+                .background(sumiExtendedColors().chartBar),
         )
     }
 }

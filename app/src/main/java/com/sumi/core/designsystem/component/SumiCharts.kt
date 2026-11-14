@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sumi.core.designsystem.theme.NumericBody
 import com.sumi.core.designsystem.theme.SumiSpacing
+import com.sumi.core.designsystem.theme.sumiExtendedColors
 import com.sumi.domain.insights.Averages
 import java.time.format.TextStyle
 import java.util.Locale
@@ -64,7 +65,8 @@ fun TimelineStrip(
     val peak = totals.withIndex().maxByOrNull { it.value }?.takeIf { it.value > 0L }
     var selectedHour by remember { mutableStateOf<Int?>(null) }
 
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = MaterialTheme.colorScheme.primary // selection marker only
+    val bar = sumiExtendedColors().chartBar
     val ghost = MaterialTheme.colorScheme.onSurfaceVariant
     val idleLine = if (peak == null) {
         "No usage recorded yet today"
@@ -127,9 +129,9 @@ fun TimelineStrip(
                         )
                     }
                     index == peak?.index -> {
-                        // The one emphasized bar: full accent.
+                        // The one emphasized bar: full chart-bar tone.
                         drawRoundRect(
-                            color = accent,
+                            color = bar,
                             topLeft = Offset(left, 0f),
                             size = Size(barWidth, size.height),
                             cornerRadius = CornerRadius(4f, 4f),
@@ -139,7 +141,7 @@ fun TimelineStrip(
                         val barHeight = (size.height * (value.toFloat() / max.toFloat()))
                             .coerceAtLeast(2f)
                         drawRoundRect(
-                            color = accent.copy(alpha = 0.5f),
+                            color = bar.copy(alpha = 0.55f),
                             topLeft = Offset(left, size.height - barHeight),
                             size = Size(barWidth, barHeight),
                             cornerRadius = CornerRadius(4f, 4f),
@@ -201,7 +203,7 @@ fun WeeklyBars(
     // One honest rule: the average is the total divided by the window, quiet days included.
     val average = if (totals.isNotEmpty()) Averages.dailyAverage(totals) else null
     val accent = MaterialTheme.colorScheme.primary
-    val barColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val barColor = sumiExtendedColors().chartBar
     val averageColor = MaterialTheme.colorScheme.outline
 
     val busiestIndex = totals.withIndex().maxByOrNull { it.value }?.takeIf { it.value > 0 }?.index
@@ -290,7 +292,7 @@ fun DailyTrendBars(
     if (totals.isEmpty()) return
     val max = totals.maxOrNull()?.takeIf { it > 0 } ?: 1L
     val accent = MaterialTheme.colorScheme.primary
-    val barColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val barColor = sumiExtendedColors().chartBar
     val averageColor = MaterialTheme.colorScheme.outline
     val average = Averages.dailyAverage(totals)
     val activeDays = totals.count { it > 0L }
@@ -359,7 +361,7 @@ fun DailyBars(
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val ghost = MaterialTheme.colorScheme.onSurfaceVariant
-    val barColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val barColor = sumiExtendedColors().chartBar
     val averageColor = MaterialTheme.colorScheme.outline
     val barHeight = RATIO_BAR_HEIGHT
     val max = days.maxOfOrNull { it.valueMs }?.takeIf { it > 0 } ?: 1L
