@@ -11,7 +11,7 @@ import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -340,7 +340,7 @@ private fun AppRow(
         modifier = GlanceModifier
             .fillMaxWidth()
             .height(rowHeight.dp)
-            .clickable(actionStartActivity(rowIntent, actionParametersOf()))
+            .clickable(androidx.glance.appwidget.action.actionStartActivity(rowIntent, actionParametersOf()))
             .semantics { contentDescription = "Open ${row.displayName} — ${row.durationText} today" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -366,7 +366,7 @@ private fun AppRow(
                     style = TextStyle(
                         color = cp(snap.palette.monogramOn(segmentArgb)),
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     ),
                 )
             }

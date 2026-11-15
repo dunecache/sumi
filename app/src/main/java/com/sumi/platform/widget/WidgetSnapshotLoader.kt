@@ -180,7 +180,8 @@ internal object WidgetSnapshotLoader {
         // The serif anchor: bundled Literata. Glance `Text` cannot carry it (system fonts
         // only), so it is drawn in the app process and shown as an image (§11).
         val literata = runCatching {
-            Typeface.create(context.resources, com.sumi.R.font.literata_regular, Typeface.NORMAL)
+            // Resources.getFont exists since API 26 and resolves the bundled Literata TTF.
+            context.resources.getFont(com.sumi.R.font.literata_regular)
         }.getOrDefault(Typeface.SERIF)
         val totalText = (view as? WidgetView.Total)?.totalText ?: ""
         val totalBitmapBase = if (view is WidgetView.Total) {
