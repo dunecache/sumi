@@ -32,7 +32,6 @@ class NeutralComparisonTest {
         assertThat(NeutralComparison.neutralComparison(5L * 60_000L * 60, 0L, "yesterday"))
             .isEqualTo("About 5h more than yesterday.")
     }
-}
 
     @Test
     fun `widget percent band reads deltas as unchanged inside ten percent`() {
@@ -64,3 +63,4 @@ class NeutralComparisonTest {
             ),
         ).isEqualTo("About 2h 40m more than yesterday at this time.")
     }
+}
