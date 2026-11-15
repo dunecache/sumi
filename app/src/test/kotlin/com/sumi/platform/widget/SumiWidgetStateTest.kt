@@ -4,6 +4,7 @@ import com.sumi.core.database.entity.AppCategory
 import com.sumi.core.database.entity.Application
 import com.sumi.core.datastore.DailyGoalConfig
 import com.sumi.domain.usage.DailyAppUsage
+import com.sumi.domain.usage.DailyAppUsageSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -24,7 +25,7 @@ class SumiWidgetStateTest {
         Application(packageName = pkg, displayName = name, categoryId = categoryId)
 
     private fun perApp(vararg pairs: Pair<String, Long>): List<DailyAppUsage> =
-        pairs.map { DailyAppUsage("2026-11-15", it.first, it.second, "SESSIONS") }
+        pairs.map { DailyAppUsage("2026-11-15", it.first, it.second, DailyAppUsageSource.SESSIONS) }
 
     private val categories = listOf(
         AppCategory("social", "Social", "matcha-4", sortOrder = 0, isUserCreated = false),
