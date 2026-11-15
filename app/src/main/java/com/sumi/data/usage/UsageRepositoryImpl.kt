@@ -202,6 +202,9 @@ class UsageRepositoryImpl @Inject constructor(
      * (bounded below by the platform's event-retention floor) to now, reconcile in one
      * transaction, then advance the cursor.
      */
+    override suspend fun lastSuccessfulCollectionUtcMs(): Long? =
+        withContext(dispatchers.io) { collectionDao.get()?.lastEventTimeCollected?.takeIf { it > 0L } }
+
     override suspend fun collectRecent(fromUtcMs: Long, toUtcMs: Long) =
         withContext(dispatchers.io) {
             mutex.withLock { collectRecentLocked(fromUtcMs, toUtcMs) }

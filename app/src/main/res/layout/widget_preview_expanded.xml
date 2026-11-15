@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Picker preview for the expanded widget ("Sumi — Screen time (expanded)"). Spec: docs/WIDGET.md (v3, §6).
+  SAMPLE PREVIEW CONTENT — not live data; picker thumbnails only. Bar segments match the sample
+  row proportions (45/30/15% + remainder); names and times are placeholders.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_preview_bg">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Screen time"
+        android:letterSpacing="0.04"
+        android:textSize="10sp"
+        android:textColor="@color/sumi_preview_muted" />
+
+    <TextView
+        android:layout_marginTop="2dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="2h 30m"
+        android:textStyle="bold"
+        android:textSize="30sp"
+        android:typeface="serif"
+        android:textColor="@color/sumi_preview_on" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="About the same as yesterday at this time."
+        android:textSize="11sp"
+        android:textColor="@color/sumi_preview_muted" />
+
+    <!-- Sample segmented bar (8dp, segments match rows below). -->
+    <LinearLayout
+        android:layout_marginTop="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:orientation="horizontal">
+
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="45" android:background="@color/sumi_preview_seg1" />
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="30" android:background="@color/sumi_preview_seg2" />
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="15" android:background="@color/sumi_preview_seg3" />
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="10" android:background="@color/sumi_preview_remainder" />
+    </LinearLayout>
+
+    <!-- Sample rows (icon placeholder + name + duration). -->
+    <LinearLayout
+        android:layout_marginTop="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <View android:layout_width="24dp" android:layout_height="24dp"
+                android:background="@drawable/preview_dot_1" />
+            <TextView
+                android:layout_marginStart="10dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Video app"
+                android:textSize="12sp"
+                android:textColor="@color/sumi_preview_on" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1h 08m"
+                android:textSize="12sp"
+                android:textColor="@color/sumi_preview_muted" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <View android:layout_width="24dp" android:layout_height="24dp"
+                android:background="@drawable/preview_dot_2" />
+            <TextView
+                android:layout_marginStart="10dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Docs editor"
+                android:textSize="12sp"
+                android:textColor="@color/sumi_preview_on" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="45m"
+                android:textSize="12sp"
+                android:textColor="@color/sumi_preview_muted" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <View android:layout_width="24dp" android:layout_height="24dp"
+                android:background="@drawable/preview_dot_3" />
+            <TextView
+                android:layout_marginStart="10dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Mail client"
+                android:textSize="12sp"
+                android:textColor="@color/sumi_preview_on" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="22m"
+                android:textSize="12sp"
+                android:textColor="@color/sumi_preview_muted" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

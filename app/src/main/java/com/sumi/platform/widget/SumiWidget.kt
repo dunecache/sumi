@@ -1,411 +1,91 @@
 package com.sumi.platform.widget
 
 import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.Composable
-import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
-import androidx.glance.GlanceModifier
-import androidx.glance.LocalSize
-import androidx.glance.action.actionStartActivity
-import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
-import androidx.glance.background
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.width
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.semantics.contentDescription
-import androidx.glance.semantics.semantics
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
-import com.sumi.MainActivity
-import com.sumi.core.datastore.DailyGoalConfig
-import com.sumi.core.datastore.PreferencesRepository
-import com.sumi.core.datastore.ThemeMode
-import com.sumi.core.designsystem.component.formatDuration
-import com.sumi.core.designsystem.theme.SumiColorTokens
-import com.sumi.domain.common.Clock
-import com.sumi.domain.common.DateKey
-import com.sumi.domain.common.TimeZoneProvider
-import com.sumi.domain.usage.UsageRepository
-import com.sumi.platform.usage.UsageAccessChecker
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-
-/** Resting radius for the widget surface (Sumi r-md = 16 dp). */
-private const val WIDGET_CORNER_RADIUS = 16
 
 /**
- * The Sumi home-screen widget (docs/WIDGET.md): today's screen time, a thin goal
- * progress rule when a daily goal exists, and a calm supporting line. Never a mini
- * Today screen; tapping anywhere opens Sumi, which lands on Today.
- *
- * Theme policy (widget reference §4.3): the widget renders from the app's theme
- * preference — [ThemeMode.SYSTEM] resolves the current system night setting at render
- * time — on the same refresh cadence as the app (open/foreground, usage collection,
- * theme change, plus the 15-minute collection safety net). Forced light/dark always
- * renders the forced variant. Widget pixels are hosted by the launcher; rendering was
- * not verified on a device in this change.
+ * The Sumi home-screen widgets (docs/WIDGET.md v3 — "Screen time"): two picker entries,
+ * one render core. Both mirror Today's numbers and refresh wherever the app's data
+ * changes; neither computes its own statistics.
  */
-class SumiWidget : GlanceAppWidget() {
+class CompactScreenTimeWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
-            DpSize(WIDTH_COMPACT.dp, HEIGHT_SLIM.dp),
-            DpSize(WIDTH_MEDIUM.dp, HEIGHT_SLIM.dp),
-            DpSize(WIDTH_LARGE.dp, HEIGHT_SLIM.dp),
-            DpSize(WIDTH_COMPACT.dp, HEIGHT_BASELINE.dp),
-            DpSize(WIDTH_MEDIUM.dp, HEIGHT_BASELINE.dp),
-            DpSize(WIDTH_LARGE.dp, HEIGHT_LARGE.dp),
+            DpSize(SIZE_4X1.dp, SIZE_1_HEIGHT.dp),
+            DpSize(SIZE_3X1.dp, SIZE_1_HEIGHT.dp), // placement floor; tightens padding
         ),
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = WidgetSnapshotLoader.load(context)
-        provideContent { WidgetContent(snapshot) }
+        provideContent { CompactWidgetContent(snapshot) }
     }
 
     private companion object {
-        const val WIDTH_COMPACT = 140
-        const val WIDTH_MEDIUM = 250
-        const val WIDTH_LARGE = 330
-        const val HEIGHT_SLIM = 54
-        const val HEIGHT_BASELINE = 110
-        const val HEIGHT_LARGE = 148
+        const val SIZE_4X1 = 270
+        const val SIZE_3X1 = 180
+        const val SIZE_1_HEIGHT = 72
     }
 }
 
-/** Receiver registered in the manifest; the system instantiates it via reflection. */
-class SumiWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = SumiWidget()
+/** Receiver registered in the manifest for the compact entry. */
+class SumiCompactWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = CompactScreenTimeWidget()
 }
 
-/** Everything the renderer needs, loaded off the composable via the Hilt entry point. */
-internal data class WidgetSnapshot(
-    val hasUsageAccess: Boolean,
-    /** null when no aggregate row exists yet (pending first sync). */
-    val totalMs: Long?,
-    val goal: DailyGoalConfig,
-    val darkTheme: Boolean,
-)
+class ExpandedScreenTimeWidget : GlanceAppWidget() {
 
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-internal interface SumiWidgetEntryPoint {
-    fun usageRepository(): UsageRepository
-    fun preferencesRepository(): PreferencesRepository
-    fun usageAccessChecker(): UsageAccessChecker
-    fun clock(): Clock
-    fun timeZoneProvider(): TimeZoneProvider
-}
+    override val sizeMode: SizeMode = SizeMode.Responsive(
+        setOf(
+            DpSize(SIZE_4X2_W.dp, SIZE_4X2_H.dp),
+            DpSize(SIZE_4X2_W.dp, SIZE_TALL.dp),
+        ),
+    )
 
-internal object WidgetSnapshotLoader {
-    suspend fun load(context: Context): WidgetSnapshot {
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            SumiWidgetEntryPoint::class.java,
-        )
-        val preferences = entryPoint.preferencesRepository()
-        val themeMode = preferences.themeMode.first()
-        val systemDark = (
-            context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-            ) == Configuration.UI_MODE_NIGHT_YES
-        val dark = when (themeMode) {
-            ThemeMode.LIGHT -> false
-            ThemeMode.DARK -> true
-            ThemeMode.SYSTEM -> systemDark
-        }
-        val today = DateKey.of(
-            entryPoint.clock().nowUtcMs(),
-            entryPoint.timeZoneProvider().currentZone(),
-        )
-        val total = entryPoint.usageRepository().observeDailyTotal(today).first()
-        return WidgetSnapshot(
-            hasUsageAccess = entryPoint.usageAccessChecker().hasUsageAccess(),
-            totalMs = total?.totalDurationMs,
-            goal = preferences.dailyGoal.first(),
-            darkTheme = dark,
-        )
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val snapshot = WidgetSnapshotLoader.load(context)
+        provideContent { ExpandedWidgetContent(snapshot) }
+    }
+
+    private companion object {
+        const val SIZE_4X2_W = 250
+        const val SIZE_4X2_H = 140
+        const val SIZE_TALL = 210
     }
 }
 
-/** Refresh hook for paths that may change what the widget shows. */
+/** Receiver registered in the manifest for the expanded entry. */
+class SumiExpandedWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = ExpandedScreenTimeWidget()
+}
+
+/** Refresh hook for every path that may change what a widget shows. */
 internal object WidgetUpdater {
-    /** Fire-and-forget (app open, resume, 60 s tick, theme change). */
+    /** Fire-and-forget (app open, resume, 60 s tick, theme change, goal change). */
     fun refreshAsync(context: Context) {
-        CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            .launch { SumiWidget().updateAll(context.applicationContext) }
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            runCatching {
+                CompactScreenTimeWidget().updateAll(context.applicationContext)
+                ExpandedScreenTimeWidget().updateAll(context.applicationContext)
+            }
+        }
     }
 
-    /** Suspending (collection worker, where we are already off the main thread). */
+    /** Suspending (collection worker / widget refresh worker, already off the main thread). */
     suspend fun refreshNow(context: Context) {
-        SumiWidget().updateAll(context.applicationContext)
-    }
-}
-
-private data class Palette(
-    val background: androidx.compose.ui.graphics.Color,
-    val onSurface: androidx.compose.ui.graphics.Color,
-    val muted: androidx.compose.ui.graphics.Color,
-    val progress: androidx.compose.ui.graphics.Color,
-    val track: androidx.compose.ui.graphics.Color,
-)
-
-private fun palette(dark: Boolean): Palette = if (dark) {
-    Palette(
-        background = SumiColorTokens.BackgroundDark,
-        onSurface = SumiColorTokens.OnBackgroundDark,
-        muted = SumiColorTokens.OnSurfaceMutedDark,
-        progress = SumiColorTokens.AccentStrongDark,
-        track = SumiColorTokens.Matcha1Dark,
-    )
-} else {
-    Palette(
-        background = SumiColorTokens.BackgroundLight,
-        onSurface = SumiColorTokens.OnBackgroundLight,
-        muted = SumiColorTokens.OnSurfaceMutedLight,
-        progress = SumiColorTokens.AccentStrongLight,
-        track = SumiColorTokens.Matcha1Light,
-    )
-}
-
-private fun cp(color: androidx.compose.ui.graphics.Color): ColorProvider = ColorProvider(color)
-
-@Composable
-@GlanceComposable
-private fun WidgetContent(snapshot: WidgetSnapshot) {
-    val palette = palette(snapshot.darkTheme)
-    val view = resolveWidgetView(snapshot.totalMs, snapshot.hasUsageAccess, snapshot.goal)
-    val size = LocalSize.current
-    val breakpoint = pickBreakpoint(size.width.value.toInt(), size.height.value.toInt())
-
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(cp(palette.background))
-            .cornerRadius(WIDGET_CORNER_RADIUS.dp)
-            .clickable(actionStartActivity<MainActivity>())
-            .semantics { contentDescription = accessibilitySummary(view) },
-        contentAlignment = Alignment.Center,
-    ) {
-        val narrow = size.width.value < 210f
-        when (view) {
-            is WidgetView.Total -> TotalLayout(view, palette, breakpoint, narrow)
-            WidgetView.Pending -> PendingLayout(palette, breakpoint, narrow)
-            WidgetView.PermissionMissing -> PermissionLayout(palette, breakpoint, narrow)
-        }
-    }
-}
-
-@Composable
-@GlanceComposable
-private fun WordMark(muted: ColorProvider) {
-    Text(
-        WORD_MARK,
-        style = TextStyle(color = muted, fontSize = 11.sp, fontWeight = FontWeight.Medium),
-    )
-}
-
-@Composable
-@GlanceComposable
-private fun TotalLayout(
-    view: WidgetView.Total,
-    palette: Palette,
-    breakpoint: WidgetBreakpoint,
-    narrow: Boolean = false,
-) {
-    val onSurface = cp(palette.onSurface)
-    val muted = cp(palette.muted)
-    val progress = cp(palette.progress)
-    val track = cp(palette.track)
-    val zero = view.totalMs == 0L
-    val supporting = when {
-        zero -> ZERO_USAGE_LINE
-        view.goal != null -> view.goal.statusLine
-        else -> NO_GOAL_LINE
-    }
-    val percentPart = view.goal?.let {
-        when {
-            zero -> null
-            breakpoint == WidgetBreakpoint.LARGE -> it.percentText
-            else -> it.percentShort
-        }
-    }
-    val supportingLine = listOfNotNull(percentPart, supporting).joinToString(" · ")
-    val totalSp = when (breakpoint) {
-        WidgetBreakpoint.COMPACT -> 30.sp
-        WidgetBreakpoint.MEDIUM -> 40.sp
-        WidgetBreakpoint.LARGE -> 44.sp
-        WidgetBreakpoint.SLIM -> 20.sp // handled by the Row branch below
-    }
-
-    if (breakpoint == WidgetBreakpoint.SLIM) {
-        // One-row tile: wordmark · total · status inline, centered. Below 210 dp the
-        // status line is dropped before the total loses legibility (reference §3.4).
-        Row(
-            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                WORD_MARK,
-                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Medium),
-            )
-            Spacer(GlanceModifier.width(14.dp))
-            Text(
-                formatDuration(view.totalMs),
-                style = TextStyle(color = onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold),
-            )
-            if (!narrow) {
-                Spacer(GlanceModifier.width(16.dp))
-                Text(
-                    supportingLine,
-                    style = TextStyle(color = muted, fontSize = 11.sp),
-                )
-            }
-        }
-        return
-    }
-
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        WordMark(muted)
-        Text(
-            formatDuration(view.totalMs),
-            style = TextStyle(color = onSurface, fontSize = totalSp, fontWeight = FontWeight.Bold),
-        )
-        if (breakpoint != WidgetBreakpoint.COMPACT && view.goal != null) {
-            Spacer(GlanceModifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = view.goal.fraction,
-                modifier = GlanceModifier.fillMaxWidth().height(3.dp),
-                color = progress,
-                backgroundColor = track,
-            )
-            Spacer(GlanceModifier.height(4.dp))
-        }
-        if (breakpoint == WidgetBreakpoint.LARGE && view.goal != null && !zero) {
-            // Large breakpoints get the full reference copy in two calm lines.
-            Text(view.goal.percentText, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
-            Text(supporting, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
-        } else {
-            Text(
-                supportingLine,
-                style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center),
-            )
-        }
-    }
-}
-
-@Composable
-@GlanceComposable
-private fun PendingLayout(palette: Palette, breakpoint: WidgetBreakpoint, narrow: Boolean = false) {
-    val onSurface = cp(palette.onSurface)
-    val muted = cp(palette.muted)
-    if (breakpoint == WidgetBreakpoint.SLIM) {
-        Row(
-            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                WORD_MARK,
-                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Medium),
-            )
-            Spacer(GlanceModifier.width(12.dp))
-            Text(
-                PENDING_PLACEHOLDER,
-                style = TextStyle(color = onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold),
-            )
-            if (!narrow) {
-                Spacer(GlanceModifier.width(12.dp))
-                Text(PENDING_SHORT, style = TextStyle(color = muted, fontSize = 11.sp))
-            }
-        }
-        return
-    }
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        WordMark(muted)
-        Text(
-            PENDING_PLACEHOLDER,
-            style = TextStyle(
-                color = onSurface,
-                fontSize = if (breakpoint == WidgetBreakpoint.LARGE) 36.sp else 32.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-        )
-        Text(PENDING_LINE, style = TextStyle(color = muted, fontSize = 12.sp, textAlign = TextAlign.Center))
-    }
-}
-
-@Composable
-@GlanceComposable
-private fun PermissionLayout(palette: Palette, breakpoint: WidgetBreakpoint, narrow: Boolean = false) {
-    val onSurface = cp(palette.onSurface)
-    val muted = cp(palette.muted)
-    if (breakpoint == WidgetBreakpoint.SLIM) {
-        // Permission state never shows numbers; slim shows the wordmark and a short ask.
-        Row(
-            modifier = GlanceModifier.fillMaxSize().padding(horizontal = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                WORD_MARK,
-                style = TextStyle(color = muted, fontSize = 10.sp, fontWeight = FontWeight.Medium),
-            )
-            Spacer(GlanceModifier.width(12.dp))
-            Text(
-                PERMISSION_SHORT,
-                style = TextStyle(color = onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium),
-            )
-        }
-        return
-    }
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        WordMark(muted)
-        Text(
-            PERMISSION_TITLE,
-            style = TextStyle(color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
-        )
-        Spacer(GlanceModifier.height(4.dp))
-        Text(PERMISSION_ACTION, style = TextStyle(color = muted, fontSize = 11.sp, textAlign = TextAlign.Center))
+        CompactScreenTimeWidget().updateAll(context.applicationContext)
+        ExpandedScreenTimeWidget().updateAll(context.applicationContext)
     }
 }

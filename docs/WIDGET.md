@@ -1,186 +1,293 @@
-# Widget design reference — Sumi home-screen widget
+# Widget design reference — Sumi home-screen widgets
 
-**Artifact:** Android launcher home-screen widget
-**Product:** Sumi
-**Adopted:** 2026-11-14 (source: the pasted "Android Home Screen Widget Design Reference",
-now canonical; resolves the reference's own §11 open decisions)
-**Implementation:** M6 in `ROADMAP.md` (pulled forward from the Later backlog at the
-owner's request)
+**Version 3 — "Screen time" compact & expanded, 2026-11-15.** Implements the pasted
+"Sumi — Home-Screen Widget Reference: Screen Time (Compact & Expanded)". Supersedes
+the single quiet-glance widget (v1, 2026-11-14; history in git) and the discarded v2
+editorial sketch (never shipped, 2026-11-15). Two picker entries are published; they
+share one render core and one content logic.
+
+**Artifacts:** two Android launcher widgets (Jetpack Glance 1.2.0), package
+`app/src/main/java/com/sumi/platform/widget/`.
+**Design standard:** Warm Editorial Minimalism, Zen, Material 3, Accurate Data — as
+measured for Sumi (Kanso Matcha).
 
 ---
 
 ## 1. Purpose
 
-A quiet, glanceable view of phone usage on the home screen. It answers one question:
-
-**How is my attention being spent today?**
-
-It is a companion to the app, not a miniature Today screen. It exposes only what is
-useful at a glance and provides a clear route into the full experience.
+The widgets are Sumi's smallest rooms: one surface, one honest number, one fair
+comparison, and the shape of the day beneath. They mirror Today's numbers on the
+home screen and are never a miniature Today, a dashboard, or a nag.
 
 ### Principles
 
-- **Glanceable** — understandable in seconds.
-- **Quiet** — the home screen is not a dashboard.
-- **Useful** — real usage data, never decorative stats.
-- **Honest** — the date and data freshness are never implied beyond what holds.
-- **Respectful** — no guilt language, warnings, streaks, scores, or pressure.
-- **Connected** — tapping opens the relevant Sumi destination.
+- **Accurate** — every value is grounded in the shared pipeline; the widget cannot
+  show a number the app would not show for the same moment. Exact durations, never
+  approximations; formatting through the shared formatters only.
+- **Internally consistent** — the bar, the listed rows, and any remainder all reconcile
+  to the headline total. The bar always sums to the visible total.
+- **Quiet** — muted colors, serif anchor, no alarms, no red, no terracotta, ever.
+- **Honest** — silence is never substituted for data; missing access, pending first
+  sync, and staleness are explicit, calm states.
+- **Connected** — taps route into the app's existing destinations; no widget-internal state.
 
-## 2. Recommended concept (adopted)
+## 2. The two versions (published as two picker entries)
 
-**The daily overview widget** — a screen-time widget centered on today's total, with the
-optional daily goal as a restrained progress indicator. Contents, in order:
+| Entry | Picker title | Purpose | Default | Minimum |
+|---|---|---|---|---|
+| **Compact** | `Sumi — Screen time` | The glance: distribution, the number, the comparison. No list. | 4×1 | 3×1 |
+| **Expanded** | `Sumi — Screen time (expanded)` | The glance plus the answer to "which applications." | 4×2 | 4×2 |
 
-1. A small Sumi identity label (`SUMI`).
-2. Today's screen-time total (dominant element).
-3. A thin horizontal progress rule when a daily goal exists — never when it does not.
-4. A short supporting line: remaining time, goal met, or the overage (neutral wording).
-5. No buttons, no charts, no app lists, no configuration UI, no "Updated ..." line.
+Both are resizable in both axes. Both share the render core (`WidgetRender.kt`), the
+snapshot loader (`WidgetSnapshotLoader.kt`), the reconciliation state machine
+(`SumiWidgetState.kt`), and the drawn elements (`WidgetBrushes.kt`). They differ only
+in layout and density.
 
-No category summary on larger sizes either. Extra space is breathing room.
+## 3. Shared content rules
 
-### Hierarchy
+- **Total** — today's tracked usage at render time from `UsageRepository.observeDailyTotal`
+  (the same definition of "today" as Today: device-zone day key at render time, UTC epoch
+  stored). Formatted with the shared `formatDuration` — `2h 30m`, whole hours drop ` 0m`,
+  exactly zero renders `0m`, non-zero sub-minute renders `Under a minute`.
+- **Comparison** — today-so-far vs yesterday clipped to the same wall-clock window:
+  `InsightsRange.TODAY.comparisonWindow(zone, now)` bounds; `IntervalMath.unionMsInWindow`
+  over yesterday's stored sessions. Difference within **five minutes or ten percent**
+  of the larger side → "About the same as yesterday at this time." Otherwise the shared
+  `NeutralComparison` phrasing ("About 2h 56m less than yesterday at this time.").
+  Yesterday with no recorded sessions → the line is omitted entirely. A partial day is
+  never compared against a full day. In-app surfaces are unaffected by the 10% opt-in band
+  (it is a widget-only parameter of the shared rule).
+- **Application list** — the top ranked apps for today by tracked foreground duration,
+  from today's per-app rows only, with the pipeline's exclusions applied (launcher, Sumi,
+  IME). Ranking/ties resolve exactly as Today resolves them (`topApps`, name-ascending on
+  ties, duplicate names disambiguated by package suffix). Durations use the compact
+  formatter: `<1m`, `12m`, `2h 14m`, `45m`.
+- **Bar** — segmented, proportional, with rounded ends and hairline surface-colored
+  gaps (consistent with Today's category distribution). Segments are exactly the listed
+  apps in list order plus a neutral remainder covering the rest of the total (stone-1,
+  low emphasis). Tiny segments under **4%** of the visible total merge into the remainder
+  rather than vanishing. The bar always sums to the headline total — by construction:
+  remainder = (total − Σ listed rows) + merged tiny slices. The denominator is the
+  headline total, so the bar and the list can never disagree with the number above them.
+- **Reconciliation honesty** — unlisted/unattributable time is named by the remainder
+  segment (and never hidden): pre-top-N apps, tiny merged slices, and aggregate-time with
+  no per-app rows all land there. There is no "10m in other apps" text line in v3; the
+  bar's remainder segment is the single reconciliation channel, and the accessibility
+  announcement carries the same values.
+- **Strings & localization** — widget copy uses the same Kotlin constants pattern as the
+  rest of the app (English-only today, same as Today/Insights). Numeric formats that
+  depend on locale (the staleness `Updated HH:mm`, date boundaries) already honor the
+  device locale; time is rendered with `DateTimeFormatter.ofLocalizedTime(SHORT)`.
+  Truthful state: the app has no translation infrastructure beyond `res/values/strings.xml`
+  for the few picker-facing strings; those are localized as the app expands.
+- **No fabricated layout numbers** — preview/initial layouts contain sample skeletons,
+  clearly marked as sample in-file; never live-shaped, never shown as measurements.
 
-**Primary:** today's total. **Secondary:** goal progress (only with a goal).
-**Tertiary:** one supporting line. Anything else belongs in the app.
+## 4. Version A — Compact (`Sumi — Screen time`)
 
-## 3. Layouts and sizes
+Default 4×1; minimum 3×1; horizontal/vertical resize. Layout, top to bottom:
 
-Responsive via Glance `SizeMode.Responsive` with three breakpoints; the launcher
-allotments, not fixed pixels, select the layout:
+1. Segmented proportional bar (~6 dp tall, rounded ends) — spans the content width.
+2. Total in the editorial serif (bundled Literata, ~26 sp at default font scale) —
+   the largest element.
+3. Comparison line, small and muted (~10–10.5 sp); omitted per the shared rules when
+   there is no baseline.
 
-| Breakpoint | Width | Height | Content |
-|---|---|---|---|
-| **Slim** | any | < 80 dp | One inline row: `SUMI` · total (20 sp) · status (11 sp). Status dropped below 210 dp. No bar. |
-| **Compact** | 140 dp | 110 dp | `SUMI`, total (30 sp), one status line. No bar. |
-| **Medium** *(canonical)* | 250 dp | 110 dp | `SUMI`, total (32 sp), 3 dp progress rule, one `percent · remaining` line. |
-| **Large** | 330 dp | 148 dp | `SUMI`, total (36 sp), 3 dp progress rule, full `62% of daily goal` line + status line. |
+At the 3×1 minimum, padding tightens rather than dropping elements; the total never clips.
+The bar and the total share one tap target (the whole tile) — the bar is not separately
+interactive. No list.
 
-- `resizeMode="horizontal|vertical"`; `minWidth`/`minHeight` = 140/54 dp; initial
-  footprint **4×2** (canonical medium landscape, §3.1 of the reference). Content is centered
-  on both axes; totals scale with the breakpoint (20/30/40/44 sp). The 54 dp floor lets the
-  launcher place a one-row slim tile; default placement stays 4×2.
-- At minimum size: wordmark + total stay readable; the secondary line is removed before
-  the total shrinks; labels never clip; no icon-only actions are substituted.
-- Compact omits the bar (and the percent) when legibility demands; the status line
-  carries the meaning in words.
+## 5. Version B — Expanded (`Sumi — Screen time (expanded)`)
 
-## 4. Visual design
+Default 4×2; minimum 4×2. Layout, top to bottom:
 
-Mirrors Kanso Matcha exactly — the widget is a natural extension of the app.
+1. Eyebrow **Screen time** — small, muted, sans-serif.
+2. Total in the editorial serif (~26 sp; ~30 sp at 4×3 and taller).
+3. Comparison line, small and muted — same rules as A.
+4. Segmented proportional bar (~8 dp tall) — same reconciliation rules.
+5. Three application rows (up to five at 4×3+). Each row: app icon (launcher icon when
+   resolvable; otherwise a monogram drawn in the app's category color with the initial
+   letter), human-readable name (ellipsized at a measured budget, never wrapped), and the
+   right-aligned duration. A small **colored dash** in the row's category color sits
+   directly above the duration, linking row ↔ bar segment. Row height ≈ 40 dp at tall,
+   30 dp comfortable, 24 dp tight (density ladder §6).
+6. Optional goal line — **only when a daily goal is enabled**: one quiet line
+   "Daily intention · 1h 18m remaining", or "… goal met today", or "… 18m over".
+   Neutral styling; never red, never terracotta, never punitive. Uses the same goal
+   state (`DailyGoal.evaluate`) as Today.
+7. Optional staleness footer — **only when the last committed collection pass is older
+   than one hour**: "Updated HH:mm", smallest muted type, trailing edge. Otherwise hidden.
 
-### Light
-Warm paper background (`background` / `#F4F1EA`), primary text `onBackground`
-(`#36382F`), muted secondary text `onSurfaceMuted` (`#565145`), accent progress
-`accentStrong` (`#5C664B`) with a matcha-1 track (`#DCE2D1`). Restrained tonal
-separation; no pure white.
+Row taps open that application's detail screen (`app-detail/{packageName}` via the
+existing navigation — explicit Intent extras, no deep-link scheme, no widget-internal
+state). Every other region opens Today.
 
-### Dark
-Deep forest background (`background` / `#181F18`), primary text `onBackground`
-(`#E8EEE3`), muted `onSurfaceMuted` (`#B1BAAE`), accent `accentStrong` (`#D2E4BC`),
-matcha-1 track (`#3B4C35`). Distinguishable from the launcher without being a floating
-generic card.
+## 6. Density ladder (expanded)
 
-### Theme behavior
-- Follows the app's theme preference: System, Light, or Dark.
-- System → resolves the current system night mode at render time.
-- Forced Light/Dark always renders the forced variant.
-- Wallpaper dominant color is never consulted (decided 2026-11-14).
-- Known limitation: between system day/night flips and the next widget re-render
-  (app foreground, usage collection, theme change, or the 15-minute collection safety
-  net), System mode can briefly show the previous variant. See ARCHITECTURE §19.
+The default 4×2 keeps all elements but tight-packed; taller tiles breathe. Nothing
+clips the total at 1.3× font scale.
 
-### Typography
-- Numeric total is the dominant typographic element — system sans, bold, 28–36 sp.
-- Identity wordmark 11 sp caps, medium weight, muted.
-- Supporting lines 12 sp muted; percent + status combined on one line except on Large.
-- Platform sans, not Inter (standard inferred Roboto); tabular-figure control is not
-  available to RemoteViews text (documented deviation).
+| Height | Ladder | Rows | Row height | Total | Footer |
+|---|---|---|---|---|---|
+| ≥ 190 dp | tall | up to 5 | 40 dp | 30 sp | shown |
+| ≥ 140 dp (default 4×2 ≈ this) | comfortable | 3 | 30 dp | 26 sp | shown |
+| < 140 dp | tight | 3 | 24 dp | 26 sp | omitted |
 
-### Shape and surface
-- 16 dp corner rounding (`r-md`), applied by the widget clip; launchers on Android 12+
-  additionally mask widgets with the system corner radius.
-- No nested cards, no pill containers, no decorative borders.
-- Subtle track, clear fill. Progress **never switches to a red/terracotta punishment
-  color**, including above the goal.
+Compact behavior at minimum: horizontal padding 10 dp, comparison 9.5 sp, same elements.
 
-## 5. Content and data rules
+## 7. Theming and typography
 
-1. **Total** = the same aggregate as the Today screen (`daily_usage` for today's date
-   key, via `UsageRepository.observeDailyTotal`). Same definition, same format
-   (`formatDuration`). Never a stale value presented as live — the widget re-renders on
-   the app's refresh triggers only.
-2. **Zero** is a real state (`0m` + "No usage recorded yet"), distinct from pending and
-   from sub-minute usage.
-3. **Goal** — optional, informational, never blocking. Under the goal: `remaining` +
-   `N% of daily goal`. At the goal: "Goal met today". Above the goal: `over` in neutral
-   wording ("45m over your 3h goal"). Remaining is clamped ≥ 0; percent is unclamped
-   (honest "120% of daily goal"); the bar clamps at 100% for drawing.
-4. **No goal** → no bar, supporting line "Usage today". No invented target, ever.
-5. **Freshness** — no "Updated ..." label; tapping Through to Sumi is the honest route.
-   No refresh interval is promised or configurable.
+- Follow the app's persisted theme setting when one exists; otherwise the system
+  light/dark configuration (System resolves night at render time; forced Light/Dark
+  always forced). Resolution happens at load time, exactly as on v1.
+- Surfaces: warm ivory (`SurfaceElevatedLight` `#FAF9F4` with a hairline `BorderSubtleLight`
+  outline — legible on pale wallpapers) in light; warm charcoal (`SurfaceDark` `#273327`)
+  in dark. Never pure black/white, never off-token hexes. Gap lines in the bar read in
+  the tile surface color; the remainder segment is `stone-1`.
+- **Typography.** Glance `Text` cannot carry bundled fonts (system fonts only — platform
+  limitation, see §11), so the serif total is rendered as a **bitmap drawn in the app
+  process with the bundled Literata TTF** and placed as an image, at both densities
+  (26/30 sp), honoring font scale and density. Supporting text uses the platform sans
+  (Inter-class face via the system, consistent with in-app behavior of system-referenced
+  type on widget surfaces). Durations are not forced into tabular figures (glyphs
+  differ per platform — alignment rests on the trailing right edge).
+- Category colors come from the established palette (seeded token → palette index,
+  stone-1 for neutral/uncategorized/residual) — never service hues, always the same
+  index the in-app category distribution uses. Hard-coding colors per app/service is
+  forbidden by the category system itself.
+- Corner radius fixed at 24 dp — closest constant approximation to the system
+  app-widget radius; Android 12+ additionally masks the tile to the launcher radius.
+- No decorative shadows; no nested cards; no pills; no badges.
 
-## 6. Interactions
+## 8. Update strategy
 
-- **Main tap** (anywhere on the widget) → opens Sumi; lands on Today.
-  Accessibility label: "Open Sumi — today's screen time".
-- No goal shortcut, no refresh button, no gear, no swipe actions, no secondary targets
-  in compact. One tap, one destination.
+Honesty first: the widget never shows fresher than its last update, and it never
+promises a cadence the system will not honor.
 
-## 7. States (all supported, both themes)
+- **30-minute periodic re-render** — `WidgetRefreshWorker` (WorkManager, KEEP unique
+  work, enqueued from `SumiApplication.onCreate`). It performs **no collection** — only
+  re-renders from committed state — so midnight rollover cannot show yesterday's total
+  under today's date and the staleness footer stays accurate.
+- **`updatePeriodMillis=6h`** — a system safety net only.
+- **Forced updates (expedited one-time work, coalesced)** on: local date change,
+  timezone change, locale change (`DATE_CHANGED` / `TIMEZONE_CHANGED` / `LOCALE_CHANGED`
+  via `WidgetRefreshReceiver`), boot completed (`BootReceiver` enqueues the same work),
+  usage collection in the foreground or in `CollectionWorker` (existing), app foreground
+  + 60 s visible tick (existing), theme change (existing), and goal setting changes
+  (today's three write sites re-render the widget).
+- A wall-clock midnight chain (one-time 00:00 work re-enqueued by each run) was
+  deliberately **not** added: `DATE_CHANGED` plus the 30-minute re-render cover the same
+  guarantee with less machinery; worst case a fresh day appears ≤ 30 minutes late and the
+  number itself is always computed from the render-time day key.
+- All content is computed at snapshot time, off the composition path; icons and bitmaps
+  are prepared once per update.
 
-| State | Condition | Renders |
+## 9. Interaction
+
+- Tap anywhere outside a row → Sumi (Today). If usage access is missing, any tap opens
+  the app — the permission fix lives inside it (no interstitial).
+- Tap an expanded-version row → that app's detail screen via an explicit Intent extra
+  (`com.sumi.widget.extra.OPEN_APP_DETAIL`); `MainActivity` consumes the extra on create
+  or `NewIntent` and routes through the existing nav graph — the same pattern as the
+  notification `EXTRA_OPEN_FOCUS` deep-style. No scheme, no manifest filter, no network.
+- No refresh button, no overflow menu, no settings gear, no swipe actions. Launcher
+  long-press behavior is the launcher's own.
+
+## 10. Accessibility
+
+- The whole surface carries one sentence announcement: "Screen time today 2h 30m. About
+  the same as yesterday at this time. Top applications: YouTube 1h 6m, Drive 45m,
+  Mail 16m. [Daily intention sentence]." — action-first ordering preserved on rows.
+- Each expanded row is an individual accessibility node with its own label and tap
+  action: "Open {name} — {duration} today."
+- Category colors are never the only channel: rows carry icons + names + durations; the
+  bar always accompanies the list; the remainder carries no sole-meaning color cue.
+- Bitmaps drawn at snapshot time honor `fontScale` (bitmap sizes are multiplied by the
+  configuration font scale) and `density`. Layouts avoid fixed-width text where 1.3×
+  scale would clip by construction (names ellipsize, the total image grows, the bar
+  stretches).
+
+## 11. States (both versions, both themes)
+
+| State | Data | Renders |
 |---|---|---|
-| Normal — goal set | access + row + goal | total, rule, `62% of daily goal` + pace line |
-| Normal — no goal | access + row + no/paused goal | total + "Usage today" |
-| Zero usage | access + row at 0 | `0m` + "No usage recorded yet" (tap-through kept) |
-| Usage Access missing | checker false, any data | explanation + "Open Sumi to enable it in Settings"; never a stale total |
-| Pending | access + no row yet | `—` + "Waiting for today's first sync" |
-| Goal exceeded | used > goal | actual total; neutral over-wording; normal palette |
-| Theme switch | pref or system changes | re-renders on next trigger with the matching palette |
+| Normal | access + aggregate + per-app | Header/total/bar/(rows)/optional goal line |
+| Zero usage | access + zero row | `0m` honestly; comparison only if a baseline exists; no rows, unlit bar |
+| Import-only day | aggregate + per-app rows, no sessions | Same — rows/bar from per-app rows (import writes them) |
+| Unattributable total | aggregate only | Rows omitted; bar = 100% neutral remainder segment |
+| Usage Access missing | checker false | "Usage access needed" + "Tap to review your permissions." Calm; never a fabricated 0m |
+| Fresh install / pending first sync | access, no aggregate row | "Waiting for data" + "Your screen time will appear here shortly." |
+| Goal exceeded | used > goal | Actual total; "Daily intention · 18m over"; palette unchanged; never red |
+| Stale data (> 1 h) | collection older than 1 h | Expanded only: "Updated HH:mm" smallest/muted, trailing edge |
+| Theme switch | pref/system flip | Next trigger re-renders with the matching palette |
 
-## 8. Platform requirements
+## 12. Engineering notes
 
-- Glance 1.2.0 (`androidx.glance:glance-appwidget`) — the only new dependency, added with
-  this milestone; no other libraries, no new permissions.
-- `minSdk 26`, dp-based sizing, both `horizontal|vertical` resize axes.
-- `updatePeriodMillis="0"` — refresh is push-driven by Sumi's own triggers (app
-  foreground / 60 s visible tick / usage collection incl. the collection worker /
-  theme change). Never claims live tracking.
-- `initialLayout`/`previewLayout` share one static RemoteViews layout: wordmark on the
-  paper surface, **no numbers** — the picker cannot fabricate statistics.
-- Launchers vary; rendering on multiple launchers unverified here (doc honestly).
+- Two Glance providers (`CompactScreenTimeWidget`, `ExpandedScreenTimeWidget`) share
+  one render core and one snapshot loader; receivers `SumiCompactWidgetReceiver`,
+  `SumiExpandedWidgetReceiver` (exported per the AppWidget contract).
+- Picker previews are static XML layouts with sample content (values marked as sample
+  in-file) — no numbers from the pipeline are required to fill them; `initialLayout`
+  shares the same skeleton.
+- **Glance system-fonts limit:** `androidx.glance.text.FontFamily` resolves system
+  families only, and RemoteViews text with bundled typefaces is not supported. The
+  editorial serif therefore exists in the widget as a `Canvas`-drawn bitmap using the
+  bundled `literata_regular.ttf`. Supporting text uses system sans. This is the
+  deliberate cost of the reference's "bundled serif renders outside the app process"
+  requirement; the alternative (platform `serif`) is a one-line change if it disappoints.
+- Fractional bar segments cannot be expressed as `Row` children in Glance (its weights
+  are uniform `Expand`), so the bar is a rounded-caps/hairline-gaps bitmap drawn at
+  1200×36 px and stretched with `ContentScale.FillBounds`; flat colors keep the stretch
+  invisible. Row-level alignment rests on trailing-edge text; 1.3× font scale enlarges
+  the total bitmap.
+- Icons: `AppIconLoader` → launcher icon bitmaps; monogram fallback (category-colored
+  circle/rounded tile, initial letter, contrast-picked glyph) when unresolvable —
+  consistent with "letter-mark on the category color."
+- Row name budget is measured (≈110 dp at 12 sp) with the platform paint; longer names
+  ellipsize deterministically.
+- Registrars: two `appwidget-provider` XMLs with `targetCellWidth/Height` (4×1 / 4×2),
+  `resizeMode="horizontal|vertical"`, `widgetCategory="home_screen"`, 6 h `updatePeriodMillis`.
+- `allowBackup="false"` is already in force; all processing stays on-device, no network,
+  no new permissions, no new stored data, no analytics.
+- Code isolated in `platform/widget/` (plus a repository member `lastSuccessfulCollectionUtcMs()`
+  on `UsageRepository`); nothing outside presentation imports it.
 
-## 9. Accessibility
+## 13. Testing
 
-- Root is one focusable with a content description carrying action + values:
-  "Open Sumi — today's screen time. 3h 29m. 50 percent of daily goal, 1h 30m remaining."
-- The progress rule is decorative (information carried by adjacent text); redundant
-  announcements are avoided by construction.
-- Contrast: all widget text pairs on both themes use the measured WCAG-validated
-  Kanso Matcha token pairs.
-- Large-font support is limited by RemoteViews; the wordmark and total remain the
-  legible minimum. TalkBack behavior not device-verified (see ROADMAP M6).
+- JVM (`app/src/test/.../SumiWidgetStateTest.kt`): ranking/order, limit 3/5, fractions
+  summing to 1 with remainder, tiny-merge (<4%), full-remainder unattributable bar,
+  compact durations, letter marks, zero/pending/permission states, goal states
+  (remaining/met/over, clamped fraction), staleness threshold, a11y sentences.
+- Domain (`domain/src/test/.../NeutralComparisonTest.kt`): the widget's opt-in 10-percent
+  band in addition to the 5-minute floor.
+- CI (build/test/lint) is the only verification available in this environment. **Not
+  verified on a device:** Glance composition output, bar stretch/seam behavior, 4×2 fit
+  at minimum density, 1.3× font-scale rendering, icon loading at scale, picker preview
+  rendering, TalkBack traversal, midnight rollover end-to-end, and the refresh cadence.
+  These need an on-device pass against the reference checklist in §13 of the reference.
 
-## 10. Anti-patterns (rejected, not to be built)
+## 14. Anti-patterns (rejected)
 
-A miniature Today dashboard · multiple charts · most-used list · streaks/scores/badges ·
-goal-exceeded red · decorative rings · icon-only actions · nested cards/pills ·
-fake live updates · hard-coded sample statistics anywhere incl. the picker ·
-content clipped at minimum size · value hidden behind an interaction.
+Streaks, scores, warnings, goal-exceeded red/terracotta, fabricated or approximated
+numbers, hidden remainder, list percentages, hard-coded service colors, widget-internal
+state/config, multiple actions, refresh gestures, "Updated" lines unrelated to real
+staleness, scrollable content, clipped totals, any "first sync needed" banner that shows
+stale numbers.
 
-## 11. Resolved decisions (owner, 2026-11-14)
+## 15. Provenance and deviations
 
-1. **Total + optional goal progress** — adopted default.
-2. **No variant picker** — single goal-aware widget; no configuration activity.
-3. **No category summary** at larger sizes.
-4. **No Focus quick action.**
-5. **No manual refresh.**
-6. **No "Updated" timestamp.**
-
-## 12. Quality checklist
-
-See implementation in `app/src/main/java/com/sumi/platform/widget/`; unit-tested state
-machine (`SumiWidgetStateTest`). Device-verification items are tracked in
-`ROADMAP.md` (M6) and were not performed in the adopting change.
+- **v1** (2026-11-14): single quiet widget (total + optional goal rule). Retired by the
+  v3 reference (2026-11-15): two versions as two picker entries, per the owner.
+- **v2** (2026-11-15): editorial sketch — briefly rewritten docs/state, discarded
+  unbuilt by owner decision; history in git.
+- **Deviations kept, all documented:** bitmap serif (no bundled-font path in Glance
+  `Text`); fixed draw width for the bar (fractional weights unsupported in Glance);
+  platform sans for supporting text; `stone-1` for both remainder and uncategorized rows;
+  4% merge threshold; no wall-clock midnight one-time chain (DATE_CHANGED + 30-min
+  re-render covers it); comparison keeps "About …" phrasing (shared calm wording —
+  the reference's literal "2h 56m less" without "About" is unfounded editorial, not a
+  requirement); localization is English-constant (Sumi is English-only today);
+  per-row deep link via explicit-intent extra rather than a new URL scheme.
+- **Open questions for device verification:** 4×2 fit at minimum density, 1.3× scale
+  behavior, launcher-specific masking, TalkBack order of tile vs. row nodes, and the
+  actual midnight correction latency.

@@ -688,46 +688,76 @@ until that destination's sort model can pin a window (the Apps and Focus destina
 have since shipped — see §16 and §17).
 
 
-## 19. Home-screen widget (Glance, implemented 2026-11-14)
+## 19. Home-screen widgets (Glance, implemented 2026-11-15 — v3 "Screen time")
 
-**Frame.** `GlanceAppWidget` (`androidx.glance:glance-appwidget` 1.2.0, newly added
-dependency — justification in the M6 PR) instead of hand-managed RemoteViews: responsive
-sizes, declarative content, the same Compose idiom as the app. Hosted by the launcher;
-Sumi owns only composition and refresh cadence, never the surface lifecycle.
+**Frame.** Two picker entries from one render core (`GlanceAppWidget`, Glance 1.2.0 —
+the only added dependency): **Compact** (`CompactScreenTimeWidget`, `Sumi — Screen time`)
+and **Expanded** (`ExpandedScreenTimeWidget`, `Sumi — Screen time (expanded)`). The
+single v1 widget was retired by the v3 reference; superseded layouts live in git.
 
 **Layering.** `platform/widget/`:
-- `SumiWidgetState.kt` — pure, android-free state machine (JVM unit tests in
-  `app/src/test/.../SumiWidgetStateTest.kt`): `resolveWidgetView(totalMs?, hasAccess,
-  goal)` → `Total | Pending | PermissionMissing`; `GoalProgressView` (percent, short
-  percent, neutral status line, clamped draw fraction, unclamped percent);
-  `pickBreakpoint` (140/250/330 dp); a11y summary strings. No Android imports.
-- `SumiWidget.kt` — the Glance renderer + `SumiWidgetEntryPoint` (Hilt entry point into
-  the SingletonComponent: `UsageRepository`, `PreferencesRepository`, `UsageAccessChecker`,
-  `Clock`, `TimeZoneProvider`) + `WidgetUpdater` (`refreshAsync` fire-and-forget,
-  `refreshNow` suspending).
-- `SumiWidgetReceiver` registered in the manifest (`APPWIDGET_UPDATE`, exported per the
-  AppWidget contract); `res/xml/sumi_widget_info.xml` (`updatePeriodMillis="0"`,
-  `resizeMode="horizontal|vertical"`, 2×2 default cells); static RemoteViews layout
-  shared by `initialLayout` and `previewLayout` — no numbers, so the picker cannot
-  show fabricated statistics.
+- `SumiWidgetState.kt` — pure, android-free state machine (JVM tests in
+  `app/src/test/.../SumiWidgetStateTest.kt`): `resolveWidgetView(totalMs?, hasAccess, goal,
+  yesterdayClippedMs?)`; `RankedRowView`/`BarSegment`/`AppBreakdown` derivations
+  (ranking via the shared `topApps`, fraction-vs-headline denominator, 4% tiny-merge into
+  the remainder; remainder = headline − Σ listed, always summing to the total); compact
+  duration formatter on the rows (`formatCompactDuration`); `widgetGoalLine` (same
+  `DailyGoal.evaluate` as Today); a11y sentences. No Android imports.
+- `WidgetSnapshotLoader.kt` — everything computed at snapshot time (background):
+  theme resolution, day keys, yesterday clipped to the same wall-clock window
+  (`InsightsRange.TODAY.comparisonWindow` + `IntervalMath.unionMsInWindow`), comparison
+  string via shared `NeutralComparison` (opt-in 10% band, widget-only), goal line,
+  staleness flag, ranked 3/5-row breakdowns, name ellipsizing with the platform paint,
+  icon bitmaps, serif-total bitmaps (Literata bundled, drawn at snapshot time;
+  Glance `Text` cannot carry bundled fonts) and bar bitmaps (rounded ends, hairline
+  seams, `stone-1` remainder).
+- `WidgetRender.kt` — the two Glance layouts on `SumiWidgetSurface` (light: hairline
+  `BorderSubtleLight` outline via nested padding trick; dark: direct `SurfaceDark` fill;
+  24 dp corners; tile-wide tap → Today). Density ladder for expanded (tall ≥ 190 dp /
+  comfortable ≥ 140 dp / tight below); bar stretched via `ContentScale.FillBounds`.
+- `WidgetBrushes.kt` — Canvas bitmaps (segmented bar 1200×36, serif total, icon
+  conversion, paint-measured ellipsize).
+- `SumiWidget.kt` — both widget classes (`SizeMode.Responsive`), their receivers
+  `SumiCompactWidgetReceiver` / `SumiExpandedWidgetReceiver`, and `WidgetUpdater`
+  (`refreshAsync` / `refreshNow` — updateAll on both providers).
+- `WidgetRefreshWorker` + `WidgetRefreshReceiver` (`DATE_CHANGED` / `TIMEZONE_CHANGED` /
+  `LOCALE_CHANGED`) enqueue an expedited one-time re-render; `BootReceiver` enqueues the
+  same on boot; both mutate nothing — no collection is ever triggered by widget paths.
 
-**Data.** Identical definition of "today" as the Today screen: `DateKey` for the
-device's zone at render time; `observeDailyTotal(key).first()` for the total;
-`dailyGoal` + `themeMode` from DataStore. Goal evaluation reuses `DailyGoal.evaluate`;
-the same `formatDuration` as everywhere. No widget-specific queries or stores.
+**Data.** Identical "today" definition as Today's screen. Yesterday baseline uses stored
+sessions clipped in-session (aggregates cannot answer a partial day); the line is omitted
+when yesterday holds no sessions. Per-app rows come from today's session-derived or
+imported per-app rows (identical to Today's shares denominator). Category colors bind to
+`categories.colorToken` through `categoryColorIndex` — recolors honored, `stone-1` for
+neutral/uncategorized, never service hues. `allowBackup="false"` already enforced; all
+processing is on-device; no network, no new permissions, no new stored data; the only
+domain interface change is `UsageRepository.lastSuccessfulCollectionUtcMs()` powering the
+> 1 h staleness footer.
 
-**Refresh triggers (all push; the widget never self-schedules).** App to foreground
-(STARTED), the 60 s visible tick while the app is open, theme change (setThemeMode then
-`refreshNow`), usage collection in `CollectionWorker` and visible collection, and the
-system's `APPWIDGET_UPDATE` via the receiver. `updatePeriodMillis=0` — no guaranteed
-cadence is claimed.
+**Taps.** Tile → Today (`actionStartActivity<MainActivity>()`). Expanded rows → explicit
+Intent extra `com.sumi.widget.extra.OPEN_APP_DETAIL = packageName` consumed in
+`MainActivity` (same pattern as the notification `EXTRA_OPEN_FOCUS`) →
+`SumiApp.openAppDetailRequest` → existing `app-detail/{packageName}` route. No deep-link
+scheme added; no widget-internal state.
 
-**Theme.** Palette resolved at render time from the app's theme preference: System →
-current night setting; forced Light/Dark → forced palette. Between system day/night
-transitions and the next trigger the widget may briefly show the previous variant.
+**Refresh triggers.** App foreground + 60 s visible tick (existing); theme change
+(existing); collection in foreground and in `CollectionWorker` (existing); goal writes
+(`TodayViewModel` re-renders on save/remove/pause-toggle); boot completed (new); date /
+timezone / locale change (new); 30-minute periodic `WidgetRefreshWorker` (new); system
+`updatePeriodMillis="21600000"` (6 h, fallback only). Midnight rollover is covered by
+`DATE_CHANGED` plus the 30-minute re-render — the day key is always computed at render
+time, so yesterday cannot persist under today's date (worst case ≈ 30 min late). A
+one-time wall-clock midnight chain was deliberately not added. The widget never claims
+freshness it cannot back: the staleness footer appears only past a real 1 h threshold.
 
-**Known limitations (device-unverified).** Widget pixels are launcher-hosted: size
-breakpoint behavior, corner masking (Android 12+ system radius vs. the 16 dp clip on
-older hosts), focus/TalkBack traversal, real refresh cadence, and resize rendering were
-not exercised on a device or emulator in this change. CI verifies compile, lint, JUnit
-and the Robolectric suites only.
+**Copy.** English constants, the same pattern as the app's other strings (Sumi ships no
+translations today). Locale-aware where platform formats drive: `Updated HH:mm` uses
+`ofLocalizedTime(SHORT)`.
+
+**Known limitations (device-unverified).** Widget pixels are launcher-hosted: the 4×2
+4-cell default fit at the minimum density (density ladder §6 of WIDGET.md may need one
+notch tighter), bar seam/anti-aliasing at tiny widths, corner masking vs Android 12+
+system radius (24 dp constant chosen), TalkBack order (tile vs. row nodes), picker preview
+rendering, 1.3× font-scale output, icon loading performance at five rows, and the actual
+midnight correction latency. CI verifies compile, lint, JUnit and Robolectric only; the
+reference's §13 on-device checklist remains to be run.

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import com.sumi.platform.widget.WidgetUpdater
 
 data class TodayUiState(
     val isLoading: Boolean = true,
@@ -71,6 +72,7 @@ class TodayViewModel @Inject constructor(
     private val clock: Clock,
     private val timeZone: TimeZoneProvider,
     iconLoader: AppIconLoader,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
 ) : ViewModel() {
 
     /** Platform icon resolution for row rendering; the UiState itself stays pure data. */
@@ -150,16 +152,20 @@ class TodayViewModel @Inject constructor(
     /** Sets (or changes) the daily goal target; always marks it enabled. */
     fun saveGoal(minutes: Int) {
         viewModelScope.launch { preferencesRepository.setDailyGoal(minutes) }
+        // The widget's goal line must never lag a goal change (docs/WIDGET.md §8).
+        WidgetUpdater.refreshAsync(appContext)
     }
 
     /** Removes the goal entirely. */
     fun removeGoal() {
         viewModelScope.launch { preferencesRepository.setDailyGoal(null) }
+        WidgetUpdater.refreshAsync(appContext)
     }
 
     /** Pauses/resumes the configured goal without forgetting its value. */
     fun setGoalEnabled(enabled: Boolean) {
         viewModelScope.launch { preferencesRepository.setDailyGoalEnabled(enabled) }
+        WidgetUpdater.refreshAsync(appContext)
     }
 
     private data class BaseData(

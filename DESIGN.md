@@ -327,26 +327,36 @@ and the light counterpart of `surface-2` (module cards on a light elevated surfa
 open (the standard marks light-theme tabs unreviewed).
 
 
-## 15. Home-screen widget (adopted 2026-11-14)
+## 15. Home-screen widgets (adopted 2026-11-15, v3 — "Screen time")
 
-The widget design reference is canonical as `docs/WIDGET.md`; it is implemented as the
-M6 milestone in `ROADMAP.md` and intentionally shares the app's visual DNA:
+The widgets (two picker entries — compact and expanded) are canonical as
+`docs/WIDGET.md` v3; implemented as the M6 milestone in `ROADMAP.md`. They share the
+app's visual DNA and the Kanso Matcha tokens:
 
-- Warm paper background (`#F4F1EA`) in light; deep forest (`#181F18`) in dark — the
-  canonical `background` tokens, not wallpaper-derived tints.
-- `SUMI` wordmark (sans caps, muted) over the dominant numeric total (bold sans,
-  28–36 sp); supporting lines 12 sp muted; a thin 3 dp goal rule in `accentStrong`
-  with a matcha-1 track. **No red/terracotta on the widget ever**, including over-goal.
-- Default footprint **4×2** (canonical medium landscape); content centered on both axes;
-  totals scale 20/30/40/44 sp by breakpoint (Slim/Compact/Medium/Large). A one-row slim
-  tile is supported below 80 dp height (no bar; status drops under 210 dp).
-- 16 dp corner radius (`r-md`); no nested cards, pills, borders, or charts.
-- Theme follows the app preference (System resolves night mode at render time; forced
-  variants are always forced). Wallpaper color is never consulted.
-- No "Updated" timestamp, no Focus action, no configuration, no category summary.
+- **Surfaces:** warm ivory `SurfaceElevatedLight` `#FAF9F4` + hairline `BorderSubtleLight`
+  outline in light; warm charcoal `SurfaceDark` `#273327` in dark. Never pure black/white,
+  never wallpaper-derived tints. 24 dp corner radius (closest constant approximation to
+  the launcher radius; Android 12+ additionally masks to its own). Hairline bar seams
+  render in the tile surface color; the remainder segment is `stone-1`.
+- **Type:** the total anchors in the editorial serif — the bundled Literata drawn as a
+  bitmap at snapshot time (Glance ships no bundled-font path in `Text`). The eyebrow
+  "Screen time" and all supporting text render in the platform sans. No tabular-figure
+  forcing in RemoteViews (right-edge alignment assists).
+- **Category semantics:** bar segments and row dashes bind to the app's stored category
+  color tokens through the same `categoryColorIndex` mapping as the in-app distribution;
+  `stone-1` is the neutral remainder and the uncategorized residual. Never service hues.
+- **No terracotta and no red on the widget ever** — over-goal shows actual usage with
+  neutral wording ("Daily intention · 18m over"), palette unchanged.
+- **Respect:** no streaks, scores, badges, "Updated" stamps that fake freshness (the
+  expanded staleness footer appears only past a real 1 h stale threshold), no Focus
+  action, no configuration, no percentages per app, no package ids.
+- **Sizes:** compact 4×1 (min 3×1) and expanded 4×2 (min 4×2; taller tiles extend the
+  list to five). See the density ladder in `docs/WIDGET.md` §6.
 
-**Deviations (deliberate):** the sans voice renders as the platform sans (standard
-inferred Roboto), not Inter; RemoteViews offers no tabular-figure control, so durations
-do not force tabular numerals; the over-goal state shows the actual total with neutral
-wording (the in-app card may switch its rule to terracotta, the widget never does).
-Widget pixels are hosted by the launcher; device rendering is unverified here.
+**Deviations (deliberate):** the bundled serif exists on the widget surface only as a
+bitmap (platform limitation, §12 of the widget doc); bitmap text doesn't carry Rich-text
+semantics — the accessibility announcement lives on the tappable surface and on the row
+nodes; the light tile's hairline outline stands in for the platform widget-outline API
+(which Glance cannot reach). Theme follows the app preference (System resolves night at
+render time; forced variants always forced). Wallpaper color is never consulted. Widget
+pixels are hosted by the launcher; no device verification has run — see ROADMAP M6.

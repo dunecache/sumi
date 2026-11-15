@@ -2,10 +2,12 @@
 <resources>
     <color name="ic_launcher_background">#F6F2E8</color>
 
-    <!-- Widget initial/preview surface only (res/layout/widget_initial.xml). The live
-         widget renders canonical Kanso Matcha tokens directly (see SumiWidget.kt); these
-         two values exist because RemoteViews inflation needs resource colors. Static and
-         intentionally theme-free: this is the millisecond placeholder in the picker. -->
-    <color name="sumi_widget_initial_bg">#F4F1EA</color>
-    <color name="sumi_widget_initial_muted">#565145</color>
+    <!-- Preview pickers only (sample skeleton, never live data). Kanso Matcha light values. -->
+    <color name="sumi_preview_bg">#FAF9F4</color>
+    <color name="sumi_preview_on">#36382F</color>
+    <color name="sumi_preview_muted">#565145</color>
+    <color name="sumi_preview_seg1">#80642F</color>
+    <color name="sumi_preview_seg2">#55756A</color>
+    <color name="sumi_preview_seg3">#925F50</color>
+    <color name="sumi_preview_remainder">#77796D</color>
 </resources>

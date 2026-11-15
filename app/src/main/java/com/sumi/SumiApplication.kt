@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.sumi.platform.background.CollectionWorker
+import com.sumi.platform.widget.WidgetRefreshWorker
 import com.sumi.data.categories.CategoryBootstrap
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
@@ -30,6 +31,7 @@ class SumiApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         scheduleSafetyNet()
+        scheduleWidgetRefresh()
         categoryBootstrap.run()
     }
 
@@ -38,5 +40,12 @@ class SumiApplication : Application(), Configuration.Provider {
         val request = PeriodicWorkRequestBuilder<CollectionWorker>(15, TimeUnit.MINUTES).build()
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork("sumi-collection", androidx.work.ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    /** 30-minute re-render so the widget's staleness footer stays honest (docs/WIDGET.md §8). */
+    private fun scheduleWidgetRefresh() {
+        val request = PeriodicWorkRequestBuilder<WidgetRefreshWorker>(30, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(this)
+            .enqueueUniquePeriodicWork("sumi-widget-refresh-periodic", androidx.work.ExistingPeriodicWorkPolicy.KEEP, request)
     }
 }
