@@ -53,8 +53,8 @@ class SumiWidgetStateTest {
         val fractions = breakdown.segments.map { it.fraction }
         assertEquals(4, breakdown.segments.size)
         assertEquals(1.0, fractions.sum().toDouble(), 0.0001)
-        // order is list order, descending by duration
-        assertEquals(listOf("a", "b", "c", null), breakdown.segments.map { it.colorToken })
+        // order is list order, descending by duration; colors bound to category tokens
+        assertEquals(listOf("ochre", "matcha-4", "ochre", null), breakdown.segments.map { it.colorToken })
         assertEquals("ochre", breakdown.segments[0].colorToken)
         assertEquals("matcha-4", breakdown.segments[1].colorToken)
     }
@@ -186,7 +186,8 @@ class SumiWidgetStateTest {
 
     @Test
     fun `exceeded goal reads neutral never red`() {
-        val view = resolveWidgetView(totalMs = 14_400_000L, hasUsageAccess = true, goal = goal180)
+        // 4h 30m used vs a 3h intention → 1h 30m over, neutral wording, clamped fraction
+        val view = resolveWidgetView(totalMs = 16_200_000L, hasUsageAccess = true, goal = goal180)
         val goal = (view as WidgetView.Total).goal!!
         assertEquals("Daily intention · 1h 30m over", goal.line)
         assertEquals(1.0f, goal.fraction, 0.001f)
