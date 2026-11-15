@@ -83,6 +83,7 @@ internal fun SumiWidgetSurface(
                     .padding(1.dp)
                     .background(surface)
                     .cornerRadius((WIDGET_CORNER_RADIUS - 1).dp),
+                contentAlignment = Alignment.Center,
             ) {
                 content()
             }
@@ -396,5 +397,5 @@ private fun AppRow(
 private const val ROW_ICON_DP = 28
 private const val MAX_ROWS_BASE = 3
 private const val MAX_ROWS_TALL = 5
-private const val TALL_HEIGHT_DP = 190
-private const val COMFORTABLE_HEIGHT_DP = 140
+private val TALL_HEIGHT_DP = 190.dp
+private val COMFORTABLE_HEIGHT_DP = 140.dp
