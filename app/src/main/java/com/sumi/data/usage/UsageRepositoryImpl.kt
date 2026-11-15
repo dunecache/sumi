@@ -456,9 +456,12 @@ class UsageRepositoryImpl @Inject constructor(
      */
     override suspend fun backfillInstalledApps() =
         withContext(dispatchers.io) {
+            // The PackageManager scan (every launchable app on the device) is the expensive
+            // part and shares no state with collection — keep it OUTSIDE the mutex that
+            // collection and shrinking paths hold. The merge, diff and writes stay locked.
+            val discovered = installedApps.launchableApps()
+            if (discovered.isEmpty()) return@withContext
             mutex.withLock {
-                val discovered = installedApps.launchableApps()
-                if (discovered.isEmpty()) return@withLock
                 val excluded = excludedPackages.resolve()
                 val existing = applicationDao.getAll()
                 val plan = LibraryMerge.plan(existing, discovered, excluded)
