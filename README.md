@@ -29,6 +29,15 @@ GitHub Actions is the gate. See `docs/CI.md`.
 ./gradlew assembleDebug  # requires local Android SDK
 ```
 
+## Home-screen widget looks stale?
+
+The widget is not a live tracker; it reflects the last committed day's usage. Two things
+keep it fresh: a 30-minute background refresh and a system-level update broadcast, both
+best effort (deep Doze and aggressive OEM battery savers can delay them for hours). If
+the widget never seems to update, open the app once (freshness catches up) and exclude
+Sumi from battery optimization: Settings → Apps → Sumi → Battery → Unrestricted. Sumi
+cannot request this for you — it is a device-level choice.
+
 ## Status
 
 M0 foundation scaffolded. See `ROADMAP.md` for milestone checklist and progress log.

@@ -162,13 +162,20 @@ Compact behavior at minimum: horizontal padding 10 dp, comparison 9.5 sp, same e
 ## 8. Update strategy
 
 Honesty first: the widget never shows fresher than its last update, and it never
-promises a cadence the system will not honor.
+promises a cadence the system will not honor. Two independent background paths exist —
+WorkManager and the system widget broadcast — and neither is a live tracker.
 
-- **30-minute periodic re-render** — `WidgetRefreshWorker` (WorkManager, KEEP unique
-  work, enqueued from `SumiApplication.onCreate`). It performs **no collection** — only
-  re-renders from committed state — so midnight rollover cannot show yesterday's total
-  under today's date and the staleness footer stays accurate.
-- **`updatePeriodMillis=6h`** — a system safety net only.
+- **30-minute periodic re-render + collect** — `WidgetRefreshWorker` (WorkManager, KEEP
+  unique work, enqueued from `SumiApplication.onCreate`). It first runs the same
+  incremental 7-day overlap reconcile as `CollectionWorker` (serialized by the
+  repository's mutex with all other collection paths) and then re-renders. Numbers,
+  footer and day key therefore advance between app opens whenever the system runs the
+  job. Failures are logged (`WidgetRefreshWorker` tag), never silently swallowed.
+- **`updatePeriodMillis=1800000`** — the platform floor for widget broadcasts; the
+  system delivers `APPWIDGET_UPDATE` at most every 30 minutes and may coalesce further
+  in Doze or on devices with aggressive battery management or a rare/restricted
+  app-standby bucket. A system-mediated path independent of WorkManager: when it fires,
+  the widget re-renders committed state.
 - **Forced updates (expedited one-time work, coalesced)** on: local date change,
   timezone change, locale change (`DATE_CHANGED` / `TIMEZONE_CHANGED` / `LOCALE_CHANGED`
   via `WidgetRefreshReceiver`), boot completed (`BootReceiver` enqueues the same work),
@@ -176,11 +183,21 @@ promises a cadence the system will not honor.
   + 60 s visible tick (existing), theme change (existing), and goal setting changes
   (today's three write sites re-render the widget).
 - A wall-clock midnight chain (one-time 00:00 work re-enqueued by each run) was
-  deliberately **not** added: `DATE_CHANGED` plus the 30-minute re-render cover the same
+  deliberately **not** added: `DATE_CHANGED` plus the 30-minute paths cover the same
   guarantee with less machinery; worst case a fresh day appears ≤ 30 minutes late and the
   number itself is always computed from the render-time day key.
 - All content is computed at snapshot time, off the composition path; icons and bitmaps
   are prepared once per update.
+
+**Why the widget can still look stale after this** — and what the user can do about it.
+The platform has no push channel for usage events: the only ways today's numbers advance
+are an app foreground tick, a WorkManager wake, or the system widget broadcast. Doze
+defers all of them, and OEMs with aggressive battery management or a rare/restricted
+app-standby bucket may defer them for hours. When nothing wakes, the widget shows the
+last committed state with its staleness footer (never silently stale). The user-facing
+mitigation is system-side: exclude Sumi from battery optimization (Settings → Apps →
+Sumi → Battery → Unrestricted). This cannot be requested from code — it is a user choice
+about their device, documented for the case where freshness matters to them.
 
 ## 9. Interaction
 
@@ -246,7 +263,9 @@ promises a cadence the system will not honor.
 - Row name budget is measured (≈110 dp at 12 sp) with the platform paint; longer names
   ellipsize deterministically.
 - Registrars: two `appwidget-provider` XMLs with `targetCellWidth/Height` (4×1 / 4×2),
-  `resizeMode="horizontal|vertical"`, `widgetCategory="home_screen"`, 6 h `updatePeriodMillis`.
+  `resizeMode="horizontal|vertical"`, `widgetCategory="home_screen"`, 30-minute
+  `updatePeriodMillis` (the platform floor; the independent system backstop alongside
+  `WidgetRefreshWorker`).
 - `allowBackup="false"` is already in force; all processing stays on-device, no network,
   no new permissions, no new stored data, no analytics.
 - Code isolated in `platform/widget/` (plus a repository member `lastSuccessfulCollectionUtcMs()`
@@ -284,10 +303,14 @@ stale numbers.
   `Text`); fixed draw width for the bar (fractional weights unsupported in Glance);
   platform sans for supporting text; `stone-1` for both remainder and uncategorized rows;
   4% merge threshold; no wall-clock midnight one-time chain (DATE_CHANGED + 30-min
-  re-render covers it); comparison keeps "About …" phrasing (shared calm wording —
+  paths cover it); comparison keeps "About …" phrasing (shared calm wording —
   the reference's literal "2h 56m less" without "About" is unfounded editorial, not a
   requirement); localization is English-constant (Sumi is English-only today);
-  per-row deep link via explicit-intent extra rather than a new URL scheme.
+  per-row deep link via explicit-intent extra rather than a new URL scheme; the 6 h
+  `updatePeriodMillis` was tightened to the 30-minute platform floor and
+  `WidgetRefreshWorker` now collects incrementally before re-rendering (owner report
+  2026-11-15: widget appeared frozen until the app was opened — the 6 h net plus a
+  collection-free re-render guaranteed exactly that).
 - **Open questions for device verification:** 4×2 fit at minimum density, 1.3× scale
   behavior, launcher-specific masking, TalkBack order of tile vs. row nodes, and the
   actual midnight correction latency.

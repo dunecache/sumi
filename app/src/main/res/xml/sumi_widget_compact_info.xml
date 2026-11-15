@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Compact home-screen widget ("Sumi — Screen time"). Spec: docs/WIDGET.md (v3, §5).
-  Default placement 4×1, minimum 3×1. updatePeriodMillis = 6 h safety net only —
-  real refreshes are push-driven (foreground / theme / goal / collection / date change /
-  the 30-minute WidgetRefreshWorker), so no freshness is promised or displayed.
+  Default placement 4×1, minimum 3×1. updatePeriodMillis = 30 minutes — the platform
+  floor, and the system guarantee no shorter interval exists. Real content freshness
+  comes from the 30-minute WidgetRefreshWorker (which collects incrementally and then
+  re-renders); this broadcast is the independent second path. Neither is a live tracker.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
     android:minHeight="72dp"
     android:targetCellWidth="4"
     android:targetCellHeight="1"
-    android:updatePeriodMillis="21600000"
+    android:updatePeriodMillis="1800000"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_compact_description"
