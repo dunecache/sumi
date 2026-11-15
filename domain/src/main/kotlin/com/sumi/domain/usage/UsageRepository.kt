@@ -56,6 +56,9 @@ interface UsageRepository {
 
     /** Recompute aggregates from stored sessions for all session-backed days. */
     suspend fun rebuildAggregates()
+
+    /** Wall-clock instant the last collection pass committed; drives the widget's staleness footer. */
+    suspend fun lastSuccessfulCollectionUtcMs(): Long?
 }
 
 /** Source of raw platform events. Implemented in `platform`. */

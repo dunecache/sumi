@@ -231,19 +231,24 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ---
 
-## M6 — Home screen widget (pulled forward 2026-11-14)
-*Goal: a quiet glanceable home-screen widget — today's total and optional goal progress — shipped ahead of the rest of the V2 backlog at the owner's request.*
+## M6 — Home screen widgets (pulled forward 2026-11-14; v3 superseded 2026-11-15)
+*Goal: today's screen time on the home screen — shipped ahead of the rest of the V2 backlog at the owner's request. v1 (quiet glance) shipped 2026-11-14 (PRs #32–#35); v3 ("Screen time" Compact & Expanded) superseded it 2026-11-15 via the pasted widget reference, replacing the single provider with two picker entries on one render core.*
 
-Design reference: adopted as `docs/WIDGET.md` (2026-11-14) — the resolved form of the pasted widget design standard, incl. the owner's §11 decisions. Implementation record: ARCHITECTURE.md §19; visual mapping: DESIGN.md §15.
+Design reference (v3, adopted 2026-11-15): `docs/WIDGET.md`; implementation record: ARCHITECTURE.md §19; visual mapping: DESIGN.md §15.
 
 - [x] Glance foundation (`androidx.glance:glance-appwidget` 1.2.0; no other new dependencies)
-- [x] `AppWidgetProvider` metadata (2×2 default cells, `resizeMode="horizontal|vertical"`, `updatePeriodMillis=0`) + 12+ picker preview without fabricated statistics
-- [x] Responsive layouts via `SizeMode.Responsive` (Compact 140 dp · Medium 250 dp canonical · Large 330 dp)
-- [x] States rendered: normal+goal, normal no-goal, zero usage, Usage Access missing, pending first sync; goal exceeded in neutral wording only
-- [x] Theme follows app preference (System resolves night at render time; forced Light/Dark always forced); Kanso Matcha tokens; never red/terracotta on the widget
-- [x] A11y: single tappable surface, content description carries action + values; progress rule decorative
-- [x] Refresh push-driven: app foreground, 60 s visible tick, theme change, collection (foreground + worker), system APPWIDGET_UPDATE
-- [x] Pure state machine unit-tested on JVM (`SumiWidgetStateTest`)
+- [x] Two providers sharing one render core — `CompactScreenTimeWidget` (4×1 default, min 3×1) and `ExpandedScreenTimeWidget` (4×2 default, min 4×2, 5 rows at 4×3); both `resizeMode="horizontal|vertical"`, target cells 4×1 / 4×2, `updatePeriodMillis="21600000"` (6 h safety net)
+- [x] Bar: segmented, proportional, rounded ends, hairline gaps — segments are exactly the visible rows (list order) plus a neutral stone-1 remainder; tiny segments (<4%) merge into the remainder; the bar sums to the headline total by construction
+- [x] Expanded rows: launcher icon or category-color monogram fallback; ellipsized names (measured budget ≈110 dp); exact durations (`<1m`, `45m`, `2h 14m`); small dash above each duration binds row ↔ bar segment (never color alone)
+- [x] Comparison: yesterday clipped to the same wall-clock window (sessions only); 5 min or 10% "about the same" band (widget-opt-in parameter of the shared `NeutralComparison`; in-app copy unchanged); omitted entirely with no baseline; "About … yesterday at this time." phrasing
+- [x] Goal line (expanded, only when enabled): "Daily intention · 1h 18m remaining" / "goal met today" / "18m over" — neutral; same `DailyGoal.evaluate` state as Today; never red/terracotta
+- [x] Staleness footer (expanded only, shown past a real 1 h threshold): "Updated HH:mm" — nothing otherwise
+- [x] States: Usage Access missing ("Usage access needed"), pending first sync ("Waiting for data"), recorded zero (`0m`), import-only day, unattributable total (full neutral remainder bar) — stale numbers never shown
+- [x] Taps: tile → Today; expanded rows → app-detail route via explicit-intent extra (`com.sumi.widget.extra.OPEN_APP_DETAIL`) consumed in MainActivity (same pattern as notification deep-routing); no scheme, no new destination, no widget-internal state
+- [x] Updates: 30-minute `WidgetRefreshWorker` (re-render only, never collects) + 6 h `updatePeriodMillis` fallback + forced re-render on date/timezone/locale change (`WidgetRefreshReceiver`), boot (`BootReceiver`), collection, foreground + 60 s tick, theme change, and goal writes — no midnight one-time chain (documented decision)
+- [x] Fonts: bundled Literata drawn as snapshot-time bitmaps (Glance system-fonts only — documented platform limit); density and font scale honored
+- [x] JVM tests rewritten for v3 (`SumiWidgetStateTest`); `NeutralComparison` band covered in domain tests; CI is the gate
+- [ ] **Device verification (pending on-device pass):** 4×2 fit at minimum density + density ladder thresholds, 1.3× font scale, bar seam behavior at tiny widths, TalkBack tile/row traversal, picker previews, icon load at 5 rows, midnight correction latency
 
 **Acceptance criteria**
 - CI green (build/test/lint); app still builds with no new permissions.
@@ -279,6 +284,7 @@ Explicitly **not** planned: cloud accounts, social leaderboards, achievements, s
 
 | Date | Note |
 |---|---|
+| 2026-11-15 | Widgets superseded by the v3 "Screen time" reference (owner): two picker entries (Compact 4×1 / Expanded 4×2) on one Glance render core — serif total drawn as a bundled-Literata bitmap (Glance renders system fonts only), segmented bar reconciled to the headline total (list order + 4%-merged neutral remainder), top-3/top-5 rows with icons or category-color monograms and exact durations, time-aware yesterday clip (same-wall-clock window, 5-minute/10-percent "About the same" band, opt-in 10% param of the shared `NeutralComparison`), goal line via the shared `DailyGoal.evaluate`, staleness footer only past a real 1 h threshold, per-row deep link to the existing app-detail route (explicit-intent extra, no scheme), forced re-render on date/timezone/locale/boot/collection/foreground/theme/goal change via `WidgetRefreshWorker` + `WidgetRefreshReceiver` (+ `BootReceiver` hook) — no mid-night chain by decision; English-constant copy (no translation infra yet); `allowBackup=false` unchanged; `UsageRepository.lastSuccessfulCollectionUtcMs()` added for the 1 h staleness check. Docs: WIDGET.md → v3, DESIGN.md §15, ARCHITECTURE.md §19, M6 re-scoped. NOT verified on any device: density ladder, 4×2 fit at 1.3× font scale, bar seams at tiny widths, TalkBack order, picker previews, midnight rollover. CI is the gate. |
 | 2026-11-06 | M0 scaffolded: Gradle Kotlin DSL + version catalog, `:app` + `:domain`, Kanso Matcha tokens, Hilt/Room/DataStore, ktlint/detekt, separate CI workflows (build/test/lint), 4-destination nav + onboarding, Settings skeleton, Room schema (v1). Fonts pending binary TTFs. First CI `assembleDebug` pending (no local SDK; CI is gate). |
 | 2026-11-06 | M1 usage engine + M2 core experience: domain normalization/reconstruction/aggregation (pure, fixture-tested), platform UsageEvents/Stats adapters, Room persistence with idempotent transactional reconciliation, UsageCollector (open/resume) + WorkManager safety net, Today/Apps/AppDetail/Insights charts wired to Room, categories with defaults, Settings theme + delete-all, categories helper, notifications channels. CI (build/test/lint) is the verification gate; local device testing intentionally skipped per direction. M3/M4/M5 remain. |
 | 2026-11-06 | V1 complete (M3): deterministic rule-based insights with fact/interpretation tagging and graceful degradation, unit-tested; fonts pulled from google/fonts and wired into Type.kt (Inter/Literata/Plex Mono). Focus intentions + notification channels land as V1.5 scaffolding. M4/M5 remain. Verification agents run after V1 (per direction), not during. |

@@ -122,6 +122,10 @@ fun SumiApp(
     onThemeSelected: (ThemeMode) -> Unit,
     /** Monotonic counter of "open Focus" requests (see MainActivity); navigates once per increment. */
     openFocusRequest: Int = 0,
+    /** Monotonic counter of "open app detail" requests from widget row taps; routes once per increment. */
+    openAppDetailRequest: Int = 0,
+    /** Package to open for [openAppDetailRequest]; null until the first widget row tap. */
+    openAppDetailPackage: String? = null,
 ) {
     val navController = rememberNavController()
     // Caller composes this graph only after the flag has loaded, so the
@@ -132,6 +136,13 @@ fun SumiApp(
     LaunchedEffect(openFocusRequest) {
         if (openFocusRequest > 0 && isOnboardingCompleted) {
             navController.navigateTab(Routes.FOCUS)
+        }
+    }
+    // A widget row tap lands here to route into that app's detail screen.
+    LaunchedEffect(openAppDetailRequest) {
+        val pkg = openAppDetailPackage
+        if (openAppDetailRequest > 0 && isOnboardingCompleted && pkg != null) {
+            navController.navigate(Routes.appDetail(pkg))
         }
     }
 

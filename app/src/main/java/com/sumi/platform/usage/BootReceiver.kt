@@ -6,6 +6,10 @@ import android.content.Intent
 import android.os.SystemClock
 import com.sumi.domain.usage.RebootBoundarySource
 import com.sumi.domain.usage.RebootDetection
+import com.sumi.platform.widget.WidgetRefreshReceiver
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -77,7 +81,17 @@ class PlatformRebootSource @Inject constructor(
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            PlatformRebootSource.recordBoot(context.applicationContext, System.currentTimeMillis())
+            val app = context.applicationContext
+            PlatformRebootSource.recordBoot(app, System.currentTimeMillis())
+            // A rebooted device must never show pre-reboot numbers; re-render now.
+            val request = OneTimeWorkRequestBuilder<com.sumi.platform.widget.WidgetRefreshWorker>()
+                .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
+            WorkManager.getInstance(app).enqueueUniqueWork(
+                WidgetRefreshReceiver.WIDGET_REFRESH_WORK,
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
         }
     }
 }

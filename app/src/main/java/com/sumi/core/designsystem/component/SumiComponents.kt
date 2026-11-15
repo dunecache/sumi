@@ -83,3 +83,19 @@ fun formatDuration(durationMs: Long): String {
         else -> "${hours}h ${minutes}m"
     }
 }
+
+/**
+ * Compact variant for constrained surfaces (the home-screen widget's app rows):
+ * `< 1min` renders `<1m`, never the prose form. Identical otherwise to [formatDuration].
+ */
+fun formatCompactDuration(durationMs: Long): String {
+    val totalMinutes = (durationMs / MILLIS_PER_MINUTE).coerceAtLeast(0)
+    if (totalMinutes == 0L) return if (durationMs > 0L) "<1m" else "0m"
+    val hours = totalMinutes / MINUTES_PER_HOUR
+    val minutes = totalMinutes % MINUTES_PER_HOUR
+    return when {
+        hours == 0L -> "${minutes}m"
+        minutes == 0L -> "${hours}h"
+        else -> "${hours}h ${minutes}m"
+    }
+}

@@ -83,14 +83,37 @@
              AppWidget contract; only the system sends APPWIDGET_UPDATE. The widget reads no
              new permissions and surfaces only what the Today screen already shows. -->
         <receiver
-            android:name=".platform.widget.SumiWidgetReceiver"
+            android:name=".platform.widget.SumiCompactWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/sumi_widget_info" />
+                android:resource="@xml/sumi_widget_compact_info" />
+        </receiver>
+
+        <receiver
+            android:name=".platform.widget.SumiExpandedWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sumi_widget_expanded_info" />
+        </receiver>
+
+        <!-- Forced re-render on date / time zone / locale changes (docs/WIDGET.md §8).
+             System broadcasts only — no permission required. Boot has its own receiver above. -->
+        <receiver
+            android:name=".platform.widget.WidgetRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
         </receiver>
 
         <receiver

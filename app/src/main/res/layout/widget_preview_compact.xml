@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Picker preview for the compact widget ("Sumi — Screen time"). Spec: docs/WIDGET.md (v3, §5).
+  SAMPLE PREVIEW CONTENT — not live data; picker thumbnails only, same policy as Compose previews.
+  Bar: three sample category segments (45/30/15%) + neutral remainder. Rounded tile ends.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_preview_bg">
+
+    <!-- Sample segmented bar (track 6dp, rounded ends via nested weighted views). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:orientation="horizontal"
+        android:showDividers="end"
+        android:dividerDrawable="@android:color/transparent">
+
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="45" android:background="@color/sumi_preview_seg1" />
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="30" android:background="@color/sumi_preview_seg2" />
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="15" android:background="@color/sumi_preview_seg3" />
+        <View android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="10" android:background="@color/sumi_preview_remainder" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_marginTop="6dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="2h 30m"
+        android:textStyle="bold"
+        android:textSize="26sp"
+        android:typeface="serif"
+        android:textColor="@color/sumi_preview_on" />
+
+    <TextView
+        android:layout_marginTop="1dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="About the same as yesterday at this time."
+        android:textSize="11sp"
+        android:textColor="@color/sumi_preview_muted" />
+</LinearLayout>

@@ -16,12 +16,27 @@ object NeutralComparison {
     /**
      * "About the same as [previousLabel]." / "About 20m less than [previousLabel]." /
      * "About 2h 15m more than [previousLabel]."
+     *
+     * @param similarWithinPercent when set (e.g. `0.10f` for 10%), deltas within that fraction
+     * of the larger side also read as "About the same", in addition to the five-minute floor.
+     * Defaults to null — in-app surfaces are unaffected; the home-screen widget opts in.
      */
-    fun neutralComparison(currentMs: Long, previousMs: Long, previousLabel: String): String {
+    fun neutralComparison(
+        currentMs: Long,
+        previousMs: Long,
+        previousLabel: String,
+        similarWithinPercent: Float? = null,
+    ): String {
         val delta = currentMs - previousMs
         val absMinutes = abs(delta) / MILLIS_PER_MINUTE
         if (absMinutes < SIMILAR_THRESHOLD_MINUTES) return "About the same as $previousLabel."
-        val amount = formatDuration(absMinutes * MILLIS_PER_MINUTE)
+        if (similarWithinPercent != null) {
+            val larger = maxOf(currentMs, previousMs).toDouble().coerceAtLeast(1.0)
+            if (abs(delta) / larger <= similarWithinPercent) {
+                return "About the same as $previousLabel."
+            }
+        }
+        val amount = formatDuration(abs(delta))
         return if (delta < 0) {
             "About $amount less than $previousLabel."
         } else {

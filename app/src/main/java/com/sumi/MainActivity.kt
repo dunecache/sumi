@@ -25,6 +25,7 @@ import com.sumi.feature.onboarding.OnboardingViewModel
 import com.sumi.feature.usage.UsageCollector
 import com.sumi.navigation.SumiApp
 import com.sumi.platform.notifications.SumiNotifications
+import com.sumi.platform.widget.EXTRA_OPEN_APP_DETAIL
 import com.sumi.platform.widget.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -47,6 +48,14 @@ class MainActivity : ComponentActivity() {
      */
     private var openFocusRequest by mutableStateOf(0)
 
+    /**
+     * Package behind an app-detail deep link started from a widget row tap (monotonic
+     * counter + pending package, mirrors the notification pattern). Null until the
+     * first such tap; composed into [SumiApp].
+     */
+    private var openAppDetailRequest by mutableStateOf(0)
+    private var openAppDetailPackage by mutableStateOf<String?>(null)
+
     private companion object {
         /** Visible-session refresh cadence for today's live tail. */
         const val OPEN_TAIL_REFRESH_MS = 60_000L
@@ -57,7 +66,7 @@ class MainActivity : ComponentActivity() {
         // Edge-to-edge: Sumi draws behind the system bars; Scaffold + M3 components
         // consume insets. Light/dark icon appearance follows the composed theme.
         enableEdgeToEdge()
-        consumeFocusIntent(intent)
+        consumeActionIntents(intent)
 
         // Collect on open; re-check Usage Access + collect on resume.
         // repeatOnLifecycle also fires when this activity starts; no second standalone collect.
@@ -108,6 +117,8 @@ class MainActivity : ComponentActivity() {
                         themeMode = themeMode,
                         onboardingViewModel = onboardingViewModel,
                         openFocusRequest = openFocusRequest,
+                        openAppDetailRequest = openAppDetailRequest,
+                        openAppDetailPackage = openAppDetailPackage,
                         onThemeSelected = { mode ->
                             lifecycleScope.launch {
                                 preferences.setThemeMode(mode)
@@ -124,13 +135,19 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        consumeFocusIntent(intent)
+        consumeActionIntents(intent)
     }
 
-    private fun consumeFocusIntent(intent: android.content.Intent?) {
+    private fun consumeActionIntents(intent: android.content.Intent?) {
         if (intent?.getBooleanExtra(SumiNotifications.EXTRA_OPEN_FOCUS, false) == true) {
             openFocusRequest += 1
             intent.removeExtra(SumiNotifications.EXTRA_OPEN_FOCUS)
+        }
+        val pkg = intent?.getStringExtra(EXTRA_OPEN_APP_DETAIL)
+        if (!pkg.isNullOrBlank()) {
+            openAppDetailRequest += 1
+            openAppDetailPackage = pkg
+            intent.removeExtra(EXTRA_OPEN_APP_DETAIL)
         }
     }
 }
