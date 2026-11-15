@@ -722,7 +722,10 @@ single v1 widget was retired by the v3 reference; superseded layouts live in git
   (`refreshAsync` / `refreshNow` — updateAll on both providers).
 - `WidgetRefreshWorker` + `WidgetRefreshReceiver` (`DATE_CHANGED` / `TIMEZONE_CHANGED` /
   `LOCALE_CHANGED`) enqueue an expedited one-time re-render; `BootReceiver` enqueues the
-  same on boot; both mutate nothing — no collection is ever triggered by widget paths.
+  same on boot; `WidgetRefreshWorker` runs an incremental 7-day overlap reconcile before
+  re-rendering, serialized by the repository's mutex together with every other collection
+  path (`CollectionWorker`, foreground), so the widget can never show fresher than
+  committed state nor stall its own data between app opens.
 
 **Data.** Identical "today" definition as Today's screen. Yesterday baseline uses stored
 sessions clipped in-session (aggregates cannot answer a partial day); the line is omitted
@@ -743,12 +746,17 @@ scheme added; no widget-internal state.
 **Refresh triggers.** App foreground + 60 s visible tick (existing); theme change
 (existing); collection in foreground and in `CollectionWorker` (existing); goal writes
 (`TodayViewModel` re-renders on save/remove/pause-toggle); boot completed (new); date /
-timezone / locale change (new); 30-minute periodic `WidgetRefreshWorker` (new); system
-`updatePeriodMillis="21600000"` (6 h, fallback only). Midnight rollover is covered by
-`DATE_CHANGED` plus the 30-minute re-render — the day key is always computed at render
-time, so yesterday cannot persist under today's date (worst case ≈ 30 min late). A
-one-time wall-clock midnight chain was deliberately not added. The widget never claims
-freshness it cannot back: the staleness footer appears only past a real 1 h threshold.
+timezone / locale change (new); 30-minute periodic `WidgetRefreshWorker` (new; collects
+incrementally then re-renders); system `updatePeriodMillis="1800000"` (30 minutes, the
+platform floor — the second, system-mediated backstop). Midnight rollover is covered by
+`DATE_CHANGED` plus the 30-minute paths — the day key is always computed at render time,
+so yesterday cannot persist under today's date (worst case ≈ 30 min late). A one-time
+wall-clock midnight chain was deliberately not added. The widget never claims freshness
+it cannot back: the staleness footer appears only past a real 1 h threshold. When
+neither the app nor a background path wakes (deep Doze, rare/restricted standby buckets,
+aggressive OEM battery savers), the widget shows last committed state with the honest
+staleness footer; user-facing mitigation is battery-optimization exclusion (Settings →
+Apps → Sumi → Battery → Unrestricted), which cannot be requested in code.
 
 **Copy.** English constants, the same pattern as the app's other strings (Sumi ships no
 translations today). Locale-aware where platform formats drive: `Updated HH:mm` uses

@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Expanded home-screen widget ("Sumi — Screen time (expanded)"). Spec: docs/WIDGET.md (v3, §6).
-  Default placement 4×2, minimum 4×2. Same update policy as the compact entry:
-  6 h updatePeriodMillis is a safety net; real refreshes are push-driven.
+  Expanded home-screen widget ("Sumi — Screen time (expanded)"). Spec: docs/WIDGET.md
+  (v3, §6). Default placement 4×2, minimum 4×2. Same update policy as the compact
+  entry: the 30-minute WidgetRefreshWorker collects incrementally and re-renders;
+  updatePeriodMillis = 30 minutes (platform floor) is the independent system path.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="140dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
-    android:updatePeriodMillis="21600000"
+    android:updatePeriodMillis="1800000"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_expanded_description"
