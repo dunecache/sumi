@@ -4,6 +4,10 @@ import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sumi.domain.common.Clock
 import com.sumi.domain.usage.UsageRepository
@@ -39,18 +43,41 @@ class WidgetRefreshWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        WidgetDiagnostics.log("worker start runAttempt=$runAttemptCount ${WidgetDiagnostics.deviceState(applicationContext)}")
         if (usageAccessChecker.hasUsageAccess()) {
             val now = clock.nowUtcMs()
             runCatching { repository.collectRecent(now - SEVEN_DAYS_MS, now) }
                 .onFailure { Log.w(TAG, "usage collection failed", it) }
+                .onSuccess { WidgetDiagnostics.log("worker collection ok") }
+        } else {
+            WidgetDiagnostics.log("worker skipped collection: no usage access")
         }
         runCatching { WidgetUpdater.refreshNow(applicationContext) }
             .onFailure { Log.w(TAG, "widget refresh failed", it) }
+            .onSuccess { WidgetDiagnostics.log("worker updateAll ok") }
         return Result.success()
     }
 
-    private companion object {
-        const val TAG = "WidgetRefreshWorker"
-        const val SEVEN_DAYS_MS = 7L * 24L * 60L * 60L * 1000L
+    companion object {
+        const val WORK_NOW = "sumi-widget-refresh-now"
+
+        /**
+         * Expedited one-shot path used by widget/system broadcasts: it must not depend on
+         * the receiver's `goAsync()` (broken on some OEMs — see [SumiWidgetReceiver]).
+         * [OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST] is a safe fallback: if the
+         * app has no expedited quota left, the job still runs as regular work rather than
+         * being dropped. REPLACE collapses bursts of broadcasts into one reconcile+render.
+         */
+        fun enqueueNow(context: Context) {
+            val request = OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
+            WorkManager.getInstance(context.applicationContext)
+                .enqueueUniqueWork(WORK_NOW, ExistingWorkPolicy.REPLACE, request)
+            WidgetDiagnostics.log("enqueueNow $WORK_NOW")
+        }
+
+        private const val TAG = "WidgetRefreshWorker"
+        private const val SEVEN_DAYS_MS = 7L * 24L * 60L * 60L * 1000L
     }
 }
