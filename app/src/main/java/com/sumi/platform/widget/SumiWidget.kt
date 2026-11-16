@@ -1,6 +1,8 @@
 package com.sumi.platform.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
@@ -30,6 +32,7 @@ class CompactScreenTimeWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = WidgetSnapshotLoader.load(context)
+        WidgetDiagnostics.log("render compact total=${snapshot.totalMs} view=${snapshot.view::class.simpleName}")
         provideContent { CompactWidgetContent(snapshot) }
     }
 
@@ -40,8 +43,33 @@ class CompactScreenTimeWidget : GlanceAppWidget() {
     }
 }
 
+/**
+ * Receiver base for both v3 widgets. Glance 1.2.0's own source routes
+ * `ACTION_APPWIDGET_UPDATE` through a WorkManager worker on vivo devices **only up to
+ * SDK 34** (its comment: "goAsync is broken on certain OEMs"). On vivo Android 15 that
+ * workaround is skipped and the plain `goAsync()` path is used — the very path the
+ * workaround exists to avoid. We intercept the update broadcast and enqueue our own
+ * expedited worker, which collects an incremental delta and calls `updateAll()`
+ * directly: no sender-side `goAsync()` involved. Everything else (options changed,
+ * locale, click actions) keeps Glance's default handling.
+ */
+abstract class SumiWidgetReceiver : GlanceAppWidgetReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+            WidgetDiagnostics.log(
+                "receiver ${javaClass.simpleName}: APPWIDGET_UPDATE -> worker " +
+                    WidgetDiagnostics.deviceState(context),
+            )
+            WidgetRefreshWorker.enqueueNow(context)
+            return
+        }
+        WidgetDiagnostics.log("receiver ${javaClass.simpleName}: ${intent.action} -> Glance default")
+        super.onReceive(context, intent)
+    }
+}
+
 /** Receiver registered in the manifest for the compact entry. */
-class SumiCompactWidgetReceiver : GlanceAppWidgetReceiver() {
+class SumiCompactWidgetReceiver : SumiWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = CompactScreenTimeWidget()
 }
 
@@ -56,6 +84,7 @@ class ExpandedScreenTimeWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = WidgetSnapshotLoader.load(context)
+        WidgetDiagnostics.log("render expanded total=${snapshot.totalMs} view=${snapshot.view::class.simpleName}")
         provideContent { ExpandedWidgetContent(snapshot) }
     }
 
@@ -67,7 +96,7 @@ class ExpandedScreenTimeWidget : GlanceAppWidget() {
 }
 
 /** Receiver registered in the manifest for the expanded entry. */
-class SumiExpandedWidgetReceiver : GlanceAppWidgetReceiver() {
+class SumiExpandedWidgetReceiver : SumiWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ExpandedScreenTimeWidget()
 }
 

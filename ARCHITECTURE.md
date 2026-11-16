@@ -748,7 +748,12 @@ scheme added; no widget-internal state.
 (`TodayViewModel` re-renders on save/remove/pause-toggle); boot completed (new); date /
 timezone / locale change (new); 30-minute periodic `WidgetRefreshWorker` (new; collects
 incrementally then re-renders); system `updatePeriodMillis="1800000"` (30 minutes, the
-platform floor — the second, system-mediated backstop). Midnight rollover is covered by
+platform floor — the second, system-mediated backstop). Both widget receivers override
+`onReceive`: `ACTION_APPWIDGET_UPDATE` is enqueued as expedited one-shot work instead of
+being composed in the receiver's `goAsync()` (Glance's own vendor workaround covers vivo
+only below SDK 35; the owner's vivo V2322 is SDK 35). Debug builds log receiver actions,
+worker runs (standby bucket / battery state) and renders under `SumiWidgetDiag`.
+Midnight rollover is covered by
 `DATE_CHANGED` plus the 30-minute paths — the day key is always computed at render time,
 so yesterday cannot persist under today's date (worst case ≈ 30 min late). A one-time
 wall-clock midnight chain was deliberately not added. The widget never claims freshness

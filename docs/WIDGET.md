@@ -182,6 +182,18 @@ WorkManager and the system widget broadcast — and neither is a live tracker.
   usage collection in the foreground or in `CollectionWorker` (existing), app foreground
   + 60 s visible tick (existing), theme change (existing), and goal setting changes
   (today's three write sites re-render the widget).
+- **Receiver → worker, not receiver → `goAsync()`.** Both widget receivers intercept
+  `ACTION_APPWIDGET_UPDATE` and enqueue the expedited one-shot `WidgetRefreshWorker`
+  (collect + `updateAll`) instead of letting Glance compose inside the broadcast.
+  Glance 1.2.0's own source contains a vendor workaround for exactly this — its
+  `maybeLaunchAsyncRequestWorker` routes widget broadcasts through WorkManager because
+  "goAsync is broken on certain OEMs" — but the built-in condition is
+  `MANUFACTURER == "vivo" && SDK_INT < 35`. On the owner's vivo V2322 (Android 15,
+  SDK 35) that workaround is skipped; our interception applies it regardless of version.
+  `DEBUG_UPDATE`, locale and click actions still use Glance's default receiver handling.
+- Debug builds log the whole chain (`logcat -s SumiWidgetDiag`): receiver action, worker
+  start with standby bucket and battery-optimization state, and each render with its
+  total. Release builds compile the logging out.
 - A wall-clock midnight chain (one-time 00:00 work re-enqueued by each run) was
   deliberately **not** added: `DATE_CHANGED` plus the 30-minute paths cover the same
   guarantee with less machinery; worst case a fresh day appears ≤ 30 minutes late and the
@@ -310,7 +322,9 @@ stale numbers.
   `updatePeriodMillis` was tightened to the 30-minute platform floor and
   `WidgetRefreshWorker` now collects incrementally before re-rendering (owner report
   2026-11-15: widget appeared frozen until the app was opened — the 6 h net plus a
-  collection-free re-render guaranteed exactly that).
+  collection-free re-render guaranteed exactly that); receiver broadcasts are routed to
+  an expedited worker instead of Glance's `goAsync()` (the OEM workaround Glance applies
+  only below SDK 35, while the owner's vivo runs SDK 35).
 - **Open questions for device verification:** 4×2 fit at minimum density, 1.3× scale
   behavior, launcher-specific masking, TalkBack order of tile vs. row nodes, and the
   actual midnight correction latency.

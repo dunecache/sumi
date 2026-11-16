@@ -67,6 +67,8 @@ android {
     buildFeatures {
         compose = true
         aidl = false
+        // Debug-only widget diagnostics use BuildConfig.DEBUG; keep the flag generated.
+        buildConfig = true
     }
 
     // No INTERNET permission. See AndroidManifest.xml. Usage Access uses AppOpsManager, not network.
