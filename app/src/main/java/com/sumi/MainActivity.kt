@@ -26,6 +26,7 @@ import com.sumi.feature.usage.UsageCollector
 import com.sumi.navigation.SumiApp
 import com.sumi.platform.notifications.SumiNotifications
 import com.sumi.platform.widget.EXTRA_OPEN_APP_DETAIL
+import com.sumi.platform.widget.WidgetDiagnostics
 import com.sumi.platform.widget.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -63,6 +64,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WidgetDiagnostics.log("APP_OPEN MainActivity.onCreate")
         // Edge-to-edge: Sumi draws behind the system bars; Scaffold + M3 components
         // consume insets. Light/dark icon appearance follows the composed theme.
         enableEdgeToEdge()

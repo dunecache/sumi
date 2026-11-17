@@ -1,7 +1,6 @@
 package com.sumi.platform.widget
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -43,18 +42,22 @@ class WidgetRefreshWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        WidgetDiagnostics.log("worker start runAttempt=$runAttemptCount ${WidgetDiagnostics.deviceState(applicationContext)}")
+        WidgetDiagnostics.log(
+            "WIDGET_REFRESH_WORKER start tags=${tags.joinToString()} runAttempt=$runAttemptCount " +
+                WidgetDiagnostics.deviceState(applicationContext),
+        )
         if (usageAccessChecker.hasUsageAccess()) {
             val now = clock.nowUtcMs()
             runCatching { repository.collectRecent(now - SEVEN_DAYS_MS, now) }
-                .onFailure { Log.w(TAG, "usage collection failed", it) }
-                .onSuccess { WidgetDiagnostics.log("worker collection ok") }
+                .onFailure { WidgetDiagnostics.error("WIDGET_REFRESH_WORKER collection failed", it) }
+                .onSuccess { WidgetDiagnostics.log("WIDGET_REFRESH_WORKER collection ok") }
         } else {
-            WidgetDiagnostics.log("worker skipped collection: no usage access")
+            WidgetDiagnostics.log("WIDGET_REFRESH_WORKER skipped collection: no usage access")
         }
         runCatching { WidgetUpdater.refreshNow(applicationContext) }
-            .onFailure { Log.w(TAG, "widget refresh failed", it) }
-            .onSuccess { WidgetDiagnostics.log("worker updateAll ok") }
+            .onFailure { WidgetDiagnostics.error("WIDGET_REFRESH_WORKER updateAll failed", it) }
+            .onSuccess { WidgetDiagnostics.log("WIDGET_REFRESH_WORKER updateAll ok") }
+        WidgetDiagnostics.log("WIDGET_REFRESH_WORKER done")
         return Result.success()
     }
 
@@ -77,7 +80,6 @@ class WidgetRefreshWorker @AssistedInject constructor(
             WidgetDiagnostics.log("enqueueNow $WORK_NOW")
         }
 
-        private const val TAG = "WidgetRefreshWorker"
         private const val SEVEN_DAYS_MS = 7L * 24L * 60L * 60L * 1000L
     }
 }
