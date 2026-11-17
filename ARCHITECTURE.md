@@ -725,7 +725,13 @@ single v1 widget was retired by the v3 reference; superseded layouts live in git
   same on boot; `WidgetRefreshWorker` runs an incremental 7-day overlap reconcile before
   re-rendering, serialized by the repository's mutex together with every other collection
   path (`CollectionWorker`, foreground), so the widget can never show fresher than
-  committed state nor stall its own data between app opens.
+  committed state nor stall its own data between app opens. **All of this was inert until
+  2026-11-17:** WorkManager was initialized by the default `androidx.startup` initializer
+  with no `HiltWorkerFactory`, so every `@HiltWorker` failed to instantiate and no job
+  ran. The manifest now removes the `WorkManagerInitializer` *meta-data* (WorkManager
+  2.9.1 ships it under `androidx.startup.InitializationProvider`, not as a `<provider>`),
+  leaving on-demand initialization through `SumiApplication`'s
+  `Configuration.Provider` + Hilt. Verified on device from the workspace build.
 
 **Data.** Identical "today" definition as Today's screen. Yesterday baseline uses stored
 sessions clipped in-session (aggregates cannot answer a partial day); the line is omitted

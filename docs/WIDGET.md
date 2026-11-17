@@ -324,7 +324,11 @@ stale numbers.
   2026-11-15: widget appeared frozen until the app was opened — the 6 h net plus a
   collection-free re-render guaranteed exactly that); receiver broadcasts are routed to
   an expedited worker instead of Glance's `goAsync()` (the OEM workaround Glance applies
-  only below SDK 35, while the owner's vivo runs SDK 35).
+  only below SDK 35, while the owner's vivo runs SDK 35); and WorkManager's default startup
+  initializer is now removed correctly (its `<meta-data>` under
+  `androidx.startup.InitializationProvider`, not a legacy `<provider>`) so on-demand
+  initialization supplies the `HiltWorkerFactory` — without this, every `@HiltWorker` failed
+  to instantiate and **no background refresh ever ran** (root cause found 2026-11-17).
 - **Open questions for device verification:** 4×2 fit at minimum density, 1.3× scale
   behavior, launcher-specific masking, TalkBack order of tile vs. row nodes, and the
   actual midnight correction latency.
