@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.sumi.platform.background.CollectionWorker
+import com.sumi.platform.widget.WidgetDiagnostics
 import com.sumi.platform.widget.WidgetRefreshWorker
 import com.sumi.data.categories.CategoryBootstrap
 import dagger.hilt.android.HiltAndroidApp
@@ -30,8 +31,10 @@ class SumiApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        WidgetDiagnostics.init(this)
         scheduleSafetyNet()
         scheduleWidgetRefresh()
+        WidgetDiagnostics.log("APP onCreate: scheduled collection(15m) + widget-refresh(30m)")
         categoryBootstrap.run()
     }
 

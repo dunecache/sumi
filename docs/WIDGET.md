@@ -328,3 +328,31 @@ stale numbers.
 - **Open questions for device verification:** 4×2 fit at minimum density, 1.3× scale
   behavior, launcher-specific masking, TalkBack order of tile vs. row nodes, and the
   actual midnight correction latency.
+
+### Debug-build investigation aid (2026-11-17)
+
+Debug builds (compiled out of release via `BuildConfig.DEBUG`) write a timestamped
+timeline of the whole refresh chain to `Download/sumi-widget-diag.txt` through
+MediaStore — no storage permission — in addition to logcat tag `SumiWidgetDiag`. Each
+line names the trigger (receiver action, WorkManager `tags`, app open, boot), the
+device's standby bucket / battery state, placed widget count, and render start/done
+with any exception stack trace. Glance's `DEBUG_UPDATE` broadcast is additionally
+routed to the worker in debug builds so the shell can exercise the exact
+receiver → worker → render path (the real `APPWIDGET_UPDATE` is a protected broadcast
+that non-system callers cannot send). This is a temporary diagnostic hook for the
+Vivo investigation, not a user-facing feature.
+
+**Root cause found (2026-11-17) — this was never Vivo-specific.** The timeline showed
+`APPWIDGET_UPDATE` reaching the receiver and `enqueueNow` succeeding, but no worker
+ever starting. Logcat (`WM-WorkerFactory`) showed
+`NoSuchMethodException: WidgetRefreshWorker.<init>(Context, WorkerParameters)` from
+`WorkerFactory.createWorkerWithDefaultFallback`: the **default** factory was active,
+not `HiltWorkerFactory`. WorkManager 2.9.1 registers its initializer as a `<meta-data>`
+on `androidx.startup.InitializationProvider`; the app was removing a legacy
+`<provider>` node instead, so WorkManager was initialized at startup with a plain
+`Configuration` and no Hilt worker factory. **Every WorkManager job — including the
+30-minute periodic and all receiver-triggered work — had failed to instantiate since
+the app was created.** The manifest now removes the correct `meta-data` node so
+WorkManager initializes on demand from `Configuration.Provider` with `HiltWorkerFactory`.
+The widget appeared to update only on app open because that path calls
+`WidgetUpdater.refreshAsync()` directly, bypassing WorkManager entirely.

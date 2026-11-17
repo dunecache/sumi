@@ -32,8 +32,14 @@ class CompactScreenTimeWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = WidgetSnapshotLoader.load(context)
-        WidgetDiagnostics.log("render compact total=${snapshot.totalMs} view=${snapshot.view::class.simpleName}")
-        provideContent { CompactWidgetContent(snapshot) }
+        WidgetDiagnostics.log("RENDER_START compact total=${snapshot.totalMs} view=${snapshot.view::class.simpleName}")
+        try {
+            provideContent { CompactWidgetContent(snapshot) }
+            WidgetDiagnostics.log("RENDER_DONE compact")
+        } catch (t: Throwable) {
+            WidgetDiagnostics.error("RENDER_FAILED compact", t)
+            throw t
+        }
     }
 
     private companion object {
@@ -55,15 +61,24 @@ class CompactScreenTimeWidget : GlanceAppWidget() {
  */
 abstract class SumiWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+        val action = intent.action
+        if (action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
             WidgetDiagnostics.log(
                 "receiver ${javaClass.simpleName}: APPWIDGET_UPDATE -> worker " +
-                    WidgetDiagnostics.deviceState(context),
+                    WidgetDiagnostics.deviceState(context) + " " +
+                    WidgetDiagnostics.placedWidgets(context, javaClass),
             )
             WidgetRefreshWorker.enqueueNow(context)
             return
         }
-        WidgetDiagnostics.log("receiver ${javaClass.simpleName}: ${intent.action} -> Glance default")
+        // Debug-only test hook: Glance's DEBUG_UPDATE is a non-protected broadcast we can
+        // send from a shell, so it exercises the exact receiver -> worker -> render path.
+        if (WidgetDiagnostics.isDebugTrigger(action)) {
+            WidgetDiagnostics.log("receiver ${javaClass.simpleName}: DEBUG_UPDATE -> worker (debug trigger)")
+            WidgetRefreshWorker.enqueueNow(context)
+            return
+        }
+        WidgetDiagnostics.log("receiver ${javaClass.simpleName}: $action -> Glance default")
         super.onReceive(context, intent)
     }
 }
@@ -84,8 +99,14 @@ class ExpandedScreenTimeWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val snapshot = WidgetSnapshotLoader.load(context)
-        WidgetDiagnostics.log("render expanded total=${snapshot.totalMs} view=${snapshot.view::class.simpleName}")
-        provideContent { ExpandedWidgetContent(snapshot) }
+        WidgetDiagnostics.log("RENDER_START expanded total=${snapshot.totalMs} view=${snapshot.view::class.simpleName}")
+        try {
+            provideContent { ExpandedWidgetContent(snapshot) }
+            WidgetDiagnostics.log("RENDER_DONE expanded")
+        } catch (t: Throwable) {
+            WidgetDiagnostics.error("RENDER_FAILED expanded", t)
+            throw t
+        }
     }
 
     private companion object {
@@ -104,6 +125,7 @@ class SumiExpandedWidgetReceiver : SumiWidgetReceiver() {
 internal object WidgetUpdater {
     /** Fire-and-forget (app open, resume, 60 s tick, theme change, goal change). */
     fun refreshAsync(context: Context) {
+        WidgetDiagnostics.log("refreshAsync called")
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
                 CompactScreenTimeWidget().updateAll(context.applicationContext)
@@ -114,6 +136,7 @@ internal object WidgetUpdater {
 
     /** Suspending (collection worker / widget refresh worker, already off the main thread). */
     suspend fun refreshNow(context: Context) {
+        WidgetDiagnostics.log("refreshNow called")
         CompactScreenTimeWidget().updateAll(context.applicationContext)
         ExpandedScreenTimeWidget().updateAll(context.applicationContext)
     }
