@@ -59,14 +59,23 @@
         tools:targetApi="35"
         tools:ignore="RemoveWorkManagerInitializer">
 
-        <!-- hilt-work uses on-demand WorkManager initialization (HiltWorkManagerFactory).
-             Remove the default initializer so androidx.hilt work doesn't deadlock at startup.
-             Instantiatable ignore: lint checks the removed provider's class which WorkManager
-             initializes with a Context arg; the removal itself is the officially supported path. -->
+        <!-- WorkManager 2.9.1 registers WorkManagerInitializer as a <meta-data> entry on
+             androidx.startup.InitializationProvider — NOT as its own <provider>. Removing the
+             legacy <provider> node was a no-op, so the default initializer ran at startup with
+             a plain Configuration and no HiltWorkerFactory: every @HiltWorker failed with
+             NoSuchMethodException(Context, WorkerParameters) and NO background job ever ran.
+             Remove the meta-data instead so WorkManager initializes on demand from
+             Configuration.Provider (SumiApplication) with the HiltWorkerFactory. -->
         <provider
-            android:name="androidx.work.WorkManagerInitializer"
-            tools:node="remove"
-            tools:ignore="Instantiatable" />
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <activity
             android:name=".MainActivity"
